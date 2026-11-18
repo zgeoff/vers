@@ -456,7 +456,6 @@ test('it stops at the specified rng state if provided', async () => {
   });
 
   const config = {
-    // set a long duration so we always reach the right value
     duration: 200_000,
 
     // when our algo changes, can just pull this state to something valid from our
@@ -478,7 +477,6 @@ test('it stops at the specified rng state if provided', async () => {
 });
 
 test('it aborts on failure if failure action is set to abort', async () => {
-  // set our life to 1 so we die immediately
   const avatar = createMockAvatarData({ life: 1 });
   const enemy = createMockEnemyData();
 
@@ -521,7 +519,6 @@ test('it aborts on failure if failure action is set to abort', async () => {
 });
 
 test('it retries when failure action is set to retry', async () => {
-  // set our life to 1 so we die immediately
   const avatar = createMockAvatarData({ life: 1 });
   const enemy = createMockEnemyData();
 

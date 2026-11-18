@@ -7,8 +7,6 @@ interface Recording {
   readonly fired: ReadonlyArray<number>;
 }
 
-// A recorder that threads the planner's state through a sequence of calls one millisecond apart
-// and keeps the index of every call that produced a nudge.
 function setupTest() {
   let state = INITIAL_RETRIEVAL_STATE;
   let index = 0;

@@ -71,7 +71,6 @@ test('it shows the ambient catching-up line while ledger versions exceed the ver
 
     const pending = await screen.findByTestId('activity-rewards-pending');
 
-    // only the version-5 entry sits above the verified head of 3
     expect(pending).toHaveTextContent('Catching up… 4 rewards pending.');
   });
 });

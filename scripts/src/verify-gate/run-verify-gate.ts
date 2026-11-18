@@ -6,8 +6,8 @@ interface GateEnv {
   readonly tempDirectory: string;
 }
 
-// The step of the `verify / gate` check. The body comes from the event, as GitHub wrote it when the
-// run started, so an `edited` run reads the report that `bun verify publish` just wrote.
+// the body comes from the event, as GitHub wrote it when the run started, so an `edited` run reads
+// the report that `bun verify publish` just wrote.
 export async function runVerifyGate(env: GateEnv): Promise<number> {
   const event: unknown = await Bun.file(env.eventPath).json();
 

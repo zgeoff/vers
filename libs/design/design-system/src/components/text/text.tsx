@@ -4,9 +4,7 @@ import * as React from 'react';
 import type { PolymorphicComponentProps } from '../../types';
 
 const text = cva({
-  base: {
-    //
-  },
+  base: {},
   variants: {
     align: {
       center: {

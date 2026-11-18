@@ -51,7 +51,6 @@ function isSettledResubmit(
 ): boolean {
   const lastCheckpoint = checkpoints.at(-1);
 
-  // The last entry's version must land on `settled.appendedHead`.
   if (lastCheckpoint === undefined || lastCheckpoint.version !== settled.appendedHead) {
     return false;
   }
@@ -68,6 +67,5 @@ function isSettledResubmit(
     previousHash = buildCheckpointHashFromEntry(checkpoint);
   }
 
-  // The final rebuilt hash must reproduce `settled.lastHash`.
   return previousHash === settled.lastHash;
 }

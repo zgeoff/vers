@@ -62,7 +62,6 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
       reject(new Error('analytics upstream deadline exceeded'));
     }, UPSTREAM_DEADLINE_MS);
 
-    // the timer never keeps the process alive
     timer.unref?.();
   });
 

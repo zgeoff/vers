@@ -100,11 +100,8 @@ test('it processes events', () => {
   const wave = activity.currentWave;
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
 
-  // run the combat for 1s so that all entities should attack once
   combatExecutor.run(1000);
 
-  // in this contrived example, the avatar should kill one enemy and be left with one enemy
-  // and have received one enemy worth of damage
   expect(wave?.remaining).toBe(1);
   expect(avatar.life).toBe(60);
 });

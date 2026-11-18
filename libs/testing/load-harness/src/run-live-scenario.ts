@@ -33,8 +33,6 @@ interface RunLiveScenarioOptions {
   readonly settleTimeoutMs: number;
 }
 
-// players with the game open for the whole window; with an outage, one dependency stops part way
-// through while play goes on, and the window measures how the backlog it leaves drains
 export async function runLiveScenario(
   stack: Readonly<LoadStack>,
   options: Readonly<RunLiveScenarioOptions>,

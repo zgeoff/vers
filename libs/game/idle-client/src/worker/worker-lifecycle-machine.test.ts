@@ -1480,7 +1480,6 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
     expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
   });
 
-  // held one deep while avatar_a's run is in flight
   await runResyncTurn(context, 'avatar_b', true);
 
   currentAvatarID = 'avatar_b';
@@ -1560,7 +1559,6 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
     expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
   });
 
-  // held one deep while avatar_a's run is in flight
   await runResyncTurn(context, 'avatar_b', true);
 
   currentAvatarID = 'avatar_b';
@@ -1711,7 +1709,6 @@ test('it resyncs before a start that beats the boot report on a reload with a de
     version: 1,
   });
 
-  // the reload keeps the durable record of the delivered run and loses the in-memory one
   await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: delivered.id });
 
   const seen: Array<unknown> = [];
@@ -1867,7 +1864,6 @@ test("it attaches a second tab's start to the writer's live run without a mint",
 
   await ctx.setupStartableNode(viewer.avatar.id);
 
-  // the writer's live run: the server's active row this worker attached on its own boot
   const live = await db.activityCollection.create({
     appendedHead: 1,
     avatarID: viewer.avatar.id,
@@ -2290,7 +2286,6 @@ test('it delivers no start that a continuation held at its write mints, once a t
     expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
   });
 
-  // the player signs back in here, and the session answers again
   server.resetHandlers();
   server.use(createStubActivityProxy(viewer.user.id));
 

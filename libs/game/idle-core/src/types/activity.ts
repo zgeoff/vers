@@ -57,21 +57,18 @@ export interface ActivitySnapshot {
 }
 
 export interface Activity {
-  // meta
   readonly difficulty: number;
   readonly id: string;
   readonly name: string;
   readonly type: ActivityType;
   readonly waves: Array<Wave>;
 
-  // getters
   get currentWave(): Wave | null;
   get elapsed(): number;
   get isWavesRemaining(): boolean;
   get levelUp(): ActivityLevelUp | null;
   get rewards(): ActivityRewards;
 
-  // utils
   updateRewards: (delta: ActivityRewards) => void;
   advanceTime: (time: number) => void;
   getSnapshot: () => ActivitySnapshot;

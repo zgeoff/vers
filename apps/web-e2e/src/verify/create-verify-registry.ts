@@ -15,7 +15,6 @@ import { readLastEmail } from './read-last-email';
 import { stackHealthEndpoints } from './stack-health-endpoints';
 
 export interface VerifyRegistryOptions {
-  // the Chromium the browser driver starts, through a launcher that opens a DevTools port on it
   readonly chromiumLauncher: string;
   readonly devtoolsPort: number;
 }

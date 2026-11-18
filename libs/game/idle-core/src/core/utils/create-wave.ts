@@ -22,11 +22,9 @@ export function createWave(
   });
 
   return {
-    // meta
     enemies,
     id,
 
-    // getters
     get nextLivingEnemy() {
       return getRemainingEnemies()[0] ?? null;
     },
@@ -34,7 +32,6 @@ export function createWave(
       return getRemainingEnemies().length;
     },
 
-    // core
     getSnapshot,
   };
 }

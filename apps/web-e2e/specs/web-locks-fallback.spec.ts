@@ -45,7 +45,6 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
   await expect(page).toHaveURL(/\/respite$/u);
 
   const consoleErrors: Array<string> = [];
@@ -56,7 +55,6 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
     }
   });
 
-  // the first tab's dedicated worker wins the election
   await expect
     .poll(async () => {
       const probe = await readWriterLock(page, WRITER_LOCK_NAME);
@@ -67,10 +65,8 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
 
   const firstProbe = await readWriterLock(page, WRITER_LOCK_NAME);
 
-  // one tab spawns exactly one election worker: a held lock with an empty queue
   expect(firstProbe.pendingCount).toBe(0);
 
-  // a second tab in the same session spawns its own worker, which queues behind the writer
   const secondPage = await context.newPage();
 
   await secondPage.goto('/respite');
@@ -93,7 +89,6 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
     })
     .toBe(1);
 
-  // still exactly one writer while both tabs live
   const bothOpenProbe = await readWriterLock(secondPage, WRITER_LOCK_NAME);
 
   expect(bothOpenProbe.heldClientIDs).toStrictEqual(firstProbe.heldClientIDs);
@@ -114,7 +109,6 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
 
   expect(succeededProbe.heldClientIDs).not.toStrictEqual(firstProbe.heldClientIDs);
 
-  // the surviving tab keeps a working game shell on the new writer
   await secondPage.getByRole('link', { exact: true, name: 'Explore' }).click();
 
   await expect(secondPage).toHaveURL(/\/explore$/u);

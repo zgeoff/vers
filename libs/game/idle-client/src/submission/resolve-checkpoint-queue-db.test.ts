@@ -119,7 +119,6 @@ test('it keeps the pending-checkpoints rows when an upgrade adds the pending-act
   // run's open at the older version with a version error — drop any leftover first
   await deleteDB(upgradeTestDBName);
 
-  // an older database predating pending-activity-starts: every cache and outbox store except it
   const vOld = await openDB<CheckpointQueueSchema>(upgradeTestDBName, 5, {
     upgrade(database) {
       database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {

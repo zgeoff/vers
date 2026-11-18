@@ -191,7 +191,6 @@ test('it removes the container and stops every child before the SIGKILL when chi
     heldChildren: 4,
   });
 
-  // the ready line
   await stack.stdout.getReader().read();
 
   // wringer's `down`: SIGTERM, then SIGKILL once its grace runs out, here 1.5 s

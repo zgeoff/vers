@@ -37,8 +37,6 @@ test('it covers the viewport with one transparent fog plane', async () => {
   invariant(ctx.isMesh(plane), 'the sole child is the fog plane');
 
   expect(plane.material).toMatchObject({ depthWrite: false, transparent: true });
-
-  // one parallelogram quad — two triangles over four vertices — carries the whole gradient
   expect(plane.geometry.getAttribute('position').count).toBe(4);
   expect(plane.geometry.index?.count).toBe(6);
 

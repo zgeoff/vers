@@ -33,9 +33,7 @@ export function useFormSubmit(
         // (an analytics hook, say) must never turn that into a rejected submission
         try {
           onSuccess?.();
-        } catch {
-          // intentionally swallowed
-        }
+        } catch {}
 
         return;
       }

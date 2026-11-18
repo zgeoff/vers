@@ -1,6 +1,5 @@
 import { $ } from 'bun';
 
-// the image the dev and e2e stacks run
 const postgresImage = 'postgres:16.2-alpine3.19';
 
 // every container this harness starts carries the label, so `docker ps --filter label=` finds one
@@ -19,8 +18,6 @@ export interface PostgresContainer {
   readonly endpoint: string;
 }
 
-// A throwaway Postgres on a free loopback port, with its data on tmpfs: removing the container
-// removes every row, and no volume outlives it.
 export interface PostgresContainerOptions {
   readonly signal: AbortSignal;
   readonly readyDeadlineMs: number;
@@ -89,7 +86,6 @@ async function waitForReady(name: string, options: PostgresContainerOptions): Pr
   }
 }
 
-// The database URL a client connects with: the run's `db` endpoint, with the credentials added.
 export function toCredentialedURL(endpoint: string): string {
   const url = new URL(endpoint);
 

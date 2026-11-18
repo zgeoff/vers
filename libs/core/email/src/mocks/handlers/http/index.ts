@@ -1,6 +1,3 @@
 import { resendEmails } from './resend-emails';
 
-export const handlers = [
-  // resend
-  resendEmails,
-];
+export const handlers = [resendEmails];

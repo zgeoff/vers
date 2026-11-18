@@ -17,7 +17,6 @@ test('it returns true when elapsed time is equal or greater than the next attack
       maxDamage: 10,
       minDamage: 5,
 
-      // 1000ms interval
       speedPerMille: 1000,
     },
   });
@@ -50,7 +49,6 @@ test('it returns false when elapsed time is less than next attack time', () => {
       maxDamage: 10,
       minDamage: 5,
 
-      // 1000ms interval
       speedPerMille: 1000,
     },
   });
@@ -77,7 +75,6 @@ test('it uses the last attacked time to calculate the next attack time', () => {
       maxDamage: 10,
       minDamage: 5,
 
-      // 1000ms interval
       speedPerMille: 1000,
     },
   });
@@ -113,7 +110,6 @@ test('it returns false when the enemy is dead', () => {
       maxDamage: 10,
       minDamage: 5,
 
-      // 1000ms interval
       speedPerMille: 1000,
     },
   });

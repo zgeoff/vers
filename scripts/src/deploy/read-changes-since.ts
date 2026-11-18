@@ -14,7 +14,6 @@ const turboDryRunSchema = z.object({
 const TURBO_BIN = fileURLToPath(new URL('../../../node_modules/.bin/turbo', import.meta.url));
 
 interface ReadChangesSinceOptions {
-  // the commit the changes end at; HEAD when unset
   readonly head?: string;
 }
 

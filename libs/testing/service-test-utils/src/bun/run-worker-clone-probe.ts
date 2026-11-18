@@ -17,8 +17,6 @@ export interface WorkerCloneProbe {
   readonly remaining: ReadonlyArray<string>;
 }
 
-// Runs the fixtures with `bun test` in a child process, so the child's process-exit cleanup is the
-// one under test. It reports the databases the fixtures acquired and which of them outlive the run.
 export async function runWorkerCloneProbe(flags: ReadonlyArray<string>): Promise<WorkerCloneProbe> {
   const child = Bun.spawn(['bun', 'test', ...flags, ...FIXTURES], {
     cwd: PACKAGE_DIR,

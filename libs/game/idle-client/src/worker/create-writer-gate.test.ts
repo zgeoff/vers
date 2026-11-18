@@ -123,7 +123,6 @@ test('it restates the pending writer when another waiting writer is elected firs
     expect(ctx.broadcasts).toHaveLength(2);
   });
 
-  // the first holder dies: the earlier gate is elected, the later one still waits behind it
   ctx.fake.advanceLockQueue(WRITER_LOCK_NAME);
 
   await waitFor(() => {

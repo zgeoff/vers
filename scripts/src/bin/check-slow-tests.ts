@@ -3,9 +3,6 @@ import { z } from 'zod';
 import { collectTestTimings } from '../test-report/collect-test-timings';
 import type { JUnitReport } from '../test-report/types';
 
-// Reads the JUnit report each package's `bun test` wrote on CI and fails when any test took longer
-// than 5 s, so a slow test cannot hide behind a raised timeout. Prints the slowest tests either way.
-
 const LIMIT_SECONDS = 5;
 const SLOWEST_SHOWN = 10;
 const REPORT_FILE = 'test-report.junit.xml';

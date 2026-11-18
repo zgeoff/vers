@@ -706,7 +706,6 @@ test("it returns an empty frontier through an avatar switch, never the outgoing 
       expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
     });
 
-    // the incoming avatar settles to its own origin-only frontier
     expect(hook.result.current.has(firstOnlyID)).toBe(false);
 
     // the transition render returns an empty set rather than the outgoing avatar's held frontier,

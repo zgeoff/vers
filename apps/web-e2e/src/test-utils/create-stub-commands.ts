@@ -12,8 +12,6 @@ export interface StubCommandCall {
   readonly args: ReadonlyArray<string>;
 }
 
-// Writes a shim for each name into `<directory>/bin`, so a PATH that starts there runs the stand-in
-// in run-stub-command.ts in place of the real CLI.
 export async function createStubCommands(
   directory: string,
   names: ReadonlyArray<string>,
@@ -39,7 +37,6 @@ export async function createStubCommands(
 
 const callSchema = z.object({ name: z.string(), args: z.array(z.string()) });
 
-// Each call the stand-ins logged, in the order they started.
 export async function readStubCommandCalls(
   logPath: string,
 ): Promise<ReadonlyArray<StubCommandCall>> {

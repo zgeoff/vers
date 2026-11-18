@@ -21,7 +21,6 @@ export const Icon = {
   Close: TbX,
   Menu: TbMenu2,
 
-  // feature specific
   Account: GiCog,
   Arena: GiCrossedSwords,
   Avatar: GiCharacter,

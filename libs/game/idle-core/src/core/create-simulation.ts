@@ -92,7 +92,6 @@ export function createSimulation(): Simulation {
     }
   };
 
-  // cleans up our activity and notifies listeners
   const stopActivity = () => {
     _activity = null;
 
@@ -160,12 +159,10 @@ export function createSimulation(): Simulation {
   };
 
   return {
-    // meta
     get rng() {
       return _rng;
     },
 
-    // getters
     get activity() {
       return state.activity;
     },
@@ -188,7 +185,6 @@ export function createSimulation(): Simulation {
       return state;
     },
 
-    // utils
     addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => {
       listeners[eventName].push(listener);
     },

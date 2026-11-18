@@ -14,7 +14,6 @@ test('it calculates the next attack time', () => {
         minDamage: 5,
         name: 'Test Weapon',
 
-        // 1 attack per second = 1000ms interval
         speedPerMille: 1000,
       },
     },
@@ -25,6 +24,5 @@ test('it calculates the next attack time', () => {
   const state = { lastAttackTime: 1000 };
   const nextAttackTime = getNextAttackTime(avatar, state);
 
-  // 1000 + 1000
   expect(nextAttackTime).toBe(2000);
 });

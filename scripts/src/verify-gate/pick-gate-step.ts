@@ -1,4 +1,3 @@
-// The branch release-please opens its release pull request from.
 const releaseBranch = 'release-please--branches--main';
 
 // The REST login of the Renovate app's bot account, as a pull_request event names it.

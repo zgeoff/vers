@@ -31,7 +31,6 @@ export async function handleSetFailureActionMessage(
 
   context.broadcast(statusMessage);
 
-  // The device-local cache records the change dirty as an offline outbox entry before the push.
   await writeFailureActionCache({
     avatarID: input.avatarID,
     dirty: true,

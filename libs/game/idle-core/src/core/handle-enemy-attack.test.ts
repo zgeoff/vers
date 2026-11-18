@@ -62,7 +62,6 @@ test('it does nothing if the enemy is dead', () => {
   const activity = createActivity(activityData, ctx);
   const enemy = activity.currentWave!.nextLivingEnemy!;
 
-  // kill the enemy
   enemy.receiveDamage(100);
 
   const event: EnemyAttackEvent = {
@@ -108,7 +107,6 @@ test('it correctly resolves the correct event source', () => {
     type: CombatEventType.EnemyAttack,
   };
 
-  // kill the enemy
   firstEnemy.receiveDamage(100);
 
   handleEnemyAttack(event, avatar, activity);

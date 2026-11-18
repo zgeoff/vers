@@ -22,9 +22,6 @@ const optionsSchema = z.strictObject({
 
 const targetConfigSchema = z.strictObject({ endpoint: z.string().min(1).default('web') });
 
-// What the browser driver can't do to vers's game: read the writer worker's state through the
-// page's QA hook, move the client router, cut the network for the page and its SharedWorker, and
-// play a second device in a browser context of its own.
 export const game = defineDriver({
   name: 'game',
   options: optionsSchema,

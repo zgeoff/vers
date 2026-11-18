@@ -4,9 +4,8 @@ const port = Number(process.env['UMAMI_STUB_PORT'] ?? 3021);
 // pageviews sees each extra run
 const trackerScript = Bun.file(new URL('../vendor/umami-script.js', import.meta.url));
 
-// A stand-in for the umami deployment that app-web's analytics proxy forwards to: the stack image
-// bakes the tracker tag in, so a page that loads it needs `/script.js` to answer real JavaScript.
-// `POST /api/send` accepts and drops a beacon.
+// the stack image bakes the tracker tag in, so a page that loads it needs `/script.js` to answer
+// real JavaScript.
 function handleRequest(request: Request): Response {
   const url = new URL(request.url);
 

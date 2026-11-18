@@ -16,8 +16,6 @@ interface CreateLoadSessionDeps {
 const SESSION_COOKIE_NAME = 'en_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24;
 
-// signs a player in the way app-web's sign-in does: a verified session row, its token pair, and
-// the sealed cookie app-web reads back on every proxied call
 export async function createLoadSession(
   deps: Readonly<CreateLoadSessionDeps>,
   userID: string,

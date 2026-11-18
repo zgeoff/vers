@@ -641,7 +641,6 @@ test('it does not bounce back to the engagement screen once a remount finds the 
       writerAbortSignal: new AbortController().signal,
     });
 
-    // the first ready state engages this attempt and navigates to the engagement screen
     await waitFor(() => {
       expect(rendered.router.state.location.pathname).toBe('/activity');
     });

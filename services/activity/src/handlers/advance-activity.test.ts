@@ -482,7 +482,6 @@ test('it converges a resubmit of an already-minted continuation onto the same ro
     .where('avatarId', '=', avatar.id)
     .execute();
 
-  // no duplicate row was minted by the resubmit
   expect(rows).toHaveLength(2);
 });
 
@@ -2099,13 +2098,11 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // session A starts the avatar's live run and becomes its writer
   const started = await createActivityRow(ctx.db, {
     avatarId: avatar.id,
     scopeId: '0_0',
   });
 
-  // session B takes over the same run, kicking session A off as its writer
   const keyPair = await resolveTestServiceKeyPair();
 
   const tokenB = await createServiceToken({

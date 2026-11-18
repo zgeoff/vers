@@ -3,10 +3,6 @@ import { z } from 'zod';
 import { readFreePort } from '../verify/local/read-free-port';
 import { runLocalStack } from '../verify/local/run-local-stack';
 
-// Runs the real runLocalStack with stand-in parts for a test: no database setup, and
-// STUB_STACK_PARTS.heldChildren children from run-stub-held-server.ts in place of the services and
-// the web server. Postgres and the web build go through the `docker` and `bunx` on PATH.
-
 const partsSchema = z.object({
   readyDeadlineMs: z.number().int(),
   stopGraceMs: z.number().int(),

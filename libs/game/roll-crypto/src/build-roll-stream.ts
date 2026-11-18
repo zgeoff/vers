@@ -41,7 +41,6 @@ export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
     invariant(span <= 2 ** 32, 'range span must not exceed 2^32');
 
     if (span === 1) {
-      // A degenerate range returns min consuming no bytes.
       return min;
     }
 

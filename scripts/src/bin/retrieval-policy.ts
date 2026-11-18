@@ -3,8 +3,6 @@ import { z } from 'zod';
 import { INITIAL_RETRIEVAL_STATE, planRetrievalNudge } from '../hooks/plan-retrieval-nudge';
 import type { RetrievalState } from '../hooks/types';
 
-// runs as a PreToolUse hook on every tool and as a SessionEnd hook
-
 const inputSchema = z.object({
   session_id: z.string().min(1),
   hook_event_name: z.string(),
@@ -90,7 +88,6 @@ async function loadState(): Promise<RetrievalState> {
   return stored.success ? stored.data : INITIAL_RETRIEVAL_STATE;
 }
 
-// Malformed JSON on stdin is treated like any other invalid payload: the hook stays silent.
 async function readPayload(): Promise<unknown> {
   try {
     return await Bun.stdin.json();

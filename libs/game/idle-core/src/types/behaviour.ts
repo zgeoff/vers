@@ -13,13 +13,10 @@ export interface IBehaviour<
   T extends Entity,
   S extends BehaviourState<object> = BehaviourState<object>,
 > {
-  // meta
   readonly id: BehaviourID;
 
-  // getters
   get state(): S;
 
-  // handlers
   handlers: {
     [LifecycleEvent.Death]?: LifecycleHandler<T>;
     [LifecycleEvent.Initialize]?: LifecycleHandler<T>;
@@ -27,7 +24,6 @@ export interface IBehaviour<
     [LifecycleEvent.Reset]?: LifecycleHandler<T>;
   };
 
-  // core
   getState: () => S;
   predicate: (entity: T) => boolean;
   setState: (setStateFn: SetEntityStateFn<S>) => void;
@@ -62,10 +58,8 @@ export interface AvatarWeaponAttackBehaviour extends IBehaviour<
   Avatar,
   AvatarWeaponAttackBehaviourState
 > {
-  // meta
   readonly id: BehaviourID.AvatarWeaponAttack;
 
-  // getters
   get lastAttackTime(): number;
   get nextAttackTime(): number;
 }
@@ -78,10 +72,8 @@ export interface EnemyPrimaryAttackBehaviour extends IBehaviour<
   Enemy,
   EnemyPrimaryAttackBehaviourState
 > {
-  // meta
   readonly id: BehaviourID.EnemyPrimaryAttack;
 
-  // getters
   get lastAttackTime(): number;
   get nextAttackTime(): number;
 }

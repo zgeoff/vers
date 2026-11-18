@@ -71,7 +71,6 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
 
   invariant(ctx.isMesh(plane), 'the rendered child is the chunk tile mesh');
 
-  // one parallelogram quad — two triangles over four vertices — carries the chunk's tile
   expect(plane.geometry.getAttribute('position').count).toBe(4);
   expect(plane.geometry.index?.count).toBe(6);
 

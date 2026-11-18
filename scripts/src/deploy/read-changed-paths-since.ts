@@ -3,7 +3,6 @@ import { $ } from 'bun';
 interface ReadChangedPathsSinceOptions {
   readonly cwd?: string;
 
-  // the commit the diff ends at; HEAD when unset
   readonly head?: string;
 }
 

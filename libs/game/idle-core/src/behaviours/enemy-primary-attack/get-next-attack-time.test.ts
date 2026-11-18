@@ -18,6 +18,5 @@ test('it calculates the next attack time', () => {
   const state = { lastAttackTime: 1000 };
   const nextAttackTime = getNextAttackTime(enemy, state);
 
-  // 1000 + 1000
   expect(nextAttackTime).toBe(2000);
 });

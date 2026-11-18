@@ -16,8 +16,6 @@ export const stopActivity = os.stopActivity.handler(async (opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  // The targeted form is idempotent: a row that already left `active` succeeds as-is, and no row
-  // other than the targeted one is ever touched.
   const activityID = opts.input.activityID;
 
   const row =

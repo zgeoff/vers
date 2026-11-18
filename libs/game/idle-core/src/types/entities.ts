@@ -26,12 +26,10 @@ export interface EnemyData {
 export type HandleTickFn = (combatExecutor: CombatExecutor) => void;
 
 interface IEntity<State extends object, EntitySnapshot extends object> {
-  // meta
   readonly id: string;
   readonly level: number;
   readonly type: EntityType;
 
-  // getters
   get isAlive(): boolean;
   get life(): number;
   get status(): EntityStatus;
@@ -44,7 +42,6 @@ interface IEntity<State extends object, EntitySnapshot extends object> {
   removeBehaviour: (id: BehaviourID) => void;
   setState: (setStateFn: SetEntityStateFn<State>) => void;
 
-  // utils
   receiveDamage: (amount: number) => void;
 }
 
@@ -77,18 +74,15 @@ export interface AvatarSnapshot {
 }
 
 export interface Avatar extends IEntity<AvatarState, AvatarSnapshot> {
-  // meta
   readonly type: EntityType.Avatar;
   readonly xp: number;
 
-  // getters
   get mainHandEquipment(): EquipmentWeapon | null;
 
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: AvatarBehaviour): void;
 
-  // utils
   rollAttackDamage: () => number;
   reset: (config?: ResetConfig) => void;
   updateLevel: (level: number) => void;
@@ -117,19 +111,16 @@ export interface EnemySnapshot {
 }
 
 export interface Enemy extends IEntity<EnemyState, EnemySnapshot> {
-  // meta
   readonly name: string;
   readonly type: EntityType.Enemy;
   readonly xp: number;
 
-  // getters
   get primaryAttack(): AttackData;
 
   // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: EnemyBehaviour): void;
 
-  // utils
   rollAttackDamage: () => number;
 }
 
@@ -155,14 +146,11 @@ export interface WaveSnapshot {
 }
 
 export interface Wave {
-  // meta
   readonly enemies: Array<Enemy>;
   readonly id: string;
 
-  // getters
   get nextLivingEnemy(): Enemy | null;
   get remaining(): number;
 
-  // utils
   getSnapshot: () => WaveSnapshot;
 }

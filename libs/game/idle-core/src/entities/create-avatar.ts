@@ -94,12 +94,10 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
   };
 
   const avatar: Avatar = {
-    // meta
     id: data.id,
     type: EntityType.Avatar,
     xp: data.xp,
 
-    // getters
     get isAlive() {
       return state.status === EntityStatus.Alive;
     },
@@ -116,14 +114,12 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
       return state.status;
     },
 
-    // core
     registerBehaviour,
     getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
 
-    // utils
     rollAttackDamage: () => rollAvatarAttackDamage(avatar, ctx),
     receiveDamage: (amount: number) => {
       handleReceiveAvatarDamage(amount, avatar);
@@ -139,10 +135,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     },
   };
 
-  DEFAULT_BEHAVIOUR_FACTORIES
-
-    // create behaviours & register them if they're applicable
-    .map((createBehaviour) => createBehaviour(avatar))
+  DEFAULT_BEHAVIOUR_FACTORIES.map((createBehaviour) => createBehaviour(avatar))
     .filter((behaviour) => behaviour.predicate(avatar))
     .forEach((behaviour) => {
       registerBehaviour(behaviour);

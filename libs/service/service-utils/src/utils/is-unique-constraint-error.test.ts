@@ -29,7 +29,6 @@ test('it returns false for non-unique constraint errors', () => {
     'insert or update on table "users" violates foreign key constraint "users_email_fkey"',
   );
 
-  // foreign key violation
   error.code = '23503';
 
   expect(isUniqueConstraintError(error, 'users_email_unique')).toBeFalse();
@@ -38,7 +37,6 @@ test('it returns false for non-unique constraint errors', () => {
 test('it returns false for other postgres errors', () => {
   const error = new postgres.PostgresError('undefined table "users_email_unique"');
 
-  // undefined table
   error.code = '42P01';
 
   expect(isUniqueConstraintError(error, 'users_email_unique')).toBeFalse();

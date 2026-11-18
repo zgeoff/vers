@@ -243,8 +243,6 @@ test('it excludes a cell inside the viewport but outside every reveal disc', asy
 
   expect(result.contentVersion).toBe('2');
   expect(result.nodes).toBeEmpty();
-
-  // completedNodeIDs is never viewport-clipped, unlike nodes
   expect(result.completedNodeIDs).toStrictEqual(['0_0']);
 });
 

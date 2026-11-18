@@ -162,15 +162,11 @@ const FOG_BILLOW_DEEP = 0.08;
 function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
   const ground = sceneTSL.positionWorld.xz;
   const clock = sceneTSL.time;
-  // strongest in the frontier band: `density * (1 - density)` peaks mid-gradient and vanishes at
-  // both ends
   const band = density.mul(density.oneMinus()).mul(4);
   // noise coordinates come from world position, not uv, so drifting the camera never drags the
   // billow along with the quad
   const drift = ground.mul(FOG_BILLOW_SCALE);
   const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
-  // two octaves drifting in opposite directions, with the time term broadcast onto both axes
-  // blowing the noise field diagonally, like wind
   const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
   const billow = coarse.mul(0.7).add(fine.mul(0.3));
   // a small density-proportional term added to the band term so deep fog keeps a faint internal

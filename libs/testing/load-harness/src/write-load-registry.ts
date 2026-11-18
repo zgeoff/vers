@@ -5,8 +5,6 @@ import type { LoadEngineVersions } from './types';
 
 const RETENTION_DAYS = 3;
 
-// the rows the deploy CLI's sim-version reconcile writes on Fly: the retained version's row points
-// at its own provider, and the current one, registered last, is the version admission stamps
 export async function writeLoadRegistry(
   db: Kysely<DB>,
   versions: Readonly<LoadEngineVersions>,

@@ -14,14 +14,12 @@ export function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
       // alone (pg_isready) gives the same readiness guarantee without the exec path.
       .withWaitStrategy(Wait.forHealthCheck())
 
-      // use a memory disk for perf
       .withTmpFs({ '/var/lib/pg/data': 'rw' })
       .withEnvironment({
         PGDATA: '/var/lib/pg/data',
       })
       .withExposedPorts({ container: 5432, host: 32_999 })
 
-      // allow reusing our container across tests
       .withReuse()
       .start()
   );

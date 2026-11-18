@@ -63,7 +63,6 @@ export function useChunkStream<TEntry>(
     previousRangeRef.current = resolved.range;
     pendingRef.current = resolved.misses;
 
-    // surface any chunks already cached for this viewport, and kick the builder for the misses
     forceUpdate();
   }, [cache, userSeed, deferredViewport]);
 

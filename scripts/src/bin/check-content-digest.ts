@@ -10,10 +10,6 @@ import { readRecordedDigestsAt } from '../content/read-recorded-digests-at';
 import type { ContentDigestFinding } from '../content/types';
 import { runCommandLine } from '../utils/run-command-line';
 
-// Fails when the item-gen, roll-crypto or worldmap-content sources differ from the digest recorded
-// for the bundled content version, or when a digest recorded at the base ref changed, so a change
-// to any of those packages ships as a new content version. Exits 1 on a finding.
-
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 
 const entry = define({

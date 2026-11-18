@@ -29,9 +29,9 @@ const FETCH_EXPRESSION = `fetch(self.location.origin + '/', { cache: 'no-store' 
   (error) => 'failed ' + error.name,
 )`;
 
-// airplane mode takes the network from every context of the device at once, and Playwright's
-// offline mode never reaches a SharedWorker or a service worker. Chrome drops a DevTools network
-// emulation when the session that set it detaches, so one session holds the cut until `end`.
+// Playwright's offline mode never reaches a SharedWorker or a service worker, and Chrome drops a
+// DevTools network emulation when the session that set it detaches, so one session holds the cut
+// until `end`.
 export async function createNetworkCut(
   browser: Browser,
   context: BrowserContext,

@@ -67,14 +67,12 @@ export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext)
   };
 
   const enemy: Enemy = {
-    // meta
     id,
     level: data.level,
     name: data.name,
     type: EntityType.Enemy,
     xp: data.xp,
 
-    // getters
     get isAlive() {
       return state.status === EntityStatus.Alive;
     },
@@ -88,14 +86,12 @@ export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext)
       return state.status;
     },
 
-    // core
     registerBehaviour,
     getSnapshot,
     handleTick,
     removeBehaviour,
     setState,
 
-    // utils
     rollAttackDamage: () => rollEnemyAttackDamage(enemy, ctx),
     receiveDamage: (amount: number) => {
       handleReceiveEnemyDamage(amount, enemy);
@@ -106,10 +102,7 @@ export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext)
     },
   };
 
-  DEFAULT_BEHAVIOUR_FACTORIES
-
-    // create behaviours & register them if they're applicable
-    .map((createBehaviour) => createBehaviour(enemy))
+  DEFAULT_BEHAVIOUR_FACTORIES.map((createBehaviour) => createBehaviour(enemy))
     .filter((behaviour) => behaviour.predicate(enemy))
     .forEach((behaviour) => {
       registerBehaviour(behaviour);

@@ -266,7 +266,6 @@ test('it discards the minted row when a stop cancels the content load', async ()
 
   expect(starts.filter((row) => row.avatarID === avatarID)).toHaveLength(0);
 
-  // the avatar's predecessor reference rewinds to the row this continuation succeeded
   const lastStarted = await readLastStartedActivity(avatarID);
 
   expect(lastStarted?.lastActivityID).toBe(terminal.id);

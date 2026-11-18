@@ -28,8 +28,6 @@ export interface StackChildContext {
   readonly databaseURL: string;
 }
 
-// The parts of a start that a test swaps out. Postgres and the web build always run through the
-// `docker` and `bunx` on PATH.
 export interface LocalStackParts {
   readonly readyDeadlineMs: number;
   readonly stopGraceMs: number;
@@ -48,9 +46,6 @@ export const localStackParts: LocalStackParts = {
   readChildren: readStackChildren,
 };
 
-// The `local` target's app: Postgres in a throwaway container, this tree's eight services, a
-// Resend stub and an umami stub as child processes, and the web app's production build. It prints
-// one ready line, runs until SIGTERM or SIGINT, then removes everything it started.
 export async function runLocalStack(parts: LocalStackParts = localStackParts): Promise<number> {
   const stopController = new AbortController();
 
@@ -83,7 +78,6 @@ export async function runLocalStack(parts: LocalStackParts = localStackParts): P
   return exitCode;
 }
 
-// the stubs, the eight services and the web server, each with the URL that answers once it serves
 async function readStackChildren(context: StackChildContext): Promise<ReadonlyArray<StackChild>> {
   const ports = context.ports;
 

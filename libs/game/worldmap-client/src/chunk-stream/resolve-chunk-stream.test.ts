@@ -52,7 +52,7 @@ test('it queues no leading-edge strip when the range is unchanged from the previ
 test('it queues the strip beyond the max-x edge when the range advanced in the positive x direction', () => {
   const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
 
-  // chunks 1 and 2 (previously 0 and 1), already cached so only the prefetch strip should surface
+  // chunks 1 and 2 are already cached, so only the prefetch strip should surface
   cache.set('1_0', 'tile-1-0');
   cache.set('2_0', 'tile-2-0');
 

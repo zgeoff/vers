@@ -2,9 +2,6 @@ import { stat } from 'node:fs/promises';
 import { Glob } from 'bun';
 import { collectDocPaths } from '../docs/collect-doc-paths';
 
-// Reports every repository path a committed doc names that does not exist, so a rename cannot leave
-// a doc pointing at nothing. Exits 1 when any is missing.
-
 const DOC_GLOBS = ['AGENTS.md', 'README.md', 'docs/**/*.md', '.claude/skills/*/SKILL.md'];
 
 // repo-sync delivers the ci-design, docs-writing and skill-writing skills from zgeoff/tools, and

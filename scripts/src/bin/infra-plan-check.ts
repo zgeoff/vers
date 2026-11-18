@@ -4,10 +4,6 @@ import { readMainTip } from '../infra/read-main-tip';
 import { runInfraPlanCheck } from '../infra/run-infra-plan-check';
 import { requireEnvVar } from '../utils/require-env-var';
 
-// Previews the prod stack of the program in INFRA_PATH, guards the plan, and writes outcome=apply
-// or outcome=held to GITHUB_OUTPUT. DRIFT is the drift check's outcome, and EVENT
-// workflow_dispatch applies a held plan of main's tip. Needs OP_SERVICE_ACCOUNT_TOKEN.
-
 const result = await runInfraPlanCheck({
   commit: requireEnvVar('COMMIT', "a dispatch applies only the commit at main's tip"),
   drift: z

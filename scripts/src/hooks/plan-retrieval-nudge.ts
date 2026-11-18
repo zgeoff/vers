@@ -92,7 +92,6 @@ function advanceResearch(state: RetrievalState, kind: RetrievalKind): RetrievalS
     .exhaustive();
 }
 
-// Consecutive content searches in the implement phase before a nudge.
 const SEARCH_THRESHOLD = 3;
 
 // Interleaved content searches and whole-file code reads in the implement phase before a nudge.
@@ -121,7 +120,6 @@ function formatImplementNudge(state: RetrievalState): string | null {
   ].join(' ');
 }
 
-// Consecutive Serena symbol lookups in the research phase, with no file read between, before a nudge.
 const LOOKUP_THRESHOLD = 3;
 
 function formatResearchNudge(state: RetrievalState): string | null {

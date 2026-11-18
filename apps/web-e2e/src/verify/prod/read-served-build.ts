@@ -16,8 +16,6 @@ const healthSchema = z.object({
     .transform((commit) => commit ?? null),
 });
 
-// Reads the commit the web app serves and checks it against this clone's main, as the doctor's
-// served-build check on prod.
 export async function readServedBuild(
   http: HttpClient,
 ): Promise<{ readonly served: string; readonly main: string }> {

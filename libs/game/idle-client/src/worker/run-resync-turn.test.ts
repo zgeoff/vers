@@ -287,7 +287,6 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
   await ctx.context.getSubmitter().submit(staleActivity.id, createMockStartedCheckpoint());
   await ctx.flush();
 
-  // the flush attempt failed and held the row for retry
   const heldRows = await readQueuedCheckpoints(staleActivity.id);
 
   expect(heldRows).toHaveLength(1);
@@ -1099,7 +1098,6 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
     verifiedHead: 0,
   });
 
-  // the run is simulating live on this device when another session takes the writer
   const input = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), activity);
   const simulation = createSimulation();
 
@@ -1190,12 +1188,10 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
     }),
   );
 
-  // the device already knows it was displaced from this run
   context.setWriterDisplacedActivityID(activity.id);
 
   const first = runResyncTurn(context, viewer.avatar.id, false);
 
-  // the player clicks continue-here while the automatic resync is still parked on its held flush
   await runResyncTurn(context, viewer.avatar.id, true);
 
   expect(resume).not.toHaveBeenCalled();
@@ -1207,7 +1203,6 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
   expect(context.getActivity()?.id).toBe(activity.id);
   expect(context.getWriterDisplacedActivityID()).toBeNull();
 
-  // the claiming install resolved the recorded displacement and told every tab
   await waitFor(() => {
     expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(3);
   });
