@@ -51,3 +51,12 @@ test('it reports the line that names each path', () => {
     { line: 4, path: 'services/replay' },
   ]);
 });
+
+test('it collects a path under the agents and claude skill folders', () => {
+  const markdown = 'Read `.agents/skills/missing/SKILL.md` and `.claude/skills/missing/SKILL.md`.';
+
+  expect(collectDocPaths(markdown, 'AGENTS.md')).toStrictEqual([
+    { line: 1, path: '.agents/skills/missing/SKILL.md' },
+    { line: 1, path: '.claude/skills/missing/SKILL.md' },
+  ]);
+});
