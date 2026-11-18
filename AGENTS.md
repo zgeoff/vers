@@ -78,13 +78,8 @@ Dependencies:
 - Give every first-party package that `bun.lock` installs, such as `@zgeoff/std`, a release-age
   exclude, by the [First-party packages](.claude/skills/ci-design/SKILL.md#first-party-packages)
   rule in ci-design.
-- Run `bun run deps:check` where ci-design says `chex dependency-gates`. CI runs `deps:check` in the
-  PR checks and the weekly dependency-health job. Its results differ from `chex dependency-gates` in
-  these cases:
-  - `deps:check` fails on an audit ignore that `bun audit fix` can clear.
-  - `deps:check` passes an override that pins the catalog version, because that override holds every
-    copy on that version.
-  - `deps:check` passes a first-party package with no release-age exclude.
+- Run `bun x @zgeoff/chex dependency-gates` to check release-age excludes, overrides and audit
+  ignores. CI runs it in the PR checks and the weekly dependency-health job.
 - TypeScript is version 7, with no `baseUrl` and no path aliases, so write each import relative to
   the importing file.
 
