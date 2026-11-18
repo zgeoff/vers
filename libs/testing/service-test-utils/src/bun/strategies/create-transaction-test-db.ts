@@ -1,7 +1,9 @@
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
+import { removeTestDatabase } from '@vers/db/test-support';
 import type { Kysely } from 'kysely';
-import { createDatabaseFromTemplate } from '../create-database-from-template';
+import { cloneDatabaseFromTemplate } from '../clone-database-from-template';
+import { registerWorkerClone } from '../register-worker-clone';
 import type { TestDBHandle } from '../test-db-handle';
 
 export async function createTransactionTestDB(): Promise<TestDBHandle> {
@@ -16,16 +18,33 @@ export async function createTransactionTestDB(): Promise<TestDBHandle> {
   };
 }
 
-let workerDB: Promise<Kysely<DB>> | undefined;
+let workerDB: Promise<WorkerDB> | undefined;
 
-function resolveWorkerDB(): Promise<Kysely<DB>> {
+async function resolveWorkerDB(): Promise<Kysely<DB>> {
   workerDB ??= createWorkerDB();
 
-  return workerDB;
+  const worker = await workerDB;
+
+  return worker.db;
 }
 
-async function createWorkerDB(): Promise<Kysely<DB>> {
-  const databaseURL = await createDatabaseFromTemplate();
+interface WorkerDB {
+  readonly databaseURL: string;
+  readonly db: Kysely<DB>;
+}
 
-  return createDB({ databaseURL, resumeDetection: false });
+async function createWorkerDB(): Promise<WorkerDB> {
+  const databaseURL = await cloneDatabaseFromTemplate();
+
+  const db = createDB({ databaseURL, resumeDetection: false });
+
+  registerWorkerClone(async () => {
+    workerDB = undefined;
+
+    await db.destroy();
+
+    await removeTestDatabase(databaseURL);
+  });
+
+  return { databaseURL, db };
 }

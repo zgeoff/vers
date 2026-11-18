@@ -1,10 +1,10 @@
 import { createDB } from '@vers/db';
 import { removeTestDatabase } from '@vers/db/test-support';
-import { createDatabaseFromTemplate } from '../create-database-from-template';
+import { cloneDatabaseFromTemplate } from '../clone-database-from-template';
 import type { TestDBHandle } from '../test-db-handle';
 
 export async function createDatabaseTestDB(): Promise<TestDBHandle> {
-  const databaseURL = await createDatabaseFromTemplate();
+  const databaseURL = await cloneDatabaseFromTemplate();
 
   const db = createDB({ databaseURL, resumeDetection: false });
 
