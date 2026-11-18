@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/bench-shape -- the `bench` script runs this mitata file directly with bun, not through `rig bench`
+
 import { buildStateFromSeed } from '@vers/game-utils';
 import type { EncounterContent } from '@vers/game-utils';
 import { bench, run } from 'mitata';

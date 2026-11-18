@@ -22,8 +22,62 @@
   },
   "rules": {
     // `executeQuery` implements Kysely's database connection, which calls it
-    // by that name
-    "zgeoff/function-verb": ["error", { "exemptNames": ["deleteCookie", "executeQuery"] }],
+    // by that name; `seed` is the export kysely-ctl runs from a seeds/ file
+    "zgeoff/function-verb": ["error", { "exemptNames": ["deleteCookie", "executeQuery", "seed"] }],
+
+    // packages that have yet to fold their loose modules into feature folders
+    // and to rename `lib/` to `utils/`; each entry leaves the list as its
+    // package passes
+    "zgeoff/feature-folders": [
+      "error",
+      {
+        "pending": [
+          "apps/web",
+          "apps/web-e2e",
+          "contracts/activity",
+          "contracts/replay",
+          "libs/core/email",
+          "libs/data/db",
+          "libs/game/game-rendering",
+          "libs/game/game-utils",
+          "libs/game/idle-core",
+          "libs/game/worldmap-core",
+          "libs/service/service-runtime",
+          "libs/testing/load-harness",
+          "libs/testing/mock-services",
+          "libs/testing/qa-account",
+          "services/activity",
+          "services/replay",
+          "services/session"
+        ]
+      }
+    ],
+
+    // packages that have yet to rename their files for their main export;
+    // each entry leaves the list as its package passes
+    "zgeoff/file-named-for-export": [
+      "error",
+      {
+        "pending": [
+          "apps/web",
+          "apps/web-e2e",
+          "infra",
+          "libs/core/email",
+          "libs/data/db",
+          "libs/game/idle-client",
+          "libs/game/idle-core",
+          "libs/game/worldmap-client",
+          "libs/game/worldmap-core",
+          "libs/service/service-auth",
+          "libs/testing/test-utils",
+          "scripts",
+          "services/email",
+          "services/keys",
+          "services/replay",
+          "services/session"
+        ]
+      }
+    ],
 
     // the shared config's version minus ignorePattern — baseline(#236)
     // disable directives sit on their own line above the flagged site, and
@@ -129,6 +183,14 @@
     "unicorn/require-post-message-target-origin": "off"
   },
   "overrides": [
+    {
+      // kysely-ctl names a migration or a seed `<timestamp>_<name>.ts` and loads it
+      // by that name, so the generated names stay as they are
+      "files": ["**/libs/data/db/migrations/**", "**/libs/data/db/seeds/**"],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
+    },
     {
       // the trace storage constructs AsyncLocalStorage lazily through a
       // namespace import, so browser bundles reaching it through the orpc
