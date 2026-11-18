@@ -24,7 +24,6 @@ import { runContinuation } from './run-continuation';
 
 interface SeedCachesOptions {
   readonly avatarID: string;
-  readonly cacheDocument?: boolean;
 }
 
 async function setupTest(options: Readonly<SeedCachesOptions>): Promise<NodeSeed> {
@@ -37,12 +36,6 @@ async function setupTest(options: Readonly<SeedCachesOptions>): Promise<NodeSeed
   await writeNodeSeeds(options.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  if (options.cacheDocument !== false) {
-    await writeContentDocumentCache(
-      createMockContentDocument({ contentVersion: seed.contentVersion }),
-    );
-  }
-
   return seed;
 }
 
@@ -50,6 +43,10 @@ test('it mints the next row locally, installs it, and registers from a zero curs
   const avatarID = 'avatar_continue';
 
   const seed = await setupTest({ avatarID });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
@@ -90,6 +87,10 @@ test('it persists the minted row durably before installing it', async () => {
 
   const seed = await setupTest({ avatarID });
 
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
   const context = createStubWorkerContext({
     bundledEngineHash: 'engine_hash_1',
     submitter: createStubSubmitter(),
@@ -118,6 +119,10 @@ test('it stamps the terminal row it succeeds as the predecessor and keys the sta
 
   const seed = await setupTest({ avatarID });
 
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
   const context = createStubWorkerContext({
     bundledEngineHash: 'engine_hash_1',
     submitter: createStubSubmitter(),
@@ -144,6 +149,10 @@ test("it anchors the next row at the scope's cached anchor", async () => {
   const avatarID = 'avatar_anchor';
 
   const seed = await setupTest({ avatarID });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 
   const context = createStubWorkerContext({
     bundledEngineHash: 'engine_hash_1',
@@ -191,6 +200,10 @@ test('it returns untouched when the runtime moved on before its turn ran', async
 
   const seed = await setupTest({ avatarID });
 
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
   const simulation = createSimulation();
@@ -209,7 +222,7 @@ test('it returns untouched when the runtime moved on before its turn ran', async
 test('it discards the minted row when a stop cancels the content load', async () => {
   const avatarID = 'avatar_stopped';
 
-  const seed = await setupTest({ avatarID, cacheDocument: false });
+  const seed = await setupTest({ avatarID });
 
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
