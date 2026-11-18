@@ -1513,7 +1513,7 @@
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.10.8",
-    "@zgeoff/rig": "0.2.1",
+    "@zgeoff/rig": "0.2.5",
     "@zgeoff/std": "0.4.3",
     "@zgeoff/umami-mcp": "0.1.2",
     "autoprefixer": "10.6.2",
@@ -3117,7 +3117,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.10.8", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-6fBF2VOJ0huoqLLCPNvhyMqoepUGmYVpJhCXeYYq4lyIWtM56ch9jqCifrVDqArkyqWkGtHgO+OTPzTbCyDeQw=="],
 
-    "@zgeoff/rig": ["@zgeoff/rig@0.2.1", "", { "dependencies": { "@zgeoff/diet": "0.2.2", "@zgeoff/std": "0.4.3", "gunshi": "1.0.0-rc.1", "ts-pattern": "5.9.2", "zod": "4.6.7" }, "bin": { "rig": "src/cli.ts" } }, "sha512-16CI50JVnvCHOqDUTtqodoP3I/hDZZC1fYQ6fkVaqOtBgI15cNbtmqpaCjI/ExM+aNT9qUYWsM7n1Ors3Wa6ug=="],
+    "@zgeoff/rig": ["@zgeoff/rig@0.2.5", "", { "dependencies": { "@zgeoff/diet": "0.2.2", "@zgeoff/std": "0.4.3", "gunshi": "1.0.0-rc.1", "ts-pattern": "5.9.2", "zod": "4.6.7" }, "bin": { "rig": "src/cli.ts" } }, "sha512-R+uLuLGTJYh63FyTP+p5cegayalFuYyi54Q6h1bvx25ym6I/BsNX9vGB+sz+0ym+duVoVefwuiAaIJC5pu6Ycw=="],
 
     "@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
