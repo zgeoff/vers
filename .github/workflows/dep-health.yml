@@ -35,7 +35,7 @@ jobs:
 
       # a run with no pull request still fails once an exclude's removal date passes
       - name: Dependency gates
-        run: bun run deps:check
+        run: bun x @zgeoff/chex dependency-gates
 
   outdated:
     runs-on: ubuntu-latest
