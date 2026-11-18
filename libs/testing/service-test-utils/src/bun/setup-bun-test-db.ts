@@ -20,7 +20,6 @@ export async function setupBunTestDB(): Promise<void> {
   // file and would drop a clone a module still holds, so the clones of ended runs are dropped here
   await removeOrphanedClones(resolveTestDBTarget().baseURI);
 
-  // drops the worker's shared clones once its files are done, so a run leaves none behind
   afterAll(releaseWorkerClones);
 }
 

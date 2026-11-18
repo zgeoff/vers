@@ -68,7 +68,6 @@ test('it keeps the refusal on screen when the server refuses a run started with 
 
   await expect(refusal).toBeVisible({ timeout: 20 * 1000 });
 
-  // the worker resyncs once the drop is done, and the refusal stays until the player leaves it
   await expect
     .poll(async () => {
       const snapshot = await readWorkerSnapshot(page);

@@ -26,7 +26,7 @@ import type {
 import { WORKER_TO_CLIENT_CHANNEL } from './constants';
 import { useSimulationTransport } from './use-simulation-transport';
 
-// a browser with a SharedWorker also has Web Locks, which the transport pick now requires; the
+// a browser with a SharedWorker also has Web Locks, which the transport pick requires; the
 // test runtime has neither, so both are stubbed together
 function setupTest() {
   const constructedWorkers: Array<EventTarget> = [];
@@ -104,8 +104,6 @@ test('it creates a client over the SharedWorker connection', () => {
 test('it constructs one client for sibling consumers mounting in the same commit', () => {
   const ctx = setupTest();
 
-  // sibling effects all run before any store write re-renders them, so only an imperative store
-  // check keeps the second and third consumer from constructing their own client
   const rendered = render(
     createElement(
       'div',

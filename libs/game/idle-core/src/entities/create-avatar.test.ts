@@ -64,7 +64,6 @@ test('it reduces life and updates status when killed', () => {
   expect(avatar.status).toBe(EntityStatus.Alive);
   expect(avatar.isAlive).toBeTrue();
 
-  // overkill by 5
   avatar.receiveDamage(95);
 
   expect(avatar.life).toBe(0);

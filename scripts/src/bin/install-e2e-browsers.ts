@@ -5,8 +5,7 @@ import { runE2EBrowserInstall } from '../ci/run-e2e-browser-install';
 import { requireEnvVar } from '../utils/require-env-var';
 import { runCommandLine } from '../utils/run-command-line';
 
-// Installs the Playwright browsers an e2e job runs, with their system packages, on a CI runner. The
-// job caches ~/apt-archives, where apt keeps the packages it downloads.
+// the job caches ~/apt-archives, where apt keeps the packages it downloads.
 
 const entry = define({
   name: 'install-e2e-browsers',

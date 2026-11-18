@@ -8,9 +8,8 @@ export const runEvictionActor = fromPromise<
   { readonly context: WorkerContext; readonly request: PendingFlowRequestOf<'eviction'> }
 >((args) =>
   runFlowBody('eviction', async () => {
-    // SUBMITTER_EVICTED can land synchronously inside the submitter's own flush callback, ahead
-    // of the child settlement that records the eviction on the submitter — waiting a macrotask
-    // lets every microtask that settlement rides land first, so the eviction's guard reads it
+    // the eviction event can land synchronously inside the submitter's flush callback, before the
+    // settlement that records the eviction; a macrotask lets that settlement land first
     await waitForMacrotask();
 
     applyEviction(args.input.context, args.input.request.activityID);

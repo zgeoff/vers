@@ -17,9 +17,7 @@ interface LoadSampler {
   readonly stop: () => Promise<SamplerRecording>;
 }
 
-// samples the shared database and the containers from outside the stack, so no instrument the
-// services lack is needed; the first sample is the baseline that later proofs are aged against, and
-// the stop takes a last one, so a proof that lands after the last tick still gets its age
+// samples from outside the stack, so the services need no instrument they lack
 export async function createLoadSampler(
   options: Readonly<CreateLoadSamplerOptions>,
 ): Promise<LoadSampler> {

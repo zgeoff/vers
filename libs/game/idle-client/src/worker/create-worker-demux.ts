@@ -49,8 +49,8 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   const outgoing = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
   const tabs = new Map<string, Tab>();
 
-  // the virtual port delivers synchronously: `upgrade` registers the router's listener before the
-  // incoming handler below relays the same frame, so no buffering or `start()` is needed
+  // the virtual port delivers synchronously: the router's listener is registered before the same
+  // frame is relayed to it, so no buffering or `start()` is needed
   const buildVirtualPort = (tabID: string, tab: Tab): VirtualPort => ({
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
       if (type === 'message') {

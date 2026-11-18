@@ -734,7 +734,6 @@ test('it defers an activityStart the account switched away from, carrying the sw
     refusal: { code: 'AVATAR_NOT_ACTIVE', reason: null },
   });
 
-  // held, not dropped: switching back delivers it
   const stored = await readActivityStart(row.id);
 
   expect(stored).toStrictEqual(row);

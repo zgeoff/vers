@@ -18,8 +18,6 @@ export function makeTracingInterceptor<T extends ClientContext = ClientContext>(
       options.path.join('.'),
       { kind: SpanKind.CLIENT },
       async (span) => {
-        // Prefers the span's own trace context, falls back to the ambient request's, and mints
-        // fresh only when neither exists (background work with no request scope).
         const outboundTrace = findSpanTraceContext() ?? findTraceContext() ?? createTraceContext();
 
         options.request.headers['traceparent'] = buildTraceparent(outboundTrace);

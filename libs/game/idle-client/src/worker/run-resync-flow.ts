@@ -540,7 +540,6 @@ async function updateLatestRunRecords(
   const held = context.getLatestRun();
   const heldID = held !== null && held.avatarID === activity.avatarID ? held.activityID : undefined;
 
-  // an install records the live row itself, with the earnings its replayed prefix carries
   if (context.getActivity()?.id !== activity.id && !(await probeRecordAhead(heldID, activity.id))) {
     context.setLatestRun({
       activityID: activity.id,

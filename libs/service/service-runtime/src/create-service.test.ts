@@ -35,9 +35,8 @@ function setupTest() {
 
   const router = {
     getActiveSpanStability: os.getActiveSpanStability.handler(async () => {
-      // exercises the async-context fidelity the Bun spike verified: a macrotask yield and a
-      // Promise.all both cross a real await boundary, and the request's span stays the active
-      // one (a defined span, not a fresh or absent one) on both sides
+      // a macrotask yield and a Promise.all each cross a real await boundary, where a runtime
+      // that loses async context drops the request's active span
       const before = trace.getActiveSpan();
 
       await setImmediate();
@@ -631,8 +630,8 @@ test('it reports an unexpected handler error to the error backend exactly once',
     setSentryHandleForTesting(previousHandle);
   });
 
-  // no SENTRY_DSN is set, so createService's own `startErrorReporting` call below no-ops and
-  // never overwrites this stub
+  // no SENTRY_DSN is set, so the service's own error-reporting start no-ops and never
+  // overwrites this stub
   setSentryHandleForTesting({
     captureException: (error) => {
       reported.push(error);

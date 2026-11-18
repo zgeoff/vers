@@ -48,8 +48,6 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const resyncStatus = useResyncStatus();
   const avatarID = avatarQuery.data?.id;
   const isAutoRetryChecked = idleWorkerHandle.failureAction === ActivityFailureAction.Retry;
-
-  // one start call per selected node, latched by scope id
   const [attemptScopeID, setAttemptScopeID] = useState<string | undefined>(undefined);
   const attemptGeneration = useRef(writerGeneration);
 

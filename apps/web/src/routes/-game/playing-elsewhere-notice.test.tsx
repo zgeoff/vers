@@ -29,8 +29,6 @@ test('it dismisses by clearing the displaced state, and a fresh displacement re-
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-  // a later displacement — the same run taken again after the player signs back in — arrives as a
-  // fresh worker broadcast and re-opens the notice
   setWriterDisplacedActivityID('activity_1');
 
   const dialog = await screen.findByRole('dialog');

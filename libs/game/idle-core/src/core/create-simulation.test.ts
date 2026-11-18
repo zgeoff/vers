@@ -142,11 +142,7 @@ test('it calls an event listener when the state updates', () => {
 
   simulation.addEventListener('updated', listenerSpy);
   simulation.startActivity(avatarData, activityData);
-
-  // skip our initialisation state
   simulation.run(1);
-
-  // run long enough for an attack cycle to occur
   simulation.run(5000);
 
   expect(listenerSpy).toHaveBeenCalledExactlyOnceWith(simulation.state);

@@ -24,8 +24,6 @@ interface ServiceEnvRequest {
   readonly stackEnvText: string;
 }
 
-// One service's environment: its committed dev env, with the e2e stack's single throwaway keypair
-// in place of the dev keys, and every address pointed at this stack's own ports.
 export function buildServiceEnv(request: ServiceEnvRequest): Record<string, string> {
   const development = parseEnv(request.developmentEnvText);
   const keys = parseEnv(request.stackEnvText);
@@ -50,8 +48,8 @@ interface WebEnvRequest {
   readonly stackEnvText: string;
 }
 
-// The web server's environment, as the e2e stack sets it. The live renderer stays on: only the
-// world map it draws reveals nodes and caches their start inputs, so with it off no run can start.
+// the live renderer stays on: only the world map it draws reveals nodes and caches their start
+// inputs, so with it off no run can start.
 export function buildWebEnv(request: WebEnvRequest): Record<string, string> {
   const keys = parseEnv(request.stackEnvText);
 

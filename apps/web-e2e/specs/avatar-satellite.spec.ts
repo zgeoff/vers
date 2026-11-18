@@ -16,7 +16,6 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
   await expect(page).toHaveURL(/\/respite$/u);
 
   // scope the no-console-errors assertion to the satellite-canvas walk this spec is about; the

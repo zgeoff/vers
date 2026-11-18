@@ -3,10 +3,8 @@ export interface ActivityExecutorSnapshot {
 }
 
 export interface ActivityExecutor {
-  // getters
   get elapsed(): number;
 
-  // utils
   getSnapshot: () => ActivityExecutorSnapshot;
   reset: () => void;
   run: (delta: number) => void;
@@ -15,7 +13,6 @@ export interface ActivityExecutor {
 export type CombatExecutorSnapshot = ActivityExecutorSnapshot;
 
 export interface CombatExecutor extends ActivityExecutor {
-  // utils
   scheduleEvent: (event: CombatEvent) => void;
 }
 

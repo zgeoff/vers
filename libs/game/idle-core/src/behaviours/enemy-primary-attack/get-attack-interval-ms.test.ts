@@ -17,6 +17,5 @@ test('it calculates the primary attack interval', () => {
   const enemy = createEnemy('test-enemy', enemyData, ctx);
   const interval = getAttackIntervalMS(enemy);
 
-  // 1000ms / 0.55 = 1818ms
   expect(interval).toBe(1818);
 });

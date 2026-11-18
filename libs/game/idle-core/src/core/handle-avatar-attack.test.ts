@@ -39,7 +39,6 @@ test('it applies damage to the first living enemy', () => {
   const wave = activity.currentWave;
   const firstEnemy = wave?.nextLivingEnemy;
 
-  // kill the first enemy
   firstEnemy?.receiveDamage(100);
 
   const event: AvatarAttackEvent = {
@@ -50,6 +49,5 @@ test('it applies damage to the first living enemy', () => {
 
   handleAvatarAttack(event, avatar, activity);
 
-  // verify second enemy's life
   expect(wave?.nextLivingEnemy?.life).toBe(90);
 });

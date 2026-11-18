@@ -143,7 +143,6 @@ export async function runOfflineReturnScenario(
   };
 }
 
-// the activity the player left running when the game closed: admitted, with nothing appended
 async function writeClosedActivity(player: ConnectedPlayer): Promise<void> {
   const run = await runActivityAttempt({
     activityID: `act_${createId()}`,

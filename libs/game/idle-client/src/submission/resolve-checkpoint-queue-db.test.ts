@@ -78,8 +78,6 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
 });
 
 test('it reads a node-seeds cache row that fails its schema as a miss and deletes the row', async () => {
-  // node-seeds is a cache: a row that no longer matches its contract schema self-heals on read
-  // against the real queue database, independent of any version upgrade running at all.
   const cacheDB = await resolveCheckpointQueueDB();
 
   const transaction = cacheDB.transaction(NODE_SEEDS_STORE_NAME, 'readwrite');
@@ -105,9 +103,6 @@ test('it reads a node-seeds cache row that fails its schema as a miss and delete
 });
 
 test('it keeps the pending-checkpoints rows when an upgrade adds the pending-activity-starts outbox store', async () => {
-  // pending-checkpoints and pending-activity-starts are the outbox: adding the outbox store a
-  // database predates must preserve the queued checkpoints already there, since a miss would
-  // silently discard un-synced local progress.
   const upgradeTestDBName = 'vers-idle-checkpoint-queue-outbox-upgrade-test';
 
   const queuedCheckpoint = {
@@ -119,7 +114,6 @@ test('it keeps the pending-checkpoints rows when an upgrade adds the pending-act
   // run's open at the older version with a version error — drop any leftover first
   await deleteDB(upgradeTestDBName);
 
-  // an older database predating pending-activity-starts: every cache and outbox store except it
   const vOld = await openDB<CheckpointQueueSchema>(upgradeTestDBName, 5, {
     upgrade(database) {
       database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {

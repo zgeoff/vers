@@ -178,7 +178,6 @@ test('it mints the new run on a build that holds everything the stopped run earn
     tail: createMockProgressCheckpoint({ rewards: { xp: 10 } }),
   });
 
-  // the stopped run's last tick lands between the mint's reads and the halt
   submitter.flushNow = mock(() => {
     context.setLatestRun({
       activityID: previous.id,
@@ -237,8 +236,6 @@ test('it leaves the live run intact when a different-scope switch cannot mint th
   context.setSimulation(simulation);
   context.setActivity(previous);
 
-  // the account stamps are cached, but the target scope's node seed is not — so the mint fails
-  // only for the missing cache, and the switch must abandon it without touching the live run
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
   const result = await handleStartActivityMessage(context, {
@@ -274,7 +271,6 @@ test('it refuses a start with unreconstructed until a reconstruction has run sin
     createMockContentDocument({ contentVersion: seed.contentVersion }),
   );
 
-  // the network is gone on this cold open: the prerequisite resync cannot read server progress
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       throw new Error('network unreachable');
@@ -338,8 +334,7 @@ test('it answers failed without reporting a fault when a worker shutdown aborts 
 
   const shutdownController = new AbortController();
 
-  // shutdown is permanent, unlike a stop scope's reset-on-advance — aborting it before the flow
-  // ever runs is how a worker reload's abort reaches this entry check
+  // a worker reload aborts shutdown before any flow runs, and shutdown never resets
   shutdownController.abort();
 
   const context = createStubWorkerContext({
@@ -395,7 +390,6 @@ test('it abandons a superseded different-scope switch without touching the live 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  // a fresher selection claims the runtime while the different-scope switch is mid-flush
   flushEffect.current = () => {
     context.setStartToken('a-fresher-token');
   };
@@ -452,8 +446,6 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  // the player stops mid-flush: the stop scope advances, so the fresh mint the switch was about
-  // to install must be stopped back durably instead
   stopEffect.current = () => {
     context.advanceStopScope();
   };
@@ -468,8 +460,6 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   expect(context.getActivity()?.id).toBe(previous.id);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  // the minted row was persisted as a recoverable activity start before the mid-switch stop landed,
-  // and its stop-back was delivered durably rather than dropped
   const rows = await readAllActivityStarts();
 
   expect(rows).toHaveLength(1);

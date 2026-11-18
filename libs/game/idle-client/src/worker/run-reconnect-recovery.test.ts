@@ -25,8 +25,6 @@ test("it resyncs the reporting tab's avatar when an undelivered start names a di
   const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const ctx = await setupTest(viewer.user.id);
 
-  // an undelivered activity start names this avatar, so the recovery would drain it if the
-  // account were still on that avatar
   await writeActivityStart(createMockActivityData({ avatarID: avatar.id }));
 
   await db.activityCollection.create({
@@ -134,7 +132,6 @@ test('it delivers a stop raised offline even when no resync follows', async () =
 
   await writePendingStopIntent({ activityID: row.id, avatarID: viewer.avatar.id });
 
-  // a live run gates the resync, but the stop must still deliver
   ctx.context.setActivity(createMockActivityData());
 
   await runReconnectRecovery(ctx.context, viewer.avatar.id);

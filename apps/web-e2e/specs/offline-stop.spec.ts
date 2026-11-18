@@ -54,7 +54,6 @@ test('it saves what a run earned with the network down before the player ended i
 
   const outage = await createSharedWorkerOutage(browser);
 
-  // the run plays on with the network down until a checkpoint it earned fails to send
   await expect
     .poll(
       async () => {

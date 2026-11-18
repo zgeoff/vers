@@ -3,8 +3,6 @@ import { os } from './os';
 
 const MOCK_QA_PASSWORD = 'mock-qa-password';
 
-// a stand-in for the QA seeding procedure: it stores the account and its QA avatar at the level,
-// and simulates no runs
 export const createQAAccount = os.createQAAccount.handler(async (opts) => {
   const email = `${opts.input.user}@qa.versidle.com`;
 

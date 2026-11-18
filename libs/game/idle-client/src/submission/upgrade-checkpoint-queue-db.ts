@@ -36,13 +36,10 @@ export function upgradeCheckpointQueueDB(
     database.createObjectStore(PREFERENCES_STORE_NAME);
   }
 
-  // `content-documents` caches published content by `contentVersion`.
   if (!database.objectStoreNames.contains(CONTENT_DOCUMENT_STORE_NAME)) {
     database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
   }
 
-  // `node-seeds` caches a revealed world-map node's start inputs — genesis seed, encounter, and
-  // content version — by its `[avatarID, nodeID]` pair.
   if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
     database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
   }

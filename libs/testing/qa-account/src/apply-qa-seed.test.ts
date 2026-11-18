@@ -11,8 +11,8 @@ import invariant from 'tiny-invariant';
 import { applyQASeed } from './apply-qa-seed';
 import type { QASeedResult } from './apply-qa-seed';
 
-// applyQASeed commits its rows in its own interactive transaction, which the default
-// transaction-isolation handle can't nest — every test here runs against a committed schema clone.
+// the seed commits in its own interactive transaction, which the default transaction-isolation
+// handle can't nest
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

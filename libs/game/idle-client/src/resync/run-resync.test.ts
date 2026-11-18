@@ -185,7 +185,6 @@ test('it attaches live when the gap is negligible, leaving the submitter untouch
   expect(result.report).toBeUndefined();
   expect(result.progress?.activity).toStrictEqual(activity);
 
-  // the submitter was never registered for this activity, so a checkpoint for it is dropped
   await ctx.submitter.submit(activity.id, createMockProgressCheckpoint());
 
   const queued = await readQueuedCheckpoints(activity.id);
@@ -350,8 +349,6 @@ test('it delivers checkpoints a previous worker left queued and plans against th
     submitter: ctx.submitter,
   });
 
-  // the stranded rows landed as one append onto the seeded head, freshening the row — so the
-  // refetched gap is gone and the plan attaches live at the head they advanced
   const landed = db.checkpointCollection.findMany((query) =>
     query.where({ activityID: activity.id }),
   );
@@ -465,7 +462,6 @@ test('it leaves a live activity queue untouched instead of draining it', async (
     verifiedHead: 0,
   });
 
-  // a checkpoint the live writer queued during the fetch round trip — pipeline, not stranded work
   await writeQueuedCheckpoint(
     activity.id,
     createMockCheckpointBatchEntry({ hash: 'in_flight_hash_6', version: 6 }),
@@ -690,7 +686,6 @@ test('it refetches after a claim that reveals appends the fetch missed', async (
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 
-      // the displaced writer lands one more batch between the first fetch and the claim
       const appendedHead = fetches === 1 ? 0 : 2;
 
       return {
@@ -753,7 +748,6 @@ test('it plans the terminal outcome without claiming when the run ends before th
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 
-      // the other session stops the run between the first fetch and the claim
       const status = fetches === 1 ? ('active' as const) : ('stopped' as const);
 
       return {
@@ -812,7 +806,6 @@ test('it drains a stale fork before claiming, so the fork lands as an eviction, 
     verifiedHead: 0,
   });
 
-  // a previous worker lifetime queued a row the new writer's appends have since outrun
   await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
 
   const track = mock<(input: unknown) => void>();
@@ -947,8 +940,6 @@ test('it yields to a third session that claims over this one before the refetch'
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 
-      // the claim's returned head reveals missed appends, and by the refetch a third session has
-      // claimed over this one
       const appendedHead = fetches === 1 ? 0 : 2;
 
       return {

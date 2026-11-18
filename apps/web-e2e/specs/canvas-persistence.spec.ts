@@ -14,7 +14,6 @@ test('it keeps the same canvas element across client-side game navigation', asyn
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
   await expect(page).toHaveURL(/\/respite$/u);
 
   // scope the no-console-errors assertion to the canvas walk this spec is about; the login that

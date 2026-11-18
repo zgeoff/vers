@@ -4,8 +4,6 @@ import type { PlayerChain, PlayerClient } from './types';
 
 const WORLD_MAP_SCOPE_TYPE = 'world_map_node';
 
-// the node reveal a fresh avatar's first map view sends: the server mints the origin's genesis
-// chain and returns the stamps every activity start pins
 export async function createOriginChain(
   client: PlayerClient,
   avatarID: string,

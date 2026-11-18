@@ -52,14 +52,12 @@ export function createActivity(data: ActivityInput, ctx: SimulationContext): Act
   };
 
   return {
-    // meta
     difficulty: data.difficulty,
     id: data.id,
     name: data.name,
     type: data.type,
     waves,
 
-    // getters
     get currentWave() {
       return waves[currentWaveIdx] ?? null;
     },
@@ -76,10 +74,8 @@ export function createActivity(data: ActivityInput, ctx: SimulationContext): Act
       return rewards;
     },
 
-    // core
     getSnapshot,
 
-    // utils
     updateRewards,
     advanceTime,
     advanceWave,

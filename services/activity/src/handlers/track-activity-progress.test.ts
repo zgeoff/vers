@@ -1159,8 +1159,6 @@ test('it advances the node chain to the terminal checkpoint the next activity an
     .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
-  // the next activity at this node anchors here, and an ingest whose start names any other
-  // position is refused
   expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
   expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });

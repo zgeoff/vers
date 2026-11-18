@@ -25,8 +25,8 @@ interface CreateLoadStackOptions {
 
 type ComposeEnv = Readonly<Record<string, string | undefined>>;
 
-// one fresh stack per scenario: postgres first and migrated before any service boots, then the
-// registry rows the services read at their first request
+// the services read the registry at their first request, so postgres is migrated and the registry
+// written before any service boots
 export async function createLoadStack(
   options: Readonly<CreateLoadStackOptions>,
 ): Promise<LoadStack> {

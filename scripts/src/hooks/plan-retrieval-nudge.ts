@@ -57,7 +57,6 @@ export function planRetrievalNudge(
 function advanceImplement(state: RetrievalState, kind: RetrievalKind): RetrievalState {
   const base = { ...state, lookupRun: 0 };
 
-  // A ranged read or any other call breaks a consecutive search run but leaves the hunt alone.
   return match(kind)
     .returnType<RetrievalState>()
     .with('search', () => ({
@@ -92,7 +91,6 @@ function advanceResearch(state: RetrievalState, kind: RetrievalKind): RetrievalS
     .exhaustive();
 }
 
-// Consecutive content searches in the implement phase before a nudge.
 const SEARCH_THRESHOLD = 3;
 
 // Interleaved content searches and whole-file code reads in the implement phase before a nudge.
@@ -121,7 +119,6 @@ function formatImplementNudge(state: RetrievalState): string | null {
   ].join(' ');
 }
 
-// Consecutive Serena symbol lookups in the research phase, with no file read between, before a nudge.
 const LOOKUP_THRESHOLD = 3;
 
 function formatResearchNudge(state: RetrievalState): string | null {

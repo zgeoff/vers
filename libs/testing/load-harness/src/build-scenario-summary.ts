@@ -95,8 +95,6 @@ function collectProcedureSummaries(calls: ReadonlyArray<CallRecord>): Array<Proc
     .toSorted((left, right) => left.procedure.localeCompare(right.procedure));
 }
 
-// the time from a dependency's return until the unproved backlog falls back to what it held in
-// steady play before the outage
 function buildRecoveryMs(recording: Readonly<ScenarioRecording>): number | undefined {
   const outage = recording.outage;
 
@@ -156,8 +154,7 @@ function collectResourceSummaries(
 
 const RATE_WINDOW_MS = 60_000;
 
-// the largest count a minute-long window of samples moved, so a short burst between two samples
-// never reads as a sustained rate
+// a minute-long window keeps a short burst between two samples from reading as a sustained rate
 function buildPeakVerifiedRate(samples: ReadonlyArray<PipelineSample>): number {
   let peak = 0;
   let windowStart = 0;

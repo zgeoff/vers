@@ -50,9 +50,8 @@ export function createSimulationDriver(
         return { checkpoints, haltedOnDurationCap: false };
       }
 
-      // A zero-consumption checkpoint can share its rngState with an earlier one in the same
-      // tail (a terminal that rolls nothing further than the checkpoint before it) — with a known
-      // count driving the halt, stopAtState is only a sanity signal, never an independent stop.
+      // a checkpoint that rolls nothing shares its rng state with the one before it, so a matching
+      // state may halt the advance only when no checkpoint count is given
       if (
         expectedCheckpointCount === undefined &&
         stopAtState !== undefined &&

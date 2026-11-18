@@ -370,8 +370,6 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
   const updatedActivity = await readActivityStatus(ctx.db, fixture.activity.id);
   const updatedProgress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  // rejected excludes the activity from the pending predicate outright, regardless of its
-  // unsettled head gap
   expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 
   expect(updatedProgress).toStrictEqual({
@@ -1705,7 +1703,6 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
     verifiedNextSeed: predecessor.chain.verifiedNextSeed,
   });
 
-  // Fully verified and still active, the stream is no longer a target — nothing revisits it.
   const idleOutcome = await runReplayIteration(deps, cache);
 
   expect(idleOutcome).toStrictEqual({ kind: 'idle' });

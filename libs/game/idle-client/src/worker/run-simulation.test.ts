@@ -44,7 +44,6 @@ test('it continues into a fresh locally minted row if it fails and the failure a
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  // the running row's terminal already landed server-side, so no active row blocks the start
   const sourceRow = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     status: 'stopped',
@@ -201,7 +200,6 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
   const avatarData = createMockAvatarData({ life: 1 });
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Retry });
 
-  // a different row is tracked than the one the simulation runs — the fresher-owner signal
   const trackedRow = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     status: 'stopped',
@@ -215,7 +213,6 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
     await runSimulation(context, simulation, 100);
   }
 
-  // no continuation start reached the service: nothing was minted for the avatar
   const minted = db.activityCollection.findFirst((query) =>
     query.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
@@ -322,14 +319,12 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
   expect(rewardMessages.length).toBeGreaterThan(0);
   expect(rewardMessages.every((message) => message.rewardSlotCount > 0)).toBeTrue();
 
-  // the very first submitted checkpoint is the zero-slot Started checkpoint (version 1) — it
-  // never earns a broadcast of its own
+  // version 1 is the zero-slot Started checkpoint, which never earns a broadcast
   expect(rewardMessages.some((message) => message.version === 1)).toBeFalse();
 });
 
 test('it never broadcasts a ledger message for a checkpoint the submitter dropped', async () => {
-  // the default mock context's submitter always resolves `undefined`, standing in for a
-  // dropped checkpoint (an unattached or already-invalid activity)
+  // the stub submitter resolves undefined, which is how a dropped checkpoint answers
   const context = createStubWorkerContext();
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
@@ -504,7 +499,6 @@ test('it leaves the recorded run untouched when the ticking simulation is not th
   const simulation = createSimulation();
   const activity = createMockActivityInput();
 
-  // a stale simulation keeps ticking for a row a later flow already replaced
   context.setActivity(createMockActivityData({ id: 'act_installed_elsewhere' }));
   simulation.startActivity(createMockAvatarData(), activity);
 
@@ -528,7 +522,6 @@ test('it keeps the failed terminal checkpoint on record after the run stops', as
     await runSimulation(context, simulation, 100);
   }
 
-  // the stop cleared the live activity, but the next mint still needs the run's total
   expect(simulation.activity).toBeNull();
 
   expect(context.getLatestRun()).toMatchObject({
@@ -560,8 +553,7 @@ test("it mints the successor's build snapshot from the cleared run's terminal to
     createMockContentDocument({ contentVersion: nodeSeed.contentVersion }),
   );
 
-  // a submit that queues nothing models the online case: every checkpoint confirmed and removed
-  // from the outbox before the terminal's continuation mints
+  // online, every checkpoint is confirmed and leaves the outbox before the continuation mints
   const submit = mock<CheckpointSubmitter['submit']>(() => Promise.resolve(undefined));
   const submitter = { ...createStubSubmitter(), submit };
 
@@ -608,8 +600,7 @@ test("it mints the successor's build snapshot from the cleared run's terminal to
 
   expect(minted.predecessorActivityID).toBe(sourceRow.id);
 
-  // the start snapshot the cleared run was admitted at, plus the total its terminal checkpoint
-  // names — the server folds the same two numbers from its own rows
+  // the server folds the same two numbers from its own rows
   const expectedXP = 500 + completed.rewards.xp;
 
   expect(minted.buildSnapshot).toStrictEqual({

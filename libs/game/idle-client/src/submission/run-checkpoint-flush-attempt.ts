@@ -69,9 +69,6 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
       const trace = createTraceContext();
       let retriedAfterIngest = false;
 
-      // The body sends the same batch again only once, after a NOT_FOUND ingests the activity's
-      // still-pending client-minted activity start — `retriedAfterIngest` turns a second NOT_FOUND
-      // into an unconditional discard rather than ingesting again.
       while (true) {
         const [error, result] = await safe(
           input.client.trackActivityProgress(
@@ -163,9 +160,8 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
 
         const ingestOutcome = await input.ingestActivityStart(input.activityID);
 
-        // NOT_FOUND was a defined reply, so `onServerContact` fired, but the start cannot ingest
-        // yet; hold the queue for retry without feeding the stall counter a genuinely unanswered
-        // flush owns
+        // NOT_FOUND was a defined reply, so the server was reached, but the start cannot ingest
+        // yet; hold the queue without counting it as an unanswered flush toward a stall
         if (ingestOutcome === 'deferred') {
           return { type: 'held-defined-error' };
         }

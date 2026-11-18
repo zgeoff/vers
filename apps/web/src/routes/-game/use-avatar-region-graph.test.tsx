@@ -526,8 +526,6 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
     invariant(resolveSecondFetch, 'the chunk-crossing pan started the second fetch');
     resolveSecondFetch();
 
-    // the resolved fetch settles the re-keyed query in place: no further round trip fires and the
-    // neighbour stays selectable
     await waitFor(() => {
       expect(hook.queryClient.isFetching()).toBe(0);
     });
@@ -706,7 +704,6 @@ test("it returns an empty frontier through an avatar switch, never the outgoing 
       expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
     });
 
-    // the incoming avatar settles to its own origin-only frontier
     expect(hook.result.current.has(firstOnlyID)).toBe(false);
 
     // the transition render returns an empty set rather than the outgoing avatar's held frontier,

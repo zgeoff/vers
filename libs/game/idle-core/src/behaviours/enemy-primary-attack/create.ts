@@ -28,10 +28,8 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
   };
 
   const behaviour: EnemyPrimaryAttackBehaviour = {
-    // meta
     id: BehaviourID.EnemyPrimaryAttack,
 
-    // getters
     get lastAttackTime(): number {
       return state.lastAttackTime;
     },
@@ -42,7 +40,6 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
       return state;
     },
 
-    // handlers
     handlers: {
       [LifecycleEvent.OnTick]: (tickEntity: Enemy, executor: CombatExecutor) => {
         handleTick(tickEntity, behaviour, executor);
@@ -53,7 +50,6 @@ export function create(entity: Enemy): EnemyPrimaryAttackBehaviour {
     },
     predicate: hasPrimaryAttack,
 
-    // utils
     getState,
     setState,
   };

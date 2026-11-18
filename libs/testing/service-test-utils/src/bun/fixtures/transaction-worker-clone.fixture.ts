@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { createTransactionTestDB } from '../strategies/create-transaction-test-db';
 
-// run by `run-worker-clone-probe.test.ts` in a child process, never by the package's own run
+// a probe test runs this in a child process; the package's own run never does
 test('it acquires the worker database of the transaction strategy', async () => {
   await using handle = await createTransactionTestDB();
 

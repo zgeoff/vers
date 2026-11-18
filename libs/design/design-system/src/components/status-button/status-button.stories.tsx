@@ -44,7 +44,6 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
     setSubmitting(false);
   };
 
-  // after a 2 second delay, set the status to success
   useEffect(() => {
     if (!submitting) {
       return () => {};

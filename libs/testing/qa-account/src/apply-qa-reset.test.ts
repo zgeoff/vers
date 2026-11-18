@@ -7,8 +7,8 @@ import invariant from 'tiny-invariant';
 import { applyQAReset } from './apply-qa-reset';
 import { applyQASeed } from './apply-qa-seed';
 
-// applyQASeed and applyQAReset each commit in their own interactive transaction, which the default
-// transaction-isolation handle can't nest — every test here runs against a committed schema clone.
+// the seed and the reset each commit in their own interactive transaction, which the default
+// transaction-isolation handle can't nest
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

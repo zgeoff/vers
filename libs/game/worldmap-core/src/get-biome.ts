@@ -25,8 +25,7 @@ export function getBiome(userSeed: number, cx: number, cy: number): BiomeSample 
   const warpedX = hexX + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleX - 0.5);
   const warpedY = hexY + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleY - 0.5);
 
-  // Reads both nearest and second-nearest feature points: blendT and neighbourBaseID need the
-  // second-nearest for the border blend.
+  // the border blend needs the second-nearest feature point as well as the nearest
   const base = buildNearestFeaturePoints({
     userSeed,
     x: warpedX,

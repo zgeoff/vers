@@ -94,8 +94,6 @@ test('it defers the cache mutation until the caller applies it, never touching t
     pendingCache: { activityID: fixture.activity.id, effect: { kind: 'set' } },
   });
 
-  // runReplayTarget itself never wrote to the cache — only the caller applying the returned
-  // mutation after a successful commit would.
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
 
@@ -880,9 +878,8 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
     seed: buildStateFromSeed(1_616_267_014),
   });
 
-  // the fixture stamps each row's default sealed secretRef/secretVersion independently, so the
-  // continuation row ends up carrying the same pair a real mint copies forward from the row it
-  // appends onto — these assertions pin that alignment
+  // a real mint copies the sealed secret pair forward from the row it appends onto, and the
+  // fixture stamps each row's pair independently
   expect(continuation.activity.secretRef).toBe(genesis.activity.secretRef);
   expect(continuation.activity.avatarId).toBe(genesis.activity.avatarId);
 
@@ -1296,8 +1293,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
 test('it verifies a world-map-node run whose scope is connected to a verified first-clear grant, still granting its own completion', async () => {
   await using ctx = await setupTest();
 
-  // the default fixture already seeds a first-clear grant for a node adjacent to its own scope —
-  // this asserts that setup directly before proving replay accepts a run built on top of it
+  // the default fixture seeds a first-clear grant for a node adjacent to its own scope
   const fixture = await createHonestActivityFixture(ctx.db, {
     avatarSettledXP: buildXPThreshold(50),
     duration: 80_000,
@@ -1510,8 +1506,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
 
   expect(avatarAfterReject).toStrictEqual({ level: buildLevelFromXP(0), xp: 0 });
 
-  // the successor is an unrelated, honest run that banked none of the rejected predecessor's xp —
-  // it settles cleanly despite chaining off a rejected run
+  // the successor banked none of the rejected predecessor's xp
   const successor = await createHonestActivityFixture(ctx.db, {
     activity: { predecessorActivityId: predecessor.activity.id },
     avatarID: predecessor.activity.avatarId,

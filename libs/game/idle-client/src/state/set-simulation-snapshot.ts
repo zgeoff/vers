@@ -30,8 +30,6 @@ function shouldResetRewardSlotLedger(
   return ledgerActivityID !== nextActivityID;
 }
 
-// the outcome outlives the ended run's own frames and an activity-less snapshot, and clears only
-// once a different run goes live
 function shouldResetRunOutcome(outcomeActivityID: string | null, nextActivityID: string | null) {
   return (
     outcomeActivityID !== null && nextActivityID !== null && outcomeActivityID !== nextActivityID

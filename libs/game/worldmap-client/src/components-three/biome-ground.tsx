@@ -111,13 +111,11 @@ function fillGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void {
     const base = getBaseTint(field.baseIDs[index] ?? 0);
     const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
     const mixT = 0.5 * (field.blendTs[index] ?? 0);
-    // The base tint blends toward the border neighbour's tint by half `blendT`.
     let red = base.r + (neighbour.r - base.r) * mixT;
     let green = base.g + (neighbour.g - base.g) * mixT;
     let blue = base.b + (neighbour.b - base.b) * mixT;
 
     if ((field.modifierIDs[index] ?? 0) !== 0) {
-      // The modifier tint overlays at `MODIFIER_OVERLAY_ALPHA` where the modifier layer drew non-`none`.
       red += (MODIFIER_TINT.r - red) * MODIFIER_OVERLAY_ALPHA;
       green += (MODIFIER_TINT.g - green) * MODIFIER_OVERLAY_ALPHA;
       blue += (MODIFIER_TINT.b - blue) * MODIFIER_OVERLAY_ALPHA;

@@ -5,8 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Runs the synced start-up stub as .claude/settings.json registers it, with auto-install off,
-// against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
   const directory = await mkdtemp(join(tmpdir(), 'skill-gate-'));
 

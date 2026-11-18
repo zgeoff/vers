@@ -536,7 +536,6 @@ test('it round-trips a remote dispatch over real HTTP with real s2s auth', async
     ctx.deterministicInput,
   );
 
-  // a remote dispatch must reproduce the in-process replay exactly
   expect(outcome).toStrictEqual(local);
 });
 

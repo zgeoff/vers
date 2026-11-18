@@ -53,9 +53,8 @@ export async function applyMatch(
   const forwardExited = isForwardExited(lastReplayed.type, segment.activity.status);
   const advanceChain = forwardExited && lastStored.version === segment.activity.appendedHead;
 
-  // A first clear is a verified completed terminal on a map node; a fail, stop, or cap forward-
-  // exits the seed chain without clearing it, and a non-`world_map_node` scope has no completion
-  // target.
+  // a fail, stop or cap forward-exits the seed chain without clearing it, and a scope that is not a
+  // map node has no completion target
   const clearedNodeID =
     lastReplayed.type === 'completed' && segment.activity.scopeType === 'world_map_node'
       ? segment.activity.scopeID

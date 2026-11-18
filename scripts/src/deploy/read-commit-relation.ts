@@ -4,7 +4,6 @@ import type { CommitRelation } from './types';
 interface ReadCommitRelationOptions {
   readonly cwd?: string;
 
-  // the commit the base relates to; HEAD when unset
   readonly head?: string;
 }
 

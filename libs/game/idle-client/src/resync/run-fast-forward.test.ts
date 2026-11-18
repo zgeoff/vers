@@ -126,8 +126,6 @@ test('it consumes exactly the budget when a reconstructed tail lands on it preci
     maxDurationMs: Number.MAX_SAFE_INTEGER,
   });
 
-  // The unaccounted tail past the appended head prices the attempt; a budget equal to it is
-  // consumed exactly.
   const tailTimeMs = (probe.checkpoints.at(-1)?.time ?? 0) - (probe.checkpoints[0]?.time ?? 0);
 
   const report = await runFastForward({
@@ -205,8 +203,6 @@ test('it plans multiple continuations locally and ships them in one bulk request
 
   expect(report.reason).toBe('budget-exhausted');
   expect(report.attempts).toBeGreaterThan(1);
-
-  // the whole plan ships as one bulk request, never one call per continuation
   expect(ctx.calls).toHaveLength(1);
   expect(ctx.calls[0]?.continuations.length).toBe(report.attempts);
 
@@ -295,8 +291,6 @@ test('it splits a large plan into bounded batches, awaiting each in order', asyn
   expect(report.attempts).toBeGreaterThan(1);
   expect(ctx.calls.length).toBeGreaterThan(1);
 
-  // batch N's activityID is exactly the row batch N-1's last continuation minted, proving each
-  // batch was awaited (and its mint committed) before the next shipped
   for (const [index, call] of ctx.calls.entries()) {
     if (index === 0) {
       continue;
@@ -419,8 +413,6 @@ test('it resolves with no fast-forward at all when the confirmed row already rec
     maxDurationMs: Number.MAX_SAFE_INTEGER,
   });
 
-  // the confirmed head already covers every checkpoint the row's own attempt ever produces —
-  // nothing unconfirmed remains for a fast-forward to catch up
   const progress = createMockLatestActivityProgress({
     activity: createMockActivityData({
       appendedHead: probe.checkpoints.length,

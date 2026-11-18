@@ -10,8 +10,6 @@ test('it reads 0 over a disc and 1 past its falloff', () => {
 
   expect(field.cols).toBe(9);
   expect(field.rows).toBe(9);
-
-  // the source cell sits inside its own clear radius; the far corner is well past clear + falloff
   expect(field.values[4 * 9 + 4]).toBe(0);
   expect(field.values[0]).toBe(1);
 });
@@ -23,8 +21,6 @@ test('it eases density monotonically outward from a disc', () => {
     { falloff: 3, resolution: 1 },
   );
 
-  // density along the half-row leading away from the disc never decreases: the tail equals its
-  // own ascending sort
   const tail = Array.from(
     { length: field.values.length },
     (_, index) => field.values[index] ?? 0,
@@ -69,7 +65,6 @@ test('it renders the union of overlapping discs without a seam between them', ()
     { falloff: 2, resolution: 1 },
   );
 
-  // every sample on the row between the two disc centers sits inside the union's clear region
   expect(
     Array.from({ length: field.values.length }, (_, index) => field.values[index] ?? 0),
   ).toStrictEqual([0, 0, 0, 0, 0]);

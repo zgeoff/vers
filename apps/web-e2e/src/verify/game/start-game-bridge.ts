@@ -27,9 +27,8 @@ type GameHandlers = {
   readonly [Method in GameMethod]: (args: GameArgs<Method>) => Promise<GameResult<Method>>;
 };
 
-// Attaches over DevTools to the browser driver's Chromium, to act on its page, cookies and worker.
-// The network cut and the second device live here between commands, because Chrome drops a cut
-// when the DevTools session that set it detaches.
+// the network cut and the second device live here between commands, because Chrome drops a cut when
+// the DevTools session that set it detaches.
 export function startGameBridge(options: GameBridgeOptions): Promise<ServiceInstance> {
   const state: BridgeState = { connected: null, second: null, cut: null };
 

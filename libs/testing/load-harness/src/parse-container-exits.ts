@@ -11,8 +11,8 @@ const InspectedContainerSchema = z.object({
   }),
 });
 
-// the output of `docker inspect` over the stack's containers; every container but a running one
-// has exited, and the stack sets no restart policy, so only an outage's restart clears an exit
+// the stack sets no restart policy, so every container but a running one has exited, and only an
+// outage's restart clears an exit
 export function parseContainerExits(output: string, startedAt: Date): Array<ContainerExit> {
   const containers = z.array(InspectedContainerSchema).parse(JSON.parse(output));
 

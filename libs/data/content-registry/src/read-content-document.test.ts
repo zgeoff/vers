@@ -7,9 +7,8 @@ import type { Kysely } from 'kysely';
 import { createContentVersion } from './create-content-version';
 import { readContentDocument } from './read-content-document';
 
-// `createContentVersion` opens its own interactive transaction, which the default
-// transaction-isolation handle can't nest — this suite publishes in-test, so it runs against a
-// real, committed schema clone.
+// publishing opens its own interactive transaction, which the default transaction-isolation
+// handle can't nest, so this suite runs against a committed schema clone
 async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
   const db = await createTestDB({ isolation: 'schema' });
 

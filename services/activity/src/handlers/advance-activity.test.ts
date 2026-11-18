@@ -373,7 +373,6 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
     },
   });
 
-  // the append itself rolled back with the mint — the source row never left active
   const row = await ctx.db
     .selectFrom('activities')
     .select(['status', 'appendedHead'])
@@ -482,7 +481,6 @@ test('it converges a resubmit of an already-minted continuation onto the same ro
     .where('avatarId', '=', avatar.id)
     .execute();
 
-  // no duplicate row was minted by the resubmit
   expect(rows).toHaveLength(2);
 });
 
@@ -634,8 +632,6 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
     },
   });
 
-  // the mismatch is rejected outright, never adopted as the append target: the unrelated row is
-  // untouched and the source row's own append rolled back with the mint it was blocked from
   const decoy = await ctx.db
     .selectFrom('activities')
     .select(['status', 'startKey'])
@@ -905,7 +901,6 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
     data: { activityID: started.id, appendedHead: 0 },
   });
 
-  // the tail's own append rolled back along with the mint it was blocked from
   const row = await ctx.db
     .selectFrom('activities')
     .select(['status', 'appendedHead'])
@@ -991,8 +986,6 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
     .orderBy('startedAt', 'asc')
     .execute();
 
-  // the first continuation's mint-and-append committed; the second, broken one never did — the
-  // request bailed strictly short of the full plan, with forward progress preserved
   expect(rows).toStrictEqual([
     { appendedHead: 1, id: started.id, status: 'stopped' },
     { appendedHead: 0, id: firstContinuationID, status: 'active' },
@@ -1323,8 +1316,8 @@ test('it mints an activity start naming a predecessor not yet on the server, sta
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // an absent predecessor is not rejected — the activity start is admitted and the replay claim waits on
-  // the predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
+  // the replay claim waits on the predecessor, so an out-of-order or reload-orphaned delivery
+  // settles once it lands
   const minted = await client.advanceActivity({
     activityID,
     continuations: [],
@@ -1392,8 +1385,6 @@ test('it converges a sequential activityStart retry onto the existing row withou
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
   const request = { activityID, continuations: [continuation], expectedHead: 0, activityStart };
 
-  // a sequential resubmit of the same activity start converges on the minted row instead of
-  // double-minting; the concurrent-insert race that loses a unique violation is a separate case
   const first = await client.advanceActivity(request);
   const second = await client.advanceActivity(request);
 
@@ -1405,7 +1396,6 @@ test('it converges a sequential activityStart retry onto the existing row withou
     .where('avatarId', '=', avatar.id)
     .execute();
 
-  // no duplicate activity start and no duplicate continuation row were minted by the resubmit
   expect(rows).toHaveLength(2);
 });
 
@@ -1684,8 +1674,6 @@ test('it rejects an activity start submitted against a quarantined chain with CH
     data: { activityID, appendedHead: 0 },
   });
 
-  // the activity start admission rolled back entirely — no row was left occupying the avatar's
-  // active-run slot
   const row = await ctx.db
     .selectFrom('activities')
     .select('id')
@@ -1956,7 +1944,6 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
-  // origin node A and a neighbour B its clear opens, both revealed; the avatar holds no grant yet
   const originID = '0_0';
   const originCoord = findCellCoord(originID);
 
@@ -1981,8 +1968,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // A clears offline: its activity start anchors at the origin (always reachable), and a terminal
-  // continuation delivers the clear. Admission accepts it — the origin needs no grant.
+  // the origin is always reachable, so its clear needs no grant
   const derivedA = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
@@ -2026,8 +2012,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
     activityStart: activityStartA,
   });
 
-  // admission appended the clear but recorded no first-clear grant — that waits on replay, so the
-  // cleared target a reachability check would read still excludes the origin
+  // the first-clear grant waits on replay, so admission records none
   const revealed = await client.getRevealedNodes({
     avatarID: avatar.id,
     viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 },
@@ -2035,12 +2020,11 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   expect(revealed.completedNodeIDs).toBeEmpty();
 
-  // the clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
-  // active-run slot; the device stops it before B's activity start can mint into the freed slot
+  // the clear's continuation opens a fresh attempt at A, which holds the avatar's single
+  // active-run slot
   await client.stopActivity({ avatarID: avatar.id });
 
-  // B is the neighbour A's clear opened; its activity start mints because admission runs no
-  // reachability check, only the sim-version and hash gates every activity start clears
+  // admission runs no reachability check, only the sim-version and hash gates
   const derivedB = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
@@ -2072,8 +2056,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
     activityStart: activityStartB,
   });
 
-  // the mint committed and stays unconfirmed — replay adjudicates reachability once it runs, and
-  // rejects this run for the still-missing origin grant, cascading through anything built on it
+  // reachability is checked only by replay
   const activityStartRow = await ctx.db
     .selectFrom('activities')
     .select(['id', 'status'])
@@ -2099,13 +2082,11 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // session A starts the avatar's live run and becomes its writer
   const started = await createActivityRow(ctx.db, {
     avatarId: avatar.id,
     scopeId: '0_0',
   });
 
-  // session B takes over the same run, kicking session A off as its writer
   const keyPair = await resolveTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
@@ -2119,9 +2100,8 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
 
   await clientB.resumeActivity({ activityID: started.id });
 
-  // session A, now kicked, delivers a valid offline activity start it minted before the takeover:
-  // admission reads no acting-session gate, so the refusal is the generic active-run CONFLICT,
-  // never a session-scoped SESSION_EVICTED
+  // admission reads no acting-session gate, so a kicked session gets the generic active-run
+  // CONFLICT, never SESSION_EVICTED
   const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
@@ -2184,7 +2164,6 @@ test("it admits a successor whose build snapshot folds the predecessor's start s
     startVersion: 1,
   });
 
-  // the online case: every checkpoint confirmed, the terminal closed the run, nothing queued
   await client.trackActivityProgress({
     activityID: first.id,
     checkpoints: tail,

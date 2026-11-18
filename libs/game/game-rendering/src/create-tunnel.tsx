@@ -24,7 +24,6 @@ export function createTunnel(): {
     In: (props: Readonly<TunnelInProps>): null => {
       const id = useId();
 
-      // refreshes this entry's content on every render, without touching its position in `order`
       useEffect(() => {
         useTunnelStore.setState((state) => ({
           order: state.order.includes(id) ? state.order : [...state.order, id],
@@ -32,8 +31,8 @@ export function createTunnel(): {
         }));
       });
 
-      // removes this entry once, on unmount — kept separate from the effect above so re-renders
-      // never reorder `order`
+      // removal runs only on unmount; folding it into the effect above would move this entry to
+      // the end of the order on every re-render
       useEffect(
         () => () => {
           useTunnelStore.setState((state) => {

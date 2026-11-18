@@ -16,10 +16,8 @@ test('it creates a second avatar, switches back, and keeps the choice across a r
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  // the seeded account carries an active avatar, so the gate lands it in-game
   await expect(page).toHaveURL(/\/respite$/u);
 
-  // the rail chip names the active avatar and opens the roster
   await page.getByRole('link', { name: 'Switch avatar (RosterPrime)' }).click();
 
   await expect(page).toHaveURL(/\/avatars$/u);
@@ -31,11 +29,9 @@ test('it creates a second avatar, switches back, and keeps the choice across a r
   await page.getByLabel('Name').fill('RosterSecond');
   await page.getByRole('button', { exact: true, name: 'Create Avatar' }).click();
 
-  // creating selects the newcomer and re-enters the game as them
   await expect(page).toHaveURL(/\/explore$/u);
   await expect(page.getByRole('link', { name: 'Switch avatar (RosterSecond)' })).toBeVisible();
 
-  // switch back to the first avatar from the roster
   await page.getByRole('link', { name: 'Switch avatar (RosterSecond)' }).click();
 
   await expect(page).toHaveURL(/\/avatars$/u);

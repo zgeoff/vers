@@ -28,10 +28,8 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
   };
 
   const behaviour: AvatarWeaponAttackBehaviour = {
-    // meta
     id: BehaviourID.AvatarWeaponAttack,
 
-    // getters
     get lastAttackTime(): number {
       return state.lastAttackTime;
     },
@@ -42,7 +40,6 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
       return state;
     },
 
-    // handlers
     handlers: {
       [LifecycleEvent.OnTick]: (tickEntity: Avatar, executor: CombatExecutor) => {
         handleTick(tickEntity, behaviour, executor);
@@ -53,7 +50,6 @@ export function create(entity: Avatar): AvatarWeaponAttackBehaviour {
     },
     predicate: hasMainHandWeapon,
 
-    // utils
     getState,
     setState,
   };

@@ -6,8 +6,7 @@ export function parseChunkKey(key: string): readonly [chunkX: number, chunkY: nu
   const chunkX = Number(rawX);
   const chunkY = Number(rawY);
 
-  // reject anything `buildChunkKey` could not have minted: a wrong component count, or an empty
-  // component `Number` would silently coerce to 0 (`Number('') === 0`)
+  // an empty component must fail too: `Number('')` silently coerces to 0
   invariant(
     parts.length === 2 &&
       rawX !== '' &&

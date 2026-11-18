@@ -11,7 +11,6 @@ test('it emits one source disc, clipped to the viewport, Morton-sorted', () => {
     minCY: -5,
   });
 
-  // the seven cells of the radius-1 disc around the origin, in ascending Morton order
   expect(cells).toStrictEqual([0, 1, 2, 4, 6, 8, 9]);
 });
 
@@ -23,7 +22,6 @@ test('it clips a disc that extends past the viewport edge', () => {
     minCY: -1,
   });
 
-  // (-1, 0) and (-1, 1) fall outside the viewport and are dropped from the full seven-cell disc
   expect(cells).toStrictEqual([0, 2, 4, 6, 8]);
 });
 
@@ -36,7 +34,6 @@ test('it dedupes cells covered by more than one overlapping disc', () => {
     { maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 },
   );
 
-  // the two radius-1 discs share four cells; the union carries each cell once
   expect(cells).toStrictEqual([0, 1, 2, 4, 6, 8, 9, 12, 16, 18]);
 });
 

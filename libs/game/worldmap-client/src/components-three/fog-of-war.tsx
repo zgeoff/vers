@@ -109,9 +109,6 @@ function createFogPlaneResources(
 
   updateDensityBytes(density.bytes, field);
 
-  // the density texture's red channel is the smootherstep-eased euclidean distance to the
-  // nearest reveal disc — 0 over revealed ground, 1 a falloff past the frontier; the opacity
-  // node samples it and modulates the result with drifting billow noise
   const textureNode = sceneTSL.texture(buildDensityTexture(density));
 
   const material = new MeshBasicNodeMaterial({
@@ -162,15 +159,11 @@ const FOG_BILLOW_DEEP = 0.08;
 function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
   const ground = sceneTSL.positionWorld.xz;
   const clock = sceneTSL.time;
-  // strongest in the frontier band: `density * (1 - density)` peaks mid-gradient and vanishes at
-  // both ends
   const band = density.mul(density.oneMinus()).mul(4);
   // noise coordinates come from world position, not uv, so drifting the camera never drags the
   // billow along with the quad
   const drift = ground.mul(FOG_BILLOW_SCALE);
   const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
-  // two octaves drifting in opposite directions, with the time term broadcast onto both axes
-  // blowing the noise field diagonally, like wind
   const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
   const billow = coarse.mul(0.7).add(fine.mul(0.3));
   // a small density-proportional term added to the band term so deep fog keeps a faint internal
@@ -225,7 +218,6 @@ function updateFogPlane(
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): void {
-  // the field and viewport already applied — the effect run straight after mount — costs nothing
   if (plane.applied.field === field && plane.applied.viewport === viewport) {
     return;
   }
@@ -233,8 +225,6 @@ function updateFogPlane(
   plane.applied = { field, viewport };
 
   if (field.cols === plane.density.cols && field.rows === plane.density.rows) {
-    // a pan without a zoom keeps the texel dimensions — rewrite the live texture's pixels in
-    // place, no new GPU texture
     updateDensityBytes(plane.density.bytes, field);
 
     plane.textureNode.value.needsUpdate = true;

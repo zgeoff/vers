@@ -27,10 +27,8 @@ export interface LiveSimulation {
 export type SimulationEventName = 'restarted' | 'started' | 'stopped' | 'updated';
 
 export interface Simulation {
-  // meta
   readonly rng: RNG;
 
-  // getters
   get activity(): Activity | null;
   get avatar(): Avatar | null;
   get ctx(): SimulationContext;
@@ -39,7 +37,6 @@ export interface Simulation {
   get rngState(): string;
   get state(): LiveSimulation;
 
-  // utils
   addEventListener: (eventName: SimulationEventName, listener: SimulationListener) => void;
   getSnapshot: () => SimulationSnapshot;
   restartActivity: () => void;

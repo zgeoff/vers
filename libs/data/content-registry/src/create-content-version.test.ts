@@ -33,7 +33,6 @@ test('it rejects a duplicate contentVersion and leaves the pointer untouched', a
   await createContentVersion(ctx.db, first);
   await createContentVersion(ctx.db, second);
 
-  // republishing the first document must not move the pointer back off the later version
   expect(createContentVersion(ctx.db, first)).rejects.toThrow();
   expect(readCurrentContentVersion(ctx.db)).resolves.toBe('31001');
 });

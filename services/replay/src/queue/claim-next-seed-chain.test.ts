@@ -221,8 +221,6 @@ test('it blocks a successor whose predecessor still has appends past its verifie
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
-  // the predecessor's own seed chain is the one activity ready to claim; the successor stays
-  // blocked
   expect(claimed).toStrictEqual({
     activityID: predecessor.id,
     avatarID: predecessorChain.avatarId,
@@ -289,8 +287,6 @@ test('it blocks a successor whose predecessor is held by an operator', async () 
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
-  // the predecessor's own status excludes it from claiming, and the held predecessor blocks the
-  // successor behind it — the whole avatar stops
   expect(claimed).toBeUndefined();
 });
 

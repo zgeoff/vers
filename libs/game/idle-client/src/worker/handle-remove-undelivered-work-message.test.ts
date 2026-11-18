@@ -117,7 +117,6 @@ test('it delivers no start that a continuation held at its write mints, once the
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // the run that just reached its terminal checkpoint, so the worker enters the continuation flow
   const terminal = createMockActivityData({
     avatarID: viewer.avatar.id,
     id: delivered.id,
