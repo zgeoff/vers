@@ -10,7 +10,7 @@
       "vite": {
         "config": []
       },
-      "entry": ["deploy.config.ts"],
+      "entry": ["deploy.config.ts", "rig.config.ts"],
       "ignoreDependencies": [
         "@playwright/test",
         "@zgeoff/agent-hooks",
