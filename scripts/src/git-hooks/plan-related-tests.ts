@@ -10,7 +10,7 @@ export function planRelatedTests(
   for (const changedPath of changedPaths) {
     const testPath = findRelatedTest(changedPath, isFile);
 
-    if (testPath === undefined) {
+    if (testPath === undefined || isPlaywrightTest(testPath)) {
       continue;
     }
 
@@ -45,6 +45,14 @@ function findRelatedTest(
   const stem = changedPath.replace(SOURCE_SUFFIX, '');
 
   return [`${stem}.test.ts`, `${stem}.test.tsx`].find((candidate) => isFile(candidate));
+}
+
+// a package's e2e/ folder holds Playwright tests, which only Playwright's runner can load, so
+// `bun test` fails on each of them
+const PLAYWRIGHT_FOLDER = /(?:^|\/)e2e\//u;
+
+function isPlaywrightTest(testPath: string): boolean {
+  return PLAYWRIGHT_FOLDER.test(testPath);
 }
 
 function getPackageDirectory(repoPath: string, isFile: (repoPath: string) => boolean): string {

@@ -72,3 +72,18 @@ test('it skips a changed test file that no longer exists', () => {
     planRelatedTests(['scripts/src/gone.test.ts'], (repoPath) => files.has(repoPath)),
   ).toStrictEqual([]);
 });
+
+test('it skips a Playwright test in a package e2e folder, changed or beside a changed source file', () => {
+  const files = new Set([
+    'apps/web/package.json',
+    'apps/web/e2e/start-home.test.ts',
+    'apps/web/e2e/start-game.test.ts',
+  ]);
+
+  expect(
+    planRelatedTests(
+      ['apps/web/e2e/start-home.test.ts', 'apps/web/e2e/start-game.ts'],
+      (repoPath) => files.has(repoPath),
+    ),
+  ).toStrictEqual([]);
+});
