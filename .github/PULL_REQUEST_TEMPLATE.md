@@ -63,7 +63,7 @@ Hillclimb:  the metric, target, baseline and final value, the attempt
             the next guess
 
 Link anything longer, or of any other kind, with `cloud up --md`.
-Run this last: `(VERIFY_UPLOAD_TOKEN="$(op read "$VERIFY_UPLOAD_TOKEN_REF")" && export VERIFY_UPLOAD_TOKEN && bun verify publish)`
+Run `bun verify publish` last.
 -->
 
 - [ ] New or changed code has a test, or this line holds the reason it has none
