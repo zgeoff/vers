@@ -77,7 +77,6 @@
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
     "@sentry/cli": "catalog:",
-    "@sentry/vite-plugin": "catalog:",
     "@size-limit/file": "catalog:",
     "@tanstack/router-cli": "catalog:",
     "@tanstack/start-storage-context": "catalog:",

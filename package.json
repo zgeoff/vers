@@ -73,7 +73,6 @@
       "@sentry/cli": "2.58.6",
       "@sentry/node": "11.11.0",
       "@sentry/react": "11.11.0",
-      "@sentry/vite-plugin": "5.4.1",
       "@sinclair/typebox": "0.34.52",
       "@size-limit/file": "13.1.1",
       "@stylistic/eslint-plugin": "5.10.0",
