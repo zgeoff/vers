@@ -35,7 +35,6 @@ pre-commit:
     - name: format-codemod
       glob: '*.{ts,tsx}'
       exclude:
-        - 'apps/design-reference/public/**'
         - 'infra/sdks/**'
         - 'apps/web/src/styled-system/**'
         - 'libs/design/design-system/src/styled-system/**'

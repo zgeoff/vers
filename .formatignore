@@ -1,5 +1,4 @@
 # committed codegen
-apps/design-reference/public/**
 infra/sdks/**
 apps/web/src/styled-system/**
 libs/design/design-system/src/styled-system/**
