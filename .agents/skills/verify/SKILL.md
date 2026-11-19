@@ -13,9 +13,9 @@ metadata:
 
 Use `bun verify` to start the app, use each feature your change touches the way a user would, and
 record a verdict that it works. Put the report in the PR with `bun verify publish`, and hand back
-the PR link and each feature you could not verify, or the blocker that stopped you before `publish`.
-Leave `bun verify gate` to CI: it reads the report from the PR description, and fails a PR that
-changes a feature with no verdict there.
+the PR link, or the blocker that stopped you before `publish`, and each feature you could not
+verify. Leave `bun verify gate` to CI: it reads the report from the PR description, and fails a PR
+that changes a feature with no verdict there.
 
 The mistakes that cost the most time:
 
@@ -93,11 +93,11 @@ Read a feature's file before you run its journey.
    to run a feature's journey last, run it after every other journey.
 8. Run `bun verify report --human` to read the report. Expect: `verified` on each changed feature
    you did not skip in step 5. Repeat steps 4 to 6 for each `stale` feature.
-9. Commit every change, and push the branch. When no PR is open for it, open one: `publish` fails
-   without it.
-10. Check that both `VERIFY_UPLOAD_URL` (the file host for the evidence) and
+9. Commit every change to a tracked file. Push the branch. When no PR is open for it, open one:
+   `publish` fails without it.
+10. Check with `test -n` that both `VERIFY_UPLOAD_URL` (the file host for the evidence) and
     `VERIFY_UPLOAD_TOKEN_REF` (the token's 1Password `op://` reference) are set. When either is
-    empty, skip step 11, and report a blocker. Never run `op read` on its own: it prints the token.
+    empty, skip step 11. Report a blocker. Never run `op read` on its own: it prints the token.
 11. Publish the report, even when you skipped a feature. The subshell keeps the token out of your
     shell, and `&&` stops the command before `publish` when `op read` fails: report that as a
     blocker.
