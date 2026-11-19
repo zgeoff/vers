@@ -70,6 +70,7 @@
       "@rolldown/plugin-babel": "0.3.0",
       "@sentry/browser": "11.11.0",
       "@sentry/bun": "11.11.0",
+      "@sentry/cli": "2.58.6",
       "@sentry/node": "11.11.0",
       "@sentry/react": "11.11.0",
       "@sentry/vite-plugin": "5.4.1",
