@@ -11,8 +11,9 @@ permissions:
 
 # Concurrency is per-job, not per-workflow: a workflow-level cancel-in-progress
 # kills flyctl mid-bluegreen rollout, stranding the green machines and failing
-# every later deploy with "found multiple image versions". Checks stay
-# cancellable (a newer push supersedes them); deploy jobs queue instead.
+# every later deploy with "found multiple image versions". Checks, tests, builds
+# and verifies group by commit and never cancel, so every push to main is tested;
+# deploy jobs queue instead.
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -20,8 +21,8 @@ jobs:
     # run, not burn runner hours — the suite's worst observed run is ~4 minutes
     timeout-minutes: 10
     concurrency:
-      group: ${{ github.workflow }}-checks-${{ github.ref }}
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-checks-${{ github.sha }}
+      cancel-in-progress: false
     env:
       TURBO_SCM_BASE: ${{ github.event.before }}
       # CI never commits, but skip hook install/execution regardless
@@ -173,8 +174,8 @@ jobs:
     # a hung step (a wedged webServer, a stuck browser) must fail the run, not burn runner hours
     timeout-minutes: 10
     concurrency:
-      group: ${{ github.workflow }}-e2e-${{ matrix.leg }}-${{ github.ref }}
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-e2e-${{ matrix.leg }}-${{ github.sha }}
+      cancel-in-progress: false
     env:
       TURBO_SCM_BASE: ${{ github.event.before }}
       # CI never commits, but skip hook install/execution regardless
@@ -395,11 +396,10 @@ jobs:
     # worst observed leg (app-web remote build) is ~6.5 minutes; headroom for
     # builder variance and one retried build without holding the queue
     timeout-minutes: 15
-    # a build changes nothing on the fleet, so a newer run's build of the same app cancels this one
-    # and the newer run ships the app
+    # keyed by commit, so a newer run's build never cancels this one
     concurrency:
-      group: ${{ github.workflow }}-build-${{ matrix.app }}
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-build-${{ matrix.app }}-${{ github.sha }}
+      cancel-in-progress: false
     strategy:
       # each app is independent — one build failing must not abandon the others
       fail-fast: false
@@ -462,9 +462,9 @@ jobs:
     # is about to promote — every app's ref resolves to this commit's build
     # when stale or the newest recorded release otherwise, so the suite always
     # exercises the fleet main is about to become. A failed build leg fails
-    # this job on the missing image instead of skipping it. A build leg that a
-    # newer run's build cancels leaves cancelled() false, so the job skips on a
-    # cancelled need itself, and the newer run tests the fleet.
+    # this job on the missing image instead of skipping it. A build leg that
+    # hits its timeout reports cancelled but leaves cancelled() false, so the
+    # job skips on a cancelled need itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
       && needs.e2e.result == 'success' && needs.manifest.result == 'success' }}
@@ -473,8 +473,8 @@ jobs:
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
     timeout-minutes: 20
     concurrency:
-      group: ${{ github.workflow }}-stack-e2e
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-stack-e2e-${{ github.sha }}
+      cancel-in-progress: false
     steps:
       # ref resolution runs turbo/git against each app's deployed SHA, which can be many pushes
       # old, so the CLI needs the pushed commit's full history: see the checks job's Checkout for
@@ -656,8 +656,8 @@ jobs:
     # every green main push — even when every deploy leg skipped. This is what
     # catches a silently-missing deploy (an app at zero machines, or a fleet
     # still running code from before a cancelled rollout) and fails the run.
-    # A newer run that cancels this run's build or full-stack gate deploys and
-    # verifies the fleet itself, and that cancel leaves cancelled() false.
+    # A need that hits its timeout reports cancelled but leaves cancelled()
+    # false, so the job skips on a cancelled need itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
       && needs.e2e.result == 'success' }}
@@ -666,8 +666,8 @@ jobs:
     # six fleet reads plus probe retries fit in ~3 minutes at worst
     timeout-minutes: 10
     concurrency:
-      group: ${{ github.workflow }}-verify-fleet
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-verify-fleet-${{ github.sha }}
+      cancel-in-progress: false
     steps:
       # verify runs turbo/git against each app's deployed SHA, as the deploy job does: see the
       # checks job's Checkout for the depth, the filter and the retry
@@ -704,8 +704,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: ${{ github.workflow }}-verify-prod
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-verify-prod-${{ github.sha }}
+      cancel-in-progress: false
     env:
       LEFTHOOK: 0
     steps:
@@ -788,6 +788,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
+    # only the newest run's alert matters, so a newer run's alert cancels this one
     concurrency:
       group: ${{ github.workflow }}-alert
       cancel-in-progress: true
