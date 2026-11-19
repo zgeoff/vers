@@ -1506,7 +1506,7 @@
     "@wringer/http": "0.1.4",
     "@zgeoff/agent-hooks": "0.2.13",
     "@zgeoff/bugsink-mcp": "0.2.0",
-    "@zgeoff/bun-test-extended": "0.2.3",
+    "@zgeoff/bun-test-extended": "0.2.4",
     "@zgeoff/chex": "0.3.11",
     "@zgeoff/dbhub": "0.23.5",
     "@zgeoff/diet": "0.2.2",
@@ -3103,7 +3103,7 @@
 
     "@zgeoff/bugsink-mcp": ["@zgeoff/bugsink-mcp@0.2.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0" }, "bin": { "bugsink-mcp": "dist/index.js" } }, "sha512-frOYmUHkNbvI7+9ib1btG3qiqr3Hu4tM30fIjwzXwIbSJCJwLhkG6bLHy5WWlezi95Lf2Fmg6kHQnDGtSIjNaQ=="],
 
-    "@zgeoff/bun-test-extended": ["@zgeoff/bun-test-extended@0.2.3", "", { "dependencies": { "jest-extended": "7.0.0", "jest-matcher-utils": "30.5.2" } }, "sha512-4ZNPft3LunVKp+s2esoJXSe64EaEywsu3z6Cg5/s/MJcdygmrQeAyfECioePCo5RuAIcaPfgF3lhYsPKcmVJ4w=="],
+    "@zgeoff/bun-test-extended": ["@zgeoff/bun-test-extended@0.2.4", "", { "dependencies": { "jest-extended": "7.0.0", "jest-matcher-utils": "30.5.2" } }, "sha512-pjHhfUFSQVOG97CPobmUJ3v1xbigRe5DOD+7VDoe5IIYvAOMkctmkHznj4EKKnZSpQp0b3/jqvYuzIFrpeaZMw=="],
 
     "@zgeoff/chex": ["@zgeoff/chex@0.3.11", "", { "dependencies": { "@zgeoff/std": "0.4.3", "oxc-parser": "0.158.0", "ts-pattern": "5.9.2" }, "bin": { "chex": "src/cli.ts" } }, "sha512-TpHPnt2iAexbB72HtT8U9FuYVuwP9go2w0gZ0S4UOgywthEXFpPkYShrqTlW4YcSMWpcxMaEiQrpaLOQM+VRZg=="],
 
