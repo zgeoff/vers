@@ -26,6 +26,7 @@ export {
   flyAPITokenSecretName,
   labelCount,
   mainProtectionRulesetName,
+  neonAPIKeySecretName,
   productionEnvironmentName,
   sentryAuthTokenSecretName,
   sentryDSNVariableName,

@@ -163,6 +163,15 @@ const flyAPITokenSecret = new github.ActionsEnvironmentSecret('fly-api-token', {
   value: requireEnv('FLY_API_TOKEN'),
 });
 
+// a key scoped to the vers Neon project, for the backup branch the migrate job creates; the
+// program's own NEON_API_KEY is the provider's key, so this one arrives under another name
+const neonAPIKeySecret = new github.ActionsEnvironmentSecret('neon-api-key', {
+  repository,
+  environment: productionEnvironment.environment,
+  secretName: 'NEON_API_KEY',
+  value: requireEnv('NEON_BACKUP_API_KEY'),
+});
+
 const sentryAuthTokenSecret = new github.ActionsEnvironmentSecret('sentry-auth-token', {
   repository,
   environment: productionEnvironment.environment,
@@ -191,4 +200,5 @@ export const dotenvAppWebE2ESecretName = dotenvAppWebE2ESecret.secretName;
 export const databaseURLSecretName = databaseURLSecret.secretName;
 export const discordWebhookURLSecretName = discordWebhookURLSecret.secretName;
 export const flyAPITokenSecretName = flyAPITokenSecret.secretName;
+export const neonAPIKeySecretName = neonAPIKeySecret.secretName;
 export const sentryAuthTokenSecretName = sentryAuthTokenSecret.secretName;
