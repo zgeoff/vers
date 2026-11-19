@@ -54,6 +54,10 @@ export function createVerifyRegistry(options: VerifyRegistryOptions): Wringer {
       .target('local', {
         mode: 'launch',
         access: 'read-write',
+
+        // a fresh database, a signed-out browser and a stub mailbox: the evidence holds no
+        // player's data
+        evidence: 'upload',
         refusalHint,
         host: local(),
         launch: () => ({
