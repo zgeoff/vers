@@ -1460,7 +1460,7 @@
     "@pandacss/preset-panda": "2.5.0",
     "@paralleldrive/cuid2": "3.3.0",
     "@playwright/test": "1.65.0",
-    "@pulumi/cloudflare": "6.23.2",
+    "@pulumi/cloudflare": "6.24.0",
     "@pulumi/github": "6.15.0",
     "@pulumi/pulumi": "3.274.0",
     "@react-email/components": "1.0.12",
@@ -2339,7 +2339,7 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.2", "", {}, "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug=="],
 
-    "@pulumi/cloudflare": ["@pulumi/cloudflare@6.23.2", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-0pkVCTydiMJD9vQmRt0V50cMFeWW8AinAaY/PjKPbC7X5aSYKooZ0F30oVVY/Ewi7o5/utBO+5ciqzz1/hYREA=="],
+    "@pulumi/cloudflare": ["@pulumi/cloudflare@6.24.0", "", { "dependencies": { "@pulumi/pulumi": "^3.269.0" } }, "sha512-UsgQbHLExQgIFLoGjACgpTeRp359khU6wCNyQ7CNqK6hzgRgyOWKRXg1GqZYOKLEXmA/nKv32p+2S3gM0Va1Vg=="],
 
     "@pulumi/github": ["@pulumi/github@6.15.0", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-U8ZxPQQcOrcTn8y8EZsWmXzMtbw0JnwWCVGmqxBZ/i2SpUlEGMYT9B+EFC/qTALZXkDf7cMiq6fZ3Gy1G23nyQ=="],
 
@@ -5149,9 +5149,9 @@
 
     "@typespec/ts-http-runtime/https-proxy-agent": ["https-proxy-agent@7.0.6", "", { "dependencies": { "agent-base": "^7.1.2", "debug": "4" } }, "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw=="],
 
-    "@vers/infra/@pulumi/axiom": ["@pulumi/axiom@file:infra/sdks/axiom", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" } }],
+    "@vers/infra/@pulumi/axiom": ["@pulumi/axiom@file:infra/sdks/axiom", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
-    "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" } }],
+    "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
     "@vitejs/plugin-rsc/srvx": ["srvx@1.0.5", "", { "bin": { "srvx": "./bin/srvx.mjs" } }, "sha512-KvSKRpgPG/oaq3cyT614OQ2bAa7DynuGamivCZeoZzIUULOdbQz6wUtnnVuC4+DCx2Zglzo8v5gBYmWIWYhDxA=="],
 
