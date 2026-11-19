@@ -161,14 +161,13 @@ and destroys its green machines. A grace after that, it gets SIGKILL. Both bound
 deploy job's timeout, which would otherwise kill flyctl mid-rollout and leave the green machines
 started. The two pinned upstream apps set no strategy and roll over in place.
 
-Deploy jobs queue rather than cancel. The checks and e2e group by commit and never cancel, so every
-push to `main` is tested in full. Each later stage (migrate, build, the full-stack gate, deploy and
-both verifies) has one fixed group that never cancels a running job: it runs one job at a time and
-keeps only the newest waiting run, so a newer run's job replaces an older run's job that is still
-waiting. The rest of that older run then skips, and the failure alert drops it because a newer run
-exists. An older run that still reaches its deploy after a newer run shipped finds each app current
-and skips it. A rollout can fail on a transient host-capacity refusal; Fly rolls back cleanly, so
-re-run the failed job.
+Deploy jobs queue rather than cancel. The checks, e2e, builds, full-stack gate and verifies group by
+commit and never cancel, so every push to `main` is tested in full. A run whose checks pass after a
+newer push has landed skips its deploy stages, so an older commit never migrates or deploys after a
+newer one, and the newest run ships every change. Migrate and each app's deploy have one fixed group
+that never cancels, so they run one job at a time, and every waiting deploy keeps its turn. A
+rollout can fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed
+job.
 
 ### Release record and rollback
 

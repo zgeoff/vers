@@ -11,10 +11,11 @@ permissions:
 
 # Concurrency is per-job, not per-workflow: a workflow-level cancel-in-progress
 # kills flyctl mid-bluegreen rollout, stranding the green machines and failing
-# every later deploy with "found multiple image versions". The checks and e2e
-# group by commit and never cancel, so every push to main is tested. Each deploy
-# stage, build through verify, has one fixed group that never cancels: it runs
-# one job at a time and keeps only the newest waiting run.
+# every later deploy with "found multiple image versions". The checks, e2e,
+# builds, full-stack gate and verifies group by commit and never cancel, so
+# every push to main is tested. Migrate, manifest, preflight and deploy each
+# have one fixed group that never cancels, so they run one job at a time. The
+# superseded job skips the deploy stages of a run that a newer push overtook.
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -271,15 +272,49 @@ jobs:
           include-hidden-files: true
           path: apps/web-e2e/.test-results
 
+  # every push runs its checks to the end, so an older run can pass them after a newer push landed;
+  # this gate skips that run's deploy stages, so an older commit never migrates or deploys after a
+  # newer one, and the newest run ships every change since the fleet's commit
+  superseded:
+    name: Check for a newer run
+    needs: [checks, e2e]
+    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: ${{ github.workflow }}-superseded-${{ github.sha }}
+      cancel-in-progress: false
+    outputs:
+      superseded: ${{ steps.probe.outputs.superseded }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # the probe imports no package, so the job skips the install
+      - name: Probe for a newer run
+        id: probe
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run --silent ci:probe-superseded-run
+
   migrate:
     name: Migrate database
-    needs: [checks, e2e]
-    # migrations are a deploy action, not a check: they run exactly once per
-    # green push — several services share the one database, so they never run
-    # per-service — and, like rollouts, are never cancelled mid-run; a newer
-    # push queues behind them. Idempotent: an up-to-date database gets no backup
-    # and no migration.
-    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
+    needs: [checks, e2e, superseded]
+    # migrations are a deploy action, not a check: they run once per green
+    # push that no newer push has superseded — several services share the one
+    # database, so they never run per-service — and, like rollouts, are never
+    # cancelled mid-run; a newer push queues behind them. Idempotent: an
+    # up-to-date database gets no backup and no migration.
+    if:
+      ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' &&
+      needs.superseded.result == 'success' && needs.superseded.outputs.superseded != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -310,11 +345,13 @@ jobs:
 
   manifest:
     name: Read deploy manifest
-    needs: [checks, e2e]
+    needs: [checks, e2e, superseded]
     # the deploy matrix derives from deploy.config.ts, so adding an app to the
     # manifest is the whole change — a hand-maintained matrix drifts, and a
     # manifest app with no deploy leg is a guaranteed verify-fleet failure
-    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
+    if:
+      ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' &&
+      needs.superseded.result == 'success' && needs.superseded.outputs.superseded != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # a deploy stage: one run at a time, the newest waiting run replaces an older one, and the
@@ -342,11 +379,13 @@ jobs:
 
   preflight:
     name: Check deploy env
-    needs: [checks, e2e]
+    needs: [checks, e2e, superseded]
     # a required env key uncovered by an app's fly.toml [env], set secrets, or
     # baked build args fails the run before any image builds — boot-time
     # validation would otherwise report the gap as a crash loop after cutover
-    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
+    if:
+      ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' &&
+      needs.superseded.result == 'success' && needs.superseded.outputs.superseded != 'true' }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
@@ -400,10 +439,9 @@ jobs:
     # worst observed leg (app-web remote build) is ~6.5 minutes; headroom for
     # builder variance and one retried build without holding the queue
     timeout-minutes: 15
-    # one build of each app at a time, never cut off; a newer run's build replaces an older one
-    # still waiting, and the newer run ships the app
+    # a build changes nothing on the fleet, so it groups by commit like the checks and never cancels
     concurrency:
-      group: ${{ github.workflow }}-build-${{ matrix.app }}
+      group: ${{ github.workflow }}-build-${{ matrix.app }}-${{ github.sha }}
       cancel-in-progress: false
     strategy:
       # each app is independent — one build failing must not abandon the others
@@ -467,9 +505,9 @@ jobs:
     # is about to promote — every app's ref resolves to this commit's build
     # when stale or the newest recorded release otherwise, so the suite always
     # exercises the fleet main is about to become. A failed build leg fails
-    # this job on the missing image instead of skipping it. A build leg that a
-    # newer run's build replaces, or that hits its timeout, reports cancelled
-    # but leaves cancelled() false, so the job skips on a cancelled need itself.
+    # this job on the missing image instead of skipping it. A build leg that
+    # hits its timeout reports cancelled but leaves cancelled() false, so the
+    # job skips on a cancelled need itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
       && needs.e2e.result == 'success' && needs.manifest.result == 'success' }}
@@ -477,9 +515,9 @@ jobs:
     environment: production
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
     timeout-minutes: 20
-    # one full-stack gate at a time, never cut off; a newer run's gate replaces an older one waiting
+    # a test on this runner, so it groups by commit like the checks and never cancels
     concurrency:
-      group: ${{ github.workflow }}-stack-e2e
+      group: ${{ github.workflow }}-stack-e2e-${{ github.sha }}
       cancel-in-progress: false
     steps:
       # ref resolution runs turbo/git against each app's deployed SHA, which can be many pushes
@@ -607,11 +645,12 @@ jobs:
     # bluegreen cutover plus probes is ~3 minutes at worst; headroom without
     # holding the queue
     timeout-minutes: 15
-    # never cancel a rollout mid-flight; a newer run's deploy waits its turn and replaces an older
-    # one still waiting
+    # never cancel a rollout mid-flight; every waiting deploy keeps its turn, as the default queue
+    # drops a waiting deploy when a later one arrives, which may be an older commit's
     concurrency:
       group: ${{ github.workflow }}-deploy-${{ matrix.app }}
       cancel-in-progress: false
+      queue: max
     strategy:
       # each app is independent — one rollout failing must not abandon the others
       fail-fast: false
@@ -658,23 +697,24 @@ jobs:
 
   verify-fleet:
     name: Verify fleet
-    needs: [checks, e2e, build, stack-e2e, deploy]
+    needs: [checks, e2e, superseded, build, stack-e2e, deploy]
     # the deploy gate: every app in the manifest must be online and current, on
     # every green main push — even when every deploy leg skipped. This is what
     # catches a silently-missing deploy (an app at zero machines, or a fleet
     # still running code from before a cancelled rollout) and fails the run.
-    # A need that a newer run replaces, or that hits its timeout, reports
-    # cancelled but leaves cancelled() false, so the job skips on it itself.
+    # A need that hits its timeout reports cancelled but leaves cancelled()
+    # false, so the job skips on a cancelled need itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
-      && needs.e2e.result == 'success' }}
+      && needs.e2e.result == 'success' && needs.superseded.result == 'success' &&
+      needs.superseded.outputs.superseded != 'true' }}
     runs-on: ubuntu-latest
     environment: production
     # six fleet reads plus probe retries fit in ~3 minutes at worst
     timeout-minutes: 10
-    # one fleet check at a time, never cut off; a newer run's check replaces an older one waiting
+    # a read-only check, so it groups by commit like the checks and never cancels
     concurrency:
-      group: ${{ github.workflow }}-verify-fleet
+      group: ${{ github.workflow }}-verify-fleet-${{ github.sha }}
       cancel-in-progress: false
     steps:
       # verify runs turbo/git against each app's deployed SHA, as the deploy job does: see the
@@ -711,9 +751,9 @@ jobs:
     if: ${{ !cancelled() && needs.verify-fleet.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # one prod check at a time, never cut off; a newer run's check replaces an older one waiting
+    # a read-only check, so it groups by commit like the checks and never cancels
     concurrency:
-      group: ${{ github.workflow }}-verify-prod
+      group: ${{ github.workflow }}-verify-prod-${{ github.sha }}
       cancel-in-progress: false
     env:
       LEFTHOOK: 0
@@ -785,7 +825,19 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet, verify-prod]
+    needs:
+      [
+        checks,
+        e2e,
+        superseded,
+        migrate,
+        manifest,
+        build,
+        stack-e2e,
+        deploy,
+        verify-fleet,
+        verify-prod,
+      ]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers. GitHub reports a need
@@ -822,10 +874,11 @@ jobs:
           ALERT_TITLE: '[CI] critical — main pipeline failed'
           ALERT_DESCRIPTION: ${{ github.event.head_commit.message }}
           ALERT_FAILED_JOBS: >-
-            checks=${{ needs.checks.result }}, e2e=${{ needs.e2e.result }}, migrate=${{
-            needs.migrate.result }}, manifest=${{ needs.manifest.result }}, build=${{
-            needs.build.result }}, stack-e2e=${{ needs.stack-e2e.result }}, deploy=${{
-            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
+            checks=${{ needs.checks.result }}, e2e=${{ needs.e2e.result }}, superseded=${{
+            needs.superseded.result }}, migrate=${{ needs.migrate.result }}, manifest=${{
+            needs.manifest.result }}, build=${{ needs.build.result }}, stack-e2e=${{
+            needs.stack-e2e.result }}, deploy=${{ needs.deploy.result }}, verify-fleet=${{
+            needs.verify-fleet.result }}
           CANCELLED_NEED: ${{ contains(needs.*.result, 'cancelled') }}
           GITHUB_TOKEN: ${{ github.token }}
         run: bun run ci:discord-alert
