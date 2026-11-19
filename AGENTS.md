@@ -210,8 +210,8 @@ the fleet is online and current. Read `docs/architecture/platform/deployment.md`
 rollout or a secret, and `docs/architecture/platform/container-builds.md` before you change a
 container build.
 
-- Database migrations run once per green push, in their own `migrate` job that is never cancelled,
-  never per service.
+- Database migrations run once per green push that no newer push supersedes, in their own `migrate`
+  job that is never cancelled, never per service.
 - Deploy jobs target the `production` GitHub environment. Repo-level secrets hold only what PR
   checks need.
 
