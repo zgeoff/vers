@@ -105,7 +105,7 @@
       "@wringer/http": "0.1.4",
       "@zgeoff/agent-hooks": "0.2.13",
       "@zgeoff/bugsink-mcp": "0.2.0",
-      "@zgeoff/bun-test-extended": "0.2.3",
+      "@zgeoff/bun-test-extended": "0.2.4",
       "@zgeoff/chex": "0.3.11",
       "@zgeoff/dbhub": "0.23.5",
       "@zgeoff/diet": "0.2.2",
