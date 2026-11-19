@@ -15,3 +15,4 @@ libs/design/styled-system/styled-system/**
 # nested checkouts and agent scratch
 .worktrees/**
 .claude/**
+.agents/**

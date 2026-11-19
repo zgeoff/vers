@@ -19,10 +19,10 @@ read the architecture doc for the subsystem in full before reasoning from its co
 
 When you write or edit a skill:
 
-1. Load the `skill-writing`, `cold-read` and `deslop` skills from `.claude/skills/`. repo-sync
+1. Load the `skill-writing`, `cold-read` and `deslop` skills from `.agents/skills/`. repo-sync
    delivers them there at the `zgeoff/skills` commit that `zgeoff/tools` pins, so install none of
    them yourself.
-2. Do every step in the "Check it" section of `.claude/skills/skill-writing/SKILL.md`. In its last
+2. Do every step in the "Check it" section of `.agents/skills/skill-writing/SKILL.md`. In its last
    step, you fill in the `## Checks` section of the PR template.
 
 `docs/architecture/overview.md` is the entry point to the system's docs. A subsystem's doc is the
@@ -73,10 +73,10 @@ Dependencies:
   hand-written edits.
 - When you add, change or remove a release-age exclude in `bunfig.toml`, or an override or an audit
   ignore in the root `package.json`, follow the
-  [Dependency exceptions](.claude/skills/ci-design/SKILL.md#dependency-exceptions) rule in
+  [Dependency exceptions](.agents/skills/ci-design/SKILL.md#dependency-exceptions) rule in
   ci-design.
 - Give every first-party package that `bun.lock` installs, such as `@zgeoff/std`, a release-age
-  exclude, by the [First-party packages](.claude/skills/ci-design/SKILL.md#first-party-packages)
+  exclude, by the [First-party packages](.agents/skills/ci-design/SKILL.md#first-party-packages)
   rule in ci-design.
 - Run `bun x @zgeoff/chex dependency-gates` to check release-age excludes, overrides and audit
   ignores. CI runs it in the PR checks and the weekly dependency-health job.

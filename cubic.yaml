@@ -27,12 +27,12 @@ reviews:
       - libs/data/db/src/schema.generated.ts
       # repo-sync overwrites these from zgeoff/tools
       - '.claude/hooks/start.ts'
-      - '.claude/skills/ci-design/SKILL.md'
-      - '.claude/skills/code-style/SKILL.md'
-      - '.claude/skills/docs-writing/**'
-      - '.claude/skills/pr-evidence/SKILL.md'
-      - '.claude/skills/skill-writing/**'
-      - '.claude/skills/testing/**'
+      - '.agents/skills/ci-design/SKILL.md'
+      - '.agents/skills/code-style/SKILL.md'
+      - '.agents/skills/docs-writing/**'
+      - '.agents/skills/pr-evidence/SKILL.md'
+      - '.agents/skills/skill-writing/**'
+      - '.agents/skills/testing/**'
       - '.github/workflows/audit-fix.yml'
       - 'socket.yml'
 

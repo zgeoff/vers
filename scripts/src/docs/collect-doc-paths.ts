@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { DocPathReference } from './types';
 
 const ROOTED_PATH_PATTERN =
-  /(?<![\w./-])(?:apps|contracts|docs|infra|libs|scripts|services|\.github|\.claude)\/[\w./*<>{}$-]*[\w*>}$-]/gu;
+  /(?<![\w./-])(?:apps|contracts|docs|infra|libs|scripts|services|\.github|\.claude|\.agents)\/[\w./*<>{}$-]*[\w*>}$-]/gu;
 
 const LINK_PATTERN = /\]\((?<target>\.{1,2}\/[^)#\s]+)(?:#[^)]*)?\)/gu;
 

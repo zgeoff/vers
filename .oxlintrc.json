@@ -326,6 +326,7 @@
     "**/.nx/**",
     ".worktrees/**",
     ".claude/**",
+    ".agents/**",
     "**/*.json",
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
