@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "bun test --randomize",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",

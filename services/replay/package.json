@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "bun --watch src/serve.ts",
     "test": "bun test --randomize",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@logtape/logtape": "catalog:",

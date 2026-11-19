@@ -9,7 +9,7 @@
     "e2e:stack": "playwright test --config playwright.stack.config.ts",
     "stack:seed": "bun src/create-stack-seed.ts",
     "test": "bun test --randomize ./src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit",
     "verify:install-browser": "playwright-core install chromium"
   },
   "devDependencies": {
