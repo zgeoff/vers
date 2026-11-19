@@ -51,7 +51,8 @@ to the doc of the feature that reads it.
 The browser-side values ride GitHub Actions configuration. The deploy workflow bakes the browser
 error-tracker DSN and the analytics website id into the web app's client bundle as build args, and a
 bundle without the website id ships no analytics tracker ([analytics](../analytics.md)). Source-map
-uploads authenticate with an Actions secret, and the build skips source maps when it is unset.
+uploads authenticate with an Actions secret, passed to the image build as a build secret rather than
+a build arg, so no layer or build cache keeps it. The build skips source maps when it is unset.
 
 ### Shared secrets
 

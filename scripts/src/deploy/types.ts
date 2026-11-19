@@ -14,6 +14,7 @@ export interface DeployTarget {
   readonly trigger: DeployTrigger;
   readonly minStartedMachines?: number;
   readonly buildArgsFromEnv?: ReadonlyArray<string>;
+  readonly buildSecretsFromEnv?: ReadonlyArray<string>;
   readonly probes?: ReadonlyArray<Probe>;
   readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
   readonly sharedSecrets?: ReadonlyArray<string>;

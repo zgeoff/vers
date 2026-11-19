@@ -81,3 +81,36 @@ test('it fails a build that flyctl rejects without a retry', async () => {
 
   expect(calls).toBe('call\n');
 });
+
+test('it passes a build secret to flyctl as a build secret, never as a build arg', async () => {
+  const flyctlPath = await createStubCommand(
+    'flyctl',
+    String.raw`printf "%s\n" "$@" > "$(dirname "$0")/args"`,
+  );
+
+  process.env['LEDGER_UPLOAD_TOKEN'] = 'ledger-token-value';
+
+  try {
+    await applyBuild(
+      {
+        app: 'vers-service-ledger',
+        buildSecretsFromEnv: ['LEDGER_UPLOAD_TOKEN'],
+        configDir: 'services/ledger',
+        dockerfile: 'services/Dockerfile',
+        exposure: 'flycast',
+        trigger: { kind: 'turbo-affected', pkg: '@vers/service-ledger' },
+      },
+      'a1b2c3d',
+      { attempts: 1, stallAfterSeconds: 5, stallGraceSeconds: 0.5 },
+    );
+  } finally {
+    delete process.env['LEDGER_UPLOAD_TOKEN'];
+  }
+
+  const argsFile = await readFile(join(dirname(flyctlPath), 'args'), 'utf8');
+
+  const args = argsFile.split('\n');
+
+  expect(args).toContainEqual('LEDGER_UPLOAD_TOKEN=ledger-token-value');
+  expect(args[args.indexOf('LEDGER_UPLOAD_TOKEN=ledger-token-value') - 1]).toBe('--build-secret');
+});

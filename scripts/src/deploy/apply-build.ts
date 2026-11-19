@@ -43,6 +43,16 @@ export async function applyBuild(
     }
   }
 
+  // a build arg stays in the builder's layer metadata and cache; a build secret is mounted for
+  // one RUN step only
+  for (const name of target.buildSecretsFromEnv ?? []) {
+    const value = process.env[name];
+
+    if (value !== undefined && value !== '') {
+      args.push('--build-secret', `${name}=${value}`);
+    }
+  }
+
   // flyctl gives the remote build and its push no deadline of its own, so an upload that never
   // gets a response holds the leg until the job times out
   const stallInterrupt = {

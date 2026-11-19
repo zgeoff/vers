@@ -41,8 +41,6 @@ COPY --from=pruner /app/out/full/ .
 # straight from the build context
 COPY tsconfig.base.json tsconfig.base.json
 
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 ARG VITE_SENTRY_DSN
 ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 ARG VITE_SIM_ENGINE_HASH
@@ -52,7 +50,12 @@ ENV VITE_UMAMI_WEBSITE_ID=$VITE_UMAMI_WEBSITE_ID
 
 WORKDIR /app/apps/web
 
-RUN \
+# the sourcemap upload token comes in as a build secret, mounted for this step
+# only, so no layer, image config or cache key holds it; with no secret the file
+# is absent and the build skips sourcemaps
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null || true)" && \
+  export SENTRY_AUTH_TOKEN && \
   # without removing dev/test env files, vite loads the wrong one in our prod
   # bundle — doesn't reproduce outside docker, not worth chasing further
   rm -f .env.development .env.test && \

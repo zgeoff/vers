@@ -11,6 +11,7 @@ import { defineConfig } from 'vite';
 
 const sentryAuthToken = readNonEmptyEnv('SENTRY_AUTH_TOKEN');
 const sentryDSN = readNonEmptyEnv('VITE_SENTRY_DSN');
+const isSourcemapUploadEnabled = sentryAuthToken !== undefined && sentryDSN !== undefined;
 
 export default defineConfig({
   build: {
@@ -29,19 +30,9 @@ export default defineConfig({
     // source maps upload to the error tracker's Debug-ID artifact-bundle endpoints — it never
     // fetches scripts from public URLs — then get deleted so the runtime image never serves them.
     // Releases are Sentry-specific endpoints the tracker doesn't implement, so both legs are off.
-    ...(sentryAuthToken !== undefined && sentryDSN !== undefined
+    ...(isSourcemapUploadEnabled
       ? [
-          sentryVitePlugin({
-            org: 'bugsink',
-            project: 'web',
-            release: { create: false, finalize: false, inject: false },
-
-            // Bugsink assembles each upload under its global write lock for about a minute, and a
-            // later environment's upload that waits on that lock hits gunicorn's 30s timeout as a
-            // 500, so each environment only stamps Debug IDs and one upload runs after the last
-            sourcemaps: { disable: 'disable-upload' },
-            telemetry: false,
-          }),
+          ...buildDebugIDPlugins(),
           buildSourcemapUploadPlugin({
             authToken: sentryAuthToken,
             url: new URL(sentryDSN).origin,
@@ -49,6 +40,12 @@ export default defineConfig({
         ]
       : []),
   ],
+
+  // a worker is a separate bundle with its own plugin list, so without its own stamp its files go
+  // up with no Debug ID and can never pair with their maps
+  worker: {
+    plugins: () => (isSourcemapUploadEnabled ? buildDebugIDPlugins() : []),
+  },
   environments: {
     client: {
       build: {
@@ -126,6 +123,20 @@ function isMockBackendServer(value: unknown): value is MockBackendServer {
     'listen' in value &&
     typeof value.listen === 'function'
   );
+}
+
+function buildDebugIDPlugins(): ReturnType<typeof sentryVitePlugin> {
+  return sentryVitePlugin({
+    org: 'bugsink',
+    project: 'web',
+    release: { create: false, finalize: false, inject: false },
+
+    // Bugsink assembles each upload under its global write lock for about a minute, and a later
+    // environment's upload that waits on that lock hits gunicorn's 30s timeout as a 500, so each
+    // bundle only stamps Debug IDs and one upload runs after the last
+    sourcemaps: { disable: 'disable-upload' },
+    telemetry: false,
+  });
 }
 
 interface SourcemapUploadOptions {
