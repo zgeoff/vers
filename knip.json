@@ -43,21 +43,17 @@
         "src/start-sentry-react.ts",
         "src/router.tsx",
         "src/mocks/browser.ts",
-        "src/lib/scene/types.ts"
-      ]
-    },
-    "apps/web-e2e": {
-      "entry": [
-        "src/serve-mock-services.ts",
-        "src/serve-resend-stub.ts",
-        "src/serve-umami-stub.ts",
-        "src/write-corpus-artifacts.ts",
-        "src/verify/verify.ts",
-        "src/verify/local/run-local-stack.ts",
+        "src/lib/scene/types.ts",
+        "src/test-utils/serve-mock-services.ts",
+        "src/test-utils/verify/serve-resend-stub.ts",
+        "src/test-utils/verify/serve-umami-stub.ts",
+        "src/test-utils/write-corpus-artifacts.ts",
+        "src/test-utils/verify/verify.ts",
+        "src/test-utils/verify/local/run-local-stack.ts",
         "src/test-utils/run-stub-*.ts",
-        "specs/*.spec.ts"
-      ],
-      "ignoreDependencies": ["@vers/web"]
+        "e2e/*.test.ts",
+        "bench/*.spec.ts"
+      ]
     },
     "libs/testing/qa-account": {
       "entry": ["src/bin/*.ts"]

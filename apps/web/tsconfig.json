@@ -11,6 +11,8 @@
     "test-setup.ts",
     "panda.config.ts",
     "vite.config.ts",
+    "bench/**/*.ts",
+    "e2e/**/*.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

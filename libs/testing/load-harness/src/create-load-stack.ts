@@ -9,7 +9,7 @@ import { parseContainerExits } from './parse-container-exits';
 import type { LoadEngineVersions, LoadStack } from './types';
 import { writeLoadRegistry } from './write-load-registry';
 
-const STACK_ENV_FILE = path.resolve(import.meta.dirname, '../../../../apps/web-e2e/stack.env');
+const STACK_ENV_FILE = path.resolve(import.meta.dirname, '../../../../apps/web/stack.env');
 const PROJECT_NAME = 'vers-load';
 const DATABASE_URL = 'postgresql://admin:password@127.0.0.1:5733/vers';
 const SESSION_SECRET = 'load-session-secret-32-characters';

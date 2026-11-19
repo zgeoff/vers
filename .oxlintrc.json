@@ -33,7 +33,6 @@
       {
         "pending": [
           "apps/web",
-          "apps/web-e2e",
           "contracts/activity",
           "contracts/replay",
           "libs/core/email",
@@ -60,7 +59,6 @@
       {
         "pending": [
           "apps/web",
-          "apps/web-e2e",
           "infra",
           "libs/core/email",
           "libs/data/db",
@@ -248,12 +246,31 @@
       // pattern in a test callback's first parameter — a plain parameter
       // fails at collection, so the framework convention wins here
       "files": [
-        "**/apps/web-e2e/src/**",
-        "**/apps/web-e2e/specs/**",
-        "**/apps/web-e2e/benchmarks/**"
+        "**/apps/web/src/test-utils/*.ts",
+        "**/apps/web/src/test-utils/verify/**",
+        "**/apps/web/e2e/**",
+        "**/apps/web/bench/**"
       ],
       "rules": {
         "zgeoff/no-destructured-params": "off"
+      }
+    },
+    {
+      // the full-stack e2e database seeds its demo accounts once, as a standalone script that runs
+      // against a real stack, so it is no test seed and has no test beside it
+      "files": ["**/apps/web/src/test-utils/create-stack-seed.ts"],
+      "rules": {
+        "zgeoff/seed-only": "off"
+      }
+    },
+    {
+      // the Playwright suite moved into e2e/ with its tests as they were, and they still keep
+      // module-level helpers and one fixed delay; the change that reshapes the offline and device
+      // tests into journeys plus unit tests removes this override
+      "files": ["**/apps/web/e2e/**"],
+      "rules": {
+        "zgeoff/no-test-sleep": "off",
+        "zgeoff/setup-test-only": "off"
       }
     },
     {
@@ -330,7 +347,7 @@
     "**/*.json",
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
-    "apps/web-e2e/vendor/**",
+    "apps/web/vendor/**",
     "**/.react-router/**",
     "**/infra/sdks/**",
     "**/apps/web/src/styled-system/**",

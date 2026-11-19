@@ -15,7 +15,7 @@ interface ComposeStack {
 
 const COMPOSE_STACKS: ReadonlyArray<ComposeStack> = [
   { directory: '.', file: 'docker-compose.yml' },
-  { directory: 'apps/web-e2e', file: 'apps/web-e2e/docker-compose.stack.yml' },
+  { directory: 'apps/web', file: 'apps/web/docker-compose.stack.yml' },
 ];
 
 const composeDocs = new Map<string, unknown>();

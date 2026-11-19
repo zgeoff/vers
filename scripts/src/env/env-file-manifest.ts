@@ -3,7 +3,7 @@ import type { EnvFileManifestEntry } from './types';
 export const ENV_FILE_MANIFEST: ReadonlyArray<EnvFileManifestEntry> = [
   {
     itemTitle: 'DOTENV_APP_WEB_E2E',
-    targetPath: 'apps/web-e2e/.env',
+    targetPath: 'apps/web/.env.e2e',
     vault: 'vers-ci',
   },
   {

@@ -47,7 +47,7 @@ library or contract is consumed as TypeScript source through an `exports` map th
 and `contracts/<name>` is `@vers/contract-<name>`.
 
 ```text
-apps/              deployables: web, web-e2e (Playwright), umami, bugsink
+apps/              deployables: web (with its Playwright suite), umami, bugsink
 services/          domain services; each compiles to a Bun binary on alpine
 contracts/         one oRPC contract per service, plus contract-base
 libs/<domain>/     shared libraries, grouped by domain for browsing only: core, data, design,
