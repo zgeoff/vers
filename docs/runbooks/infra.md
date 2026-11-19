@@ -28,13 +28,13 @@ up; this page owns the program's own credentials and commands.
   environment, the Actions variables, and the Actions secrets. Variables are repo- and
   environment-scoped. The service-auth public key value comes from encrypted stack config, and the
   rest sit in code. Secret values resolve from the `vers-ci` vault as environment variables at run
-  time, apart from the production `NEON_API_KEY`: a key scoped to the `vers` Neon project, which the
-  migrate job's backup uses, read from the `password` field on the `vers` vault's
-  `neon-vers-prod-backup` item as `NEON_BACKUP_API_KEY`. GitHub cannot return a secret's value, so
-  the program pushes and the vault stays the source of truth. Three things stay console-managed and
-  are therefore not drift: milestones and project boards, which are planning state rather than
-  schema; the `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential the resolution itself authenticates
-  with; and the provider's own PAT, for the same reason as the Axiom token.
+  time. The production `NEON_API_KEY`, which the migrate job's backup uses, is a key scoped to the
+  `vers` Neon project, read from the `neon-vers-prod-backup` item as `NEON_BACKUP_API_KEY`. GitHub
+  cannot return a secret's value, so the program pushes and the vault stays the source of truth.
+  Three things stay console-managed and are therefore not drift: milestones and project boards,
+  which are planning state rather than schema; the `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential
+  the resolution itself authenticates with; and the provider's own PAT, for the same reason as the
+  Axiom token.
 - `sdks/axiom/`, `sdks/neon/` — committed TypeScript SDKs generated from the bridged Terraform
   providers. `pulumi package add terraform-provider axiomhq/axiom 1.6.2` and
   `pulumi package add terraform-provider kislerdm/neon 0.13.0` regenerate them, and `Pulumi.yaml`
