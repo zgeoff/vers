@@ -67,7 +67,7 @@ jobs:
       - name: Setup E2E Dotenv
         env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web/.env.e2e
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -209,7 +209,7 @@ jobs:
       - name: Setup E2E Dotenv
         env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web/.env.e2e
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -270,7 +270,7 @@ jobs:
         with:
           name: playwright-results-${{ matrix.leg }}
           include-hidden-files: true
-          path: apps/web-e2e/.test-results
+          path: apps/web/.test-results
 
   # every push runs its checks to the end, so an older run can pass them after a newer push landed;
   # this gate skips that run's deploy stages, so an older commit never migrates or deploys after a
@@ -576,7 +576,7 @@ jobs:
       # never observe the unmigrated schema, even transiently
       - name: Boot the stack database
         run:
-          docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres
+          docker compose -f apps/web/docker-compose.stack.yml up -d --quiet-pull --wait postgres
           resend-stub
 
       - name: Migrate the stack database
@@ -589,10 +589,10 @@ jobs:
       - name: Seed the stack database
         env:
           DATABASE_URL: postgresql://admin:password@localhost:5533/vers
-        run: bun run --cwd apps/web-e2e stack:seed
+        run: bun run --cwd apps/web stack:seed
 
       - name: Boot the stack
-        run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
+        run: docker compose -f apps/web/docker-compose.stack.yml up -d --quiet-pull --wait
 
       # the runner's Ubuntu mirror serves the browsers' system packages at a few hundred kB/s on
       # some runs, so apt keeps its downloads in a cache
@@ -613,11 +613,11 @@ jobs:
 
       - name: Full-stack journeys
         id: journeys
-        run: bun run --cwd apps/web-e2e e2e:stack
+        run: bun run --cwd apps/web e2e:stack
 
       - name: Dump stack logs on failure
         if: ${{ failure() }}
-        run: docker compose -f apps/web-e2e/docker-compose.stack.yml logs --tail 100
+        run: docker compose -f apps/web/docker-compose.stack.yml logs --tail 100
 
       - name: Upload results of failed journeys
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -626,7 +626,7 @@ jobs:
         with:
           name: stack-playwright-results
           include-hidden-files: true
-          path: apps/web-e2e/.stack-test-results
+          path: apps/web/.stack-test-results
 
   deploy:
     name: Deploy
