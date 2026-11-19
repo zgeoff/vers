@@ -103,7 +103,7 @@
       "@wringer/db": "0.1.4",
       "@wringer/gunshi": "0.3.5",
       "@wringer/http": "0.1.4",
-      "@zgeoff/agent-hooks": "0.2.13",
+      "@zgeoff/agent-hooks": "0.2.14",
       "@zgeoff/bugsink-mcp": "0.2.0",
       "@zgeoff/bun-test-extended": "0.2.3",
       "@zgeoff/chex": "0.3.11",
