@@ -165,9 +165,8 @@ Deploy jobs queue rather than cancel. The checks, e2e, builds, full-stack gate a
 commit and never cancel, so every push to `main` is tested in full. A run whose checks pass after a
 newer push has landed skips its deploy stages, so an older commit never migrates or deploys after a
 newer one, and the newest run ships every change. Migrate and each app's deploy have one fixed group
-that never cancels, so they run one job at a time, and every waiting deploy keeps its turn. A
-rollout can fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed
-job.
+that never cancels, so they run one job at a time, and every waiting job keeps its turn. A rollout
+can fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
 
 ### Release record and rollback
 

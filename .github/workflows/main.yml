@@ -318,10 +318,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
-    # one migrate at a time; a newer run's migrate replaces an older one still waiting
+    # one migrate at a time, in arrival order; every waiting migrate keeps its turn, as the default
+    # queue drops a waiting migrate when a later one arrives, which may be an older commit's
     concurrency:
       group: ${{ github.workflow }}-migrate
       cancel-in-progress: false
+      queue: max
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
