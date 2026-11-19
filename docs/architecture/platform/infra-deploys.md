@@ -1,11 +1,12 @@
 # Infra deploys
 
 Two GitHub Actions workflows run Pulumi on the production stack of the `infra/` program, with the
-secrets in the `vers-ci` 1Password vault. Drift is a difference between the live resources and the
-program on `main`, such as a setting that a person changed in a provider's console. Both workflows
-watch the same files: `infra/`, their own scripts, and the root `package.json` and `bun.lock`, which
-pin the program's Pulumi packages. A person answers drift and every plan that the guard holds, as
-the [infra runbook](../../runbooks/infra.md#answer-a-held-apply) describes.
+secrets in the `vers-ci` 1Password vault, plus one item in the `vers` vault that the
+[infra runbook](../../runbooks/infra.md) names. Drift is a difference between the live resources and
+the program on `main`, such as a setting that a person changed in a provider's console. Both
+workflows watch the same files: `infra/`, their own scripts, and the root `package.json` and
+`bun.lock`, which pin the program's Pulumi packages. A person answers drift and every plan that the
+guard holds, as the [infra runbook](../../runbooks/infra.md#answer-a-held-apply) describes.
 
 ## The apply on merge
 
