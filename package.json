@@ -112,7 +112,7 @@
       "@zgeoff/format-codemod": "0.3.6",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.10.10",
-      "@zgeoff/rig": "0.2.4",
+      "@zgeoff/rig": "0.2.6",
       "@zgeoff/std": "0.4.4",
       "@zgeoff/umami-mcp": "0.1.2",
       "autoprefixer": "10.6.2",
