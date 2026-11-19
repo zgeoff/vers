@@ -129,7 +129,7 @@
       "happy-dom": "21.0.4",
       "html-to-text": "9.0.5",
       "idb": "8.0.4",
-      "iron-session": "9.0.1",
+      "iron-session": "9.1.0",
       "jose": "6.2.15",
       "knip": "6.43.0",
       "kysely": "0.29.8",
