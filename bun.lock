@@ -1508,7 +1508,7 @@
     "@zgeoff/agent-hooks": "0.2.14",
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.2.4",
-    "@zgeoff/chex": "0.3.11",
+    "@zgeoff/chex": "0.3.13",
     "@zgeoff/dbhub": "0.23.5",
     "@zgeoff/diet": "0.2.3",
     "@zgeoff/format-codemod": "0.3.6",
@@ -3121,7 +3121,7 @@
 
     "@zgeoff/bun-test-extended": ["@zgeoff/bun-test-extended@0.2.4", "", { "dependencies": { "jest-extended": "7.0.0", "jest-matcher-utils": "30.5.2" } }, "sha512-pjHhfUFSQVOG97CPobmUJ3v1xbigRe5DOD+7VDoe5IIYvAOMkctmkHznj4EKKnZSpQp0b3/jqvYuzIFrpeaZMw=="],
 
-    "@zgeoff/chex": ["@zgeoff/chex@0.3.11", "", { "dependencies": { "@zgeoff/std": "0.4.3", "oxc-parser": "0.158.0", "ts-pattern": "5.9.2" }, "bin": { "chex": "src/cli.ts" } }, "sha512-TpHPnt2iAexbB72HtT8U9FuYVuwP9go2w0gZ0S4UOgywthEXFpPkYShrqTlW4YcSMWpcxMaEiQrpaLOQM+VRZg=="],
+    "@zgeoff/chex": ["@zgeoff/chex@0.3.13", "", { "dependencies": { "@zgeoff/std": "0.4.4", "oxc-parser": "0.158.0", "ts-pattern": "5.9.2" }, "bin": { "chex": "src/cli.ts" } }, "sha512-8cKimQAzhylNA/h8ji9wRHUXnt290g/nb6mvMSnx0FBHBc3LOJupfVLVhwWY/9zEC308ftEcU9tVjCewXdwyWg=="],
 
     "@zgeoff/dbhub": ["@zgeoff/dbhub@0.23.5", "", { "dependencies": { "@iarna/toml": "2.2.5", "@modelcontextprotocol/sdk": "1.29.0", "dotenv": "16.5.0", "express": "5.2.1", "ssh-config": "5.0.3", "ssh2": "1.16.0", "zod": "4.6.7" }, "optionalDependencies": { "@aws-sdk/rds-signer": "3.1079.0", "@azure/identity": "4.13.1", "mariadb": "3.4.2", "mssql": "11.0.1", "mysql2": "3.14.1", "pg": "8.16.0" }, "bin": { "dbhub": "dist/index.js" } }, "sha512-jZIfyJHRONRI9fxc3JgxUXAiH0ZKtAISqGw3cpzsXcFRRJtgU8nsZpJak6rn7P/yPQQoC2y9TDj86j8lXdJeVw=="],
 
@@ -5178,8 +5178,6 @@
     "@wringer/core/@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
     "@wringer/gunshi/gunshi": ["gunshi@0.37.3", "", {}, "sha512-uwm23bguqDcleEetknuQnF5okLcgmQPM3iv4aWVHTPDbiSs9shh02F079NCY0mWkrIRjHqNhgmzW6k0FCXhy1g=="],
-
-    "@zgeoff/chex/@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
     "@zgeoff/dbhub/dotenv": ["dotenv@16.5.0", "", {}, "sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg=="],
 
