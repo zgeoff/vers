@@ -12,7 +12,7 @@
   "scripts": {
     "bench": "bun src/replay.bench.ts",
     "test": "bun test --randomize",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@paralleldrive/cuid2": "catalog:",

@@ -14,7 +14,7 @@
     "size:build": "turbo run build --filter=@vers/web",
     "size:delta": "bun run size:build 1>&2 && size-limit --json",
     "test": "bun test --randomize",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit",
     "typegen": "tsr generate"
   },
   "dependencies": {

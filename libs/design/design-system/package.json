@@ -10,7 +10,7 @@
     "codegen": "panda cssgen && bun src/bin/write-scene-colors.ts",
     "dev": "ladle serve",
     "test": "bun test --randomize",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsrs --fast -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@ark-ui/react": "catalog:",
