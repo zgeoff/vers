@@ -19,7 +19,9 @@ export class FlyctlError extends Error {
   readonly stdout: string;
 
   constructor(failure: FlyctlFailure) {
-    super(`flyctl ${failure.args.join(' ')} ${formatEnding(failure)}\n${failure.stderr}`.trimEnd());
+    super(
+      `flyctl ${formatArgs(failure.args)} ${formatEnding(failure)}\n${failure.stderr}`.trimEnd(),
+    );
 
     this.name = 'FlyctlError';
     this.exitCode = failure.exitCode;
@@ -28,6 +30,14 @@ export class FlyctlError extends Error {
     this.stderr = failure.stderr;
     this.stdout = failure.stdout;
   }
+}
+
+function formatArgs(args: ReadonlyArray<string>): string {
+  return args
+    .map((arg, index) =>
+      args[index - 1] === '--build-secret' ? arg.replace(/=.*$/su, '=[redacted]') : arg,
+    )
+    .join(' ');
 }
 
 function formatEnding(failure: FlyctlFailure): string {

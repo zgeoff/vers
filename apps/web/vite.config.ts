@@ -1,5 +1,7 @@
+import { readdir, rm } from 'node:fs/promises';
+import path from 'node:path';
 import babel from '@rolldown/plugin-babel';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
+import SentryCLI from '@sentry/cli';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react';
 import rsc from '@vitejs/plugin-rsc';
@@ -24,29 +26,12 @@ export default defineConfig({
     buildMockBackendPlugin(),
 
     // source maps upload to the error tracker's Debug-ID artifact-bundle endpoints — it never
-    // fetches scripts from public URLs — then get deleted so the runtime image never serves them.
-    // Releases are Sentry-specific endpoints the tracker doesn't implement, so both legs are off.
+    // fetches scripts from public URLs — then get deleted so the runtime image never serves them
     ...(sentryAuthToken !== undefined && sentryDSN !== undefined
-      ? [
-          sentryVitePlugin({
-            authToken: sentryAuthToken,
-            org: 'bugsink',
-            project: 'web',
-            release: { create: false, inject: false },
-            sourcemaps: { filesToDeleteAfterUpload: ['dist/**/*.map'] },
-            telemetry: false,
-            url: new URL(sentryDSN).origin,
-
-            // the plugin's default handler logs upload failures and lets the build pass,
-            // shipping an image whose stack traces can never be symbolicated — a build
-            // that can't deliver its sourcemaps must not ship
-            errorHandler(error) {
-              throw error;
-            },
-          }),
-        ]
+      ? [buildSourcemapUploadPlugin({ authToken: sentryAuthToken, url: new URL(sentryDSN).origin })]
       : []),
   ],
+
   environments: {
     client: {
       build: {
@@ -124,4 +109,50 @@ function isMockBackendServer(value: unknown): value is MockBackendServer {
     'listen' in value &&
     typeof value.listen === 'function'
   );
+}
+
+interface SourcemapUploadOptions {
+  readonly authToken: string;
+  readonly url: string;
+}
+
+// a failed step throws and fails the build, so an image that can't be symbolicated never ships
+function buildSourcemapUploadPlugin(options: SourcemapUploadOptions): Plugin {
+  return {
+    name: 'vers:sourcemap-upload',
+    apply: 'build',
+    buildApp: {
+      order: 'post',
+      async handler(builder) {
+        const distDir = path.resolve(builder.config.root, 'dist');
+
+        const cli = new SentryCLI(null, {
+          authToken: options.authToken,
+          org: 'bugsink',
+          project: 'web',
+          url: options.url,
+        });
+
+        // vite rewrites some chunks and their maps after a bundler plugin's last hook, worker
+        // bundles among them, so Debug IDs go in once every environment has built
+        await cli.execute(['sourcemaps', 'inject', distDir], 'rejectOnError');
+
+        // Bugsink assembles each upload under a global write lock for about a minute, and a second
+        // upload that waits on it hits gunicorn's 30s timeout as a 500, so one upload sends it all
+        await cli.execute(['sourcemaps', 'upload', distDir], 'rejectOnError');
+
+        await removeSourcemaps(distDir);
+      },
+    },
+  };
+}
+
+async function removeSourcemaps(directory: string): Promise<void> {
+  const entries = await readdir(directory, { recursive: true });
+
+  await Promise.all(collectSourcemapPaths(entries).map((entry) => rm(path.join(directory, entry))));
+}
+
+function collectSourcemapPaths(entries: ReadonlyArray<string>): Array<string> {
+  return entries.filter((entry) => entry.endsWith('.map'));
 }

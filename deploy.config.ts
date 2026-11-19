@@ -104,12 +104,8 @@ export default defineDeployManifest({
     },
     {
       app: 'vers-app-web',
-      buildArgsFromEnv: [
-        'SENTRY_AUTH_TOKEN',
-        'VITE_SENTRY_DSN',
-        'VITE_SIM_ENGINE_HASH',
-        'VITE_UMAMI_WEBSITE_ID',
-      ],
+      buildArgsFromEnv: ['VITE_SENTRY_DSN', 'VITE_SIM_ENGINE_HASH', 'VITE_UMAMI_WEBSITE_ID'],
+      buildSecretsFromEnv: ['SENTRY_AUTH_TOKEN'],
       configDir: 'apps/web',
       dockerfile: 'apps/web/Dockerfile',
       exposure: 'public',

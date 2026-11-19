@@ -76,7 +76,7 @@
     "@logtape/logtape": "catalog:",
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
-    "@sentry/vite-plugin": "catalog:",
+    "@sentry/cli": "catalog:",
     "@size-limit/file": "catalog:",
     "@tanstack/router-cli": "catalog:",
     "@tanstack/start-storage-context": "catalog:",
