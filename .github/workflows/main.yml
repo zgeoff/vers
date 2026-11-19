@@ -11,9 +11,10 @@ permissions:
 
 # Concurrency is per-job, not per-workflow: a workflow-level cancel-in-progress
 # kills flyctl mid-bluegreen rollout, stranding the green machines and failing
-# every later deploy with "found multiple image versions". Checks, tests, builds
-# and verifies group by commit and never cancel, so every push to main is tested;
-# deploy jobs queue instead.
+# every later deploy with "found multiple image versions". The checks and e2e
+# group by commit and never cancel, so every push to main is tested. Each deploy
+# stage, build through verify, has one fixed group that never cancels: it runs
+# one job at a time and keeps only the newest waiting run.
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -282,6 +283,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
+    # one migrate at a time; a newer run's migrate replaces an older one still waiting
     concurrency:
       group: ${{ github.workflow }}-migrate
       cancel-in-progress: false
@@ -315,7 +317,8 @@ jobs:
     if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # the workflow lint reads "deploy" in the job name as a deploy job, which never cancels
+    # a deploy stage: one run at a time, the newest waiting run replaces an older one, and the
+    # workflow lint reads "deploy" in the job name as a deploy job, which never cancels
     concurrency:
       group: ${{ github.workflow }}-manifest
       cancel-in-progress: false
@@ -347,7 +350,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
-    # the workflow lint reads "deploy" in the job name as a deploy job, which never cancels
+    # a deploy stage: one run at a time, the newest waiting run replaces an older one, and the
+    # workflow lint reads "deploy" in the job name as a deploy job, which never cancels
     concurrency:
       group: ${{ github.workflow }}-preflight
       cancel-in-progress: false
@@ -396,9 +400,10 @@ jobs:
     # worst observed leg (app-web remote build) is ~6.5 minutes; headroom for
     # builder variance and one retried build without holding the queue
     timeout-minutes: 15
-    # keyed by commit, so a newer run's build never cancels this one
+    # one build of each app at a time, never cut off; a newer run's build replaces an older one
+    # still waiting, and the newer run ships the app
     concurrency:
-      group: ${{ github.workflow }}-build-${{ matrix.app }}-${{ github.sha }}
+      group: ${{ github.workflow }}-build-${{ matrix.app }}
       cancel-in-progress: false
     strategy:
       # each app is independent — one build failing must not abandon the others
@@ -462,9 +467,9 @@ jobs:
     # is about to promote — every app's ref resolves to this commit's build
     # when stale or the newest recorded release otherwise, so the suite always
     # exercises the fleet main is about to become. A failed build leg fails
-    # this job on the missing image instead of skipping it. A build leg that
-    # hits its timeout reports cancelled but leaves cancelled() false, so the
-    # job skips on a cancelled need itself.
+    # this job on the missing image instead of skipping it. A build leg that a
+    # newer run's build replaces, or that hits its timeout, reports cancelled
+    # but leaves cancelled() false, so the job skips on a cancelled need itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
       && needs.e2e.result == 'success' && needs.manifest.result == 'success' }}
@@ -472,8 +477,9 @@ jobs:
     environment: production
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
     timeout-minutes: 20
+    # one full-stack gate at a time, never cut off; a newer run's gate replaces an older one waiting
     concurrency:
-      group: ${{ github.workflow }}-stack-e2e-${{ github.sha }}
+      group: ${{ github.workflow }}-stack-e2e
       cancel-in-progress: false
     steps:
       # ref resolution runs turbo/git against each app's deployed SHA, which can be many pushes
@@ -601,7 +607,8 @@ jobs:
     # bluegreen cutover plus probes is ~3 minutes at worst; headroom without
     # holding the queue
     timeout-minutes: 15
-    # never cancel a rollout mid-flight; a newer run's deploy waits its turn
+    # never cancel a rollout mid-flight; a newer run's deploy waits its turn and replaces an older
+    # one still waiting
     concurrency:
       group: ${{ github.workflow }}-deploy-${{ matrix.app }}
       cancel-in-progress: false
@@ -656,8 +663,8 @@ jobs:
     # every green main push — even when every deploy leg skipped. This is what
     # catches a silently-missing deploy (an app at zero machines, or a fleet
     # still running code from before a cancelled rollout) and fails the run.
-    # A need that hits its timeout reports cancelled but leaves cancelled()
-    # false, so the job skips on a cancelled need itself.
+    # A need that a newer run replaces, or that hits its timeout, reports
+    # cancelled but leaves cancelled() false, so the job skips on it itself.
     if:
       ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
       && needs.e2e.result == 'success' }}
@@ -665,8 +672,9 @@ jobs:
     environment: production
     # six fleet reads plus probe retries fit in ~3 minutes at worst
     timeout-minutes: 10
+    # one fleet check at a time, never cut off; a newer run's check replaces an older one waiting
     concurrency:
-      group: ${{ github.workflow }}-verify-fleet-${{ github.sha }}
+      group: ${{ github.workflow }}-verify-fleet
       cancel-in-progress: false
     steps:
       # verify runs turbo/git against each app's deployed SHA, as the deploy job does: see the
@@ -703,8 +711,9 @@ jobs:
     if: ${{ !cancelled() && needs.verify-fleet.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # one prod check at a time, never cut off; a newer run's check replaces an older one waiting
     concurrency:
-      group: ${{ github.workflow }}-verify-prod-${{ github.sha }}
+      group: ${{ github.workflow }}-verify-prod
       cancel-in-progress: false
     env:
       LEFTHOOK: 0
