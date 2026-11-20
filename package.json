@@ -106,7 +106,7 @@
       "@zgeoff/agent-hooks": "0.2.14",
       "@zgeoff/bugsink-mcp": "0.2.0",
       "@zgeoff/bun-test-extended": "0.2.4",
-      "@zgeoff/chex": "0.3.13",
+      "@zgeoff/chex": "0.3.14",
       "@zgeoff/dbhub": "0.23.5",
       "@zgeoff/diet": "0.2.3",
       "@zgeoff/format-codemod": "0.3.6",
