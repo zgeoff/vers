@@ -314,7 +314,7 @@ jobs:
       - name: Setup E2E Dotenv
         env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web/.env.e2e
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -378,7 +378,7 @@ jobs:
         with:
           name: playwright-results-${{ matrix.leg }}
           include-hidden-files: true
-          path: apps/web-e2e/.test-results
+          path: apps/web/.test-results
 
   # main builds the images only at deploy, on Fly's remote builder, so a change to an install
   # stage's inputs builds every server image here before it merges

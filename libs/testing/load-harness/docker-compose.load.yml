@@ -7,7 +7,7 @@
 
 x-service-base: &service-base
   env_file:
-    - ../../../apps/web-e2e/stack.env
+    - ../../../apps/web/stack.env
   healthcheck:
     test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health']
     interval: 2s

@@ -1,0 +1,66 @@
+import { expect, onTestFinished, test } from 'bun:test';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { waitFor } from '@vers/test-utils';
+import { http, passthrough } from 'msw';
+import { server as mockServer } from '../mocks/node';
+import { readFreePort } from './verify/local/read-free-port';
+
+async function setupTest() {
+  const directory = await mkdtemp(join(tmpdir(), 'stub-held-server-'));
+
+  onTestFinished(() => rm(directory, { recursive: true, force: true }));
+
+  const port = readFreePort();
+
+  const server = Bun.spawn(['bun', join(import.meta.dir, 'run-stub-held-server.ts')], {
+    env: { ...process.env, STUB_PORT: String(port), STUB_PID_DIRECTORY: directory },
+    stderr: 'pipe',
+  });
+
+  onTestFinished(() => {
+    server.kill('SIGKILL');
+  });
+
+  const healthURL = `http://127.0.0.1:${port}/health`;
+
+  // the web app's preload fails a request that no handler claims, and this one goes to the real
+  // stub process
+  mockServer.use(http.get(healthURL, () => passthrough()));
+
+  return { directory, server, healthURL };
+}
+
+test('it still answers /health after SIGTERM', async () => {
+  const ctx = await setupTest();
+
+  await waitFor(() => fetch(ctx.healthURL), { timeoutMs: 3000 });
+
+  ctx.server.kill('SIGTERM');
+
+  const stderr = ctx.server.stderr.getReader();
+
+  const held = await stderr.read();
+  const response = await fetch(ctx.healthURL);
+
+  expect({
+    held: new TextDecoder().decode(held.value),
+    status: response.status,
+    exitCode: ctx.server.exitCode,
+  }).toStrictEqual({
+    held: 'stub held server: holding its stop\n',
+    status: 200,
+    exitCode: null,
+  });
+});
+
+test('it writes its pid into the pid folder once it serves', async () => {
+  const ctx = await setupTest();
+
+  await waitFor(() => fetch(ctx.healthURL), { timeoutMs: 3000 });
+
+  const names = await readdir(ctx.directory);
+
+  expect(names).toStrictEqual([String(ctx.server.pid)]);
+});

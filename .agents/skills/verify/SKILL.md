@@ -173,8 +173,8 @@ for its commands.
 
 <!-- repo: registry -->
 
-The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the targets,
-actions, checks and features. To change `paths`, read
+The [registry](../../../apps/web/src/test-utils/verify/create-verify-registry.ts) declares the
+targets, actions, checks and features. To change `paths`, read
 [references/registry.md](references/registry.md).
 
 <!-- /repo -->
