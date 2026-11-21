@@ -29,6 +29,7 @@
     "@types/react-dom": "catalog:",
     "@types/three": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "happy-dom": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",

@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
+    "@mswjs/interceptors": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@sentry/bun": "catalog:",
@@ -53,6 +54,7 @@
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "fast-check": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"

@@ -18,6 +18,7 @@
     "@vers/db": "workspace:*",
     "@vers/game-utils": "workspace:*",
     "@vers/service-auth": "workspace:*",
+    "@zgeoff/testing": "catalog:",
     "jose": "catalog:",
     "kysely": "catalog:",
     "postgres": "catalog:",

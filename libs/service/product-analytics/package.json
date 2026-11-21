@@ -14,10 +14,12 @@
     "@opentelemetry/api": "catalog:"
   },
   "devDependencies": {
+    "@mswjs/interceptors": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"
   }

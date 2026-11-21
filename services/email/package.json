@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@logtape/logtape": "catalog:",
+    "@mswjs/interceptors": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/contract": "catalog:",
     "@sentry/bun": "catalog:",
@@ -32,6 +33,7 @@
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"
   }

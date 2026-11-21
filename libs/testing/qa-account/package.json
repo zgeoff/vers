@@ -29,6 +29,7 @@
     "@vers/sim-registry": "workspace:*",
     "@vers/worldmap-content": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
+    "@zgeoff/testing": "catalog:",
     "gunshi": "catalog:",
     "kysely": "catalog:",
     "tiny-invariant": "catalog:",

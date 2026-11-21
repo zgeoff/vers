@@ -24,6 +24,7 @@
   "dependencies": {
     "@faker-js/faker": "catalog:",
     "@msw/data": "catalog:",
+    "@mswjs/interceptors": "catalog:",
     "@noble/hashes": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
@@ -41,6 +42,7 @@
     "@vers/roll-crypto": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
+    "@zgeoff/testing": "catalog:",
     "jose": "catalog:",
     "msw": "catalog:",
     "zod": "catalog:"

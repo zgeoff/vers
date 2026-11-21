@@ -1,2 +1,2 @@
 [test]
-preload = ["./test-setup.ts"]
+preload = ["@zgeoff/testing/preload", "@vers/email/mocks", "./test-setup.ts"]

@@ -5,7 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./mocks": "./src/mocks/node.ts"
+    "./mocks": "./src/mocks/network.ts"
   },
   "scripts": {
     "preview": "bun run scripts/preview.ts",
@@ -21,6 +21,7 @@
     "resend": "catalog:"
   },
   "devDependencies": {
+    "@mswjs/interceptors": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/bun": "catalog:",
@@ -30,6 +31,7 @@
     "@types/react-dom": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"

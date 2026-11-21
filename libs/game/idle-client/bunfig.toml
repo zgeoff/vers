@@ -1,2 +1,7 @@
 [test]
-preload = ["@zgeoff/bun-test-extended", "./test-setup.ts"]
+preload = [
+  "@zgeoff/testing/preload",
+  "@zgeoff/bun-test-extended",
+  "./src/mocks/network.ts",
+  "./test-setup.ts",
+]

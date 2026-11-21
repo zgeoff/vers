@@ -12,8 +12,10 @@
     "typecheck": "tsrs --fast -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@mswjs/interceptors": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "tiny-invariant": "catalog:",
     "zustand": "catalog:"
@@ -23,7 +25,6 @@
     "@orpc/client": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"

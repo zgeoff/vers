@@ -40,6 +40,7 @@
     "@types/three": "catalog:",
     "@vers/contract-activity": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"

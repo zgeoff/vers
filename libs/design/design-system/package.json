@@ -35,6 +35,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "autoprefixer": "catalog:",
     "happy-dom": "catalog:",
     "react-dom": "catalog:",

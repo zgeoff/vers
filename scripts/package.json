@@ -38,12 +38,14 @@
   "devDependencies": {
     "@faker-js/faker": "catalog:",
     "@msw/data": "catalog:",
+    "@mswjs/interceptors": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/email": "workspace:*",
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"
   }
