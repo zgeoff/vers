@@ -4,7 +4,7 @@ import { MAX_REVEAL_BATCH_NODES } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
 import invariant from 'tiny-invariant';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
@@ -27,7 +27,7 @@ test('it calls revealNodes only for the delta beyond what a prior reveal already
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
@@ -83,7 +83,7 @@ test('it does not repeat a reveal for a node already cached this session', async
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
@@ -148,7 +148,7 @@ test('it chunks a delta larger than the server-side reveal batch cap', async () 
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
@@ -206,7 +206,7 @@ test('it relays the seeds and stamps revealNodes returns to the worker client', 
     writerAbortSignal: new AbortController().signal,
   });
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler((opts) => ({
       keyVersion: 1,
       nodes: opts.input.nodeIDs.map((nodeID) => ({
@@ -271,7 +271,7 @@ test('it does not re-request an in-flight id when the frontier grows mid-batch',
   const track = mock<(input: unknown) => void>();
   let releaseFirstReveal: (() => void) | undefined;
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler(async (opts) => {
       track(opts.input);
 
@@ -340,7 +340,7 @@ test('it completes an in-flight reveal batch the frontier growth overlaps, cachi
   const track = mock<(input: unknown) => void>();
   let releaseFirstReveal: (() => void) | undefined;
 
-  server.use(
+  network.use(
     mockActivityService.revealNodes.handler(async (opts) => {
       track(opts.input);
 

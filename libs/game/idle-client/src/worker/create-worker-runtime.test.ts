@@ -9,11 +9,11 @@ import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@ver
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
@@ -406,7 +406,7 @@ test('it delivers the offline continuation once a reconnect drains the held term
   // nothing else observable shows that the terminal append failed
   let appendFailed = false;
 
-  server.use(
+  network.use(
     http.post(
       `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
       makeFailFirstMatchHandler((input) => {
@@ -561,7 +561,7 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
     notifyReadStarted = resolve;
   });
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       notifyReadStarted?.();
 
@@ -636,7 +636,7 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 
   // the fetched progress must also report the writer lost, or a resync would re-attach a row the
   // server refuses
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),
@@ -668,7 +668,7 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 test('it stays online when a flush meets the refusal for a session another device took over', async () => {
   const viewer = await createViewer();
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   // a zero-gap active row, so the first report's resync attaches it live without any simulated
   // time elapsing
@@ -687,7 +687,7 @@ test('it stays online when a flush meets the refusal for a session another devic
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
-  server.use(
+  network.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
@@ -713,7 +713,7 @@ test('it stays online when a flush meets the refusal for a session another devic
 test('it halts the live run and broadcasts WriterDisplaced when a call meets the refusal for a session another device took over', async () => {
   const viewer = await createViewer();
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   // a zero-gap active row, so the first report's resync attaches it live without any simulated
   // time elapsing
@@ -734,7 +734,7 @@ test('it halts the live run and broadcasts WriterDisplaced when a call meets the
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
-  server.use(
+  network.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
@@ -760,7 +760,7 @@ test('it halts the live run and broadcasts WriterDisplaced when a call meets the
 test('it broadcasts a simulation with no live run to the open tabs when a takeover halts the run', async () => {
   const viewer = await createViewer();
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   // a zero-gap active row, so the first report's resync attaches it live without any simulated
   // time elapsing
@@ -781,7 +781,7 @@ test('it broadcasts a simulation with no live run to the open tabs when a takeov
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
-  server.use(
+  network.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 

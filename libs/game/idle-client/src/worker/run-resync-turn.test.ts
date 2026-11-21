@@ -13,10 +13,10 @@ import {
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
@@ -259,7 +259,7 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -701,7 +701,7 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
     failureAction: ActivityFailureAction.Retry,
   });
 
-  server.use(
+  network.use(
     mockActivityService.updateFailureAction.handler(() => {
       throw new Error('unreachable service');
     }),
@@ -875,7 +875,7 @@ test('it broadcasts session-expired without a fault report when the session is n
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'expired-session' } });
     }),
@@ -926,7 +926,7 @@ test('it broadcasts session-expired without a fault report when the session is n
 });
 
 test('it fails the resync as unreconstructed while a raised stop is undelivered on a cold worker', async () => {
-  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
@@ -985,7 +985,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   const ctx = await setupTest({ userID: viewer.user.id });
   const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       ctx.context.advanceStopScope();
 
@@ -1032,7 +1032,7 @@ test('it settles silently, broadcasting neither a failed status nor a fault, whe
 
   const track = mock<() => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       track();
 
@@ -1073,7 +1073,7 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
   ctx.context.setSimulation(simulation);
   ctx.context.setActivity(activity);
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -1138,7 +1138,7 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
 
   const resume = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -1207,7 +1207,7 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
     startedAt: new Date(Date.now() - 63_000),
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({
         data: { activityID: opts.input.activityID, appendedHead: opts.input.expectedHead },

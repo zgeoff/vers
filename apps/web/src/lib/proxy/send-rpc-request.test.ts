@@ -3,21 +3,21 @@ import { createId } from '@paralleldrive/cuid2';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
-import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { waitFor } from '@zgeoff/testing';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
 import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
+  network.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   await withRequestContext({}, () =>
     sendRPCRequest(
@@ -57,7 +57,7 @@ test.each([
   async (service, proxiedURL, upstreamURL) => {
     const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-    server.use(http.post(upstreamURL, resolver));
+    network.use(http.post(upstreamURL, resolver));
 
     const outcome = await withRequestContext({}, () =>
       sendRPCRequest(new Request(proxiedURL, { body: '{}', method: 'POST' }), service),
@@ -73,7 +73,7 @@ test.each(['createQAAccount', '%63reateQAAccount'])(
   async (procedure) => {
     const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-    server.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
+    network.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
 
     const outcome = await withRequestContext({}, () =>
       sendRPCRequest(
@@ -94,7 +94,7 @@ test.each(['createQAAccount', '%63reateQAAccount'])(
 test('it forwards the method and body for a caller with no cookie session, minting an anonymous token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
+  network.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
 
   await withRequestContext({}, () =>
     sendRPCRequest(
@@ -125,7 +125,7 @@ test('it forwards the method and body for a caller with no cookie session, minti
 test('it mints an activity call with no scope claim, so the QA seeding scope never reaches a browser call', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3006/rpc/getCurrentActivity', resolver));
+  network.use(http.post('http://localhost:3006/rpc/getCurrentActivity', resolver));
 
   await withRequestContext({}, () =>
     sendRPCRequest(
@@ -146,7 +146,7 @@ test('it mints an activity call with no scope claim, so the QA seeding scope nev
 test('it forwards a bodyless GET request without a body', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
+  network.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   const outcome = await withRequestContext({}, () =>
     sendRPCRequest(
@@ -169,7 +169,7 @@ test("it mints an s2s token carrying the caller's cookie userID as its subject, 
 
   const accessToken = await createTestAccessToken(userID);
 
-  server.use(http.get('http://localhost:3005/rpc/getAvatars', resolver));
+  network.use(http.get('http://localhost:3005/rpc/getAvatars', resolver));
 
   await withRequestContext(
     {
@@ -196,7 +196,7 @@ test("it mints an s2s token carrying the caller's cookie userID as its subject, 
 });
 
 test('it returns a response whose headers the server can still modify', async () => {
-  server.use(
+  network.use(
     http.get('http://localhost:3005/rpc/getAvatar', () =>
       HttpResponse.json({}, { headers: { 'x-upstream': 'kept' } }),
     ),
@@ -219,7 +219,7 @@ test('it returns a response whose headers the server can still modify', async ()
 test("it re-injects the traceparent from the proxy's own trace scope instead of forwarding the browser's raw header", async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
+  network.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   await withTraceContext(
     { spanID: '00f067aa0ba902b7', traceID: '4bf92f3577b34da6a3ce929d0e0e4736' },
@@ -286,7 +286,7 @@ test('it resends a hung GET-declared procedure at escalating bounds and forwards
     return HttpResponse.json({});
   });
 
-  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
+  network.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   const outcome = await withRequestContext({}, async () => {
     const pending = sendRPCRequest(
@@ -323,7 +323,7 @@ test('it answers a hung mutation with a 503 after one attempt spanning the whole
     return HttpResponse.json({});
   });
 
-  server.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
+  network.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
 
   const outcome = await withRequestContext({}, async () => {
     const pending = sendRPCRequest(
@@ -348,7 +348,7 @@ test('it answers a hung mutation with a 503 after one attempt spanning the whole
 test('it answers an immediate upstream transport failure with a 503 recorded under the transport reason', async () => {
   const inMemoryMetrics = createInMemoryMetrics();
 
-  server.use(http.get('http://localhost:3005/rpc/getAvatar', () => HttpResponse.error()));
+  network.use(http.get('http://localhost:3005/rpc/getAvatar', () => HttpResponse.error()));
 
   const outcome = await withRequestContext({}, () =>
     sendRPCRequest(
@@ -369,7 +369,7 @@ test('it answers an immediate upstream transport failure with a 503 recorded und
 test('it answers a superseded session itself, marking the response so the caller discards its offline work', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
+  network.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const userID = createId();
 
@@ -407,7 +407,7 @@ test('it answers a superseded session itself, marking the response so the caller
 test('it forwards a call whose session reached its own expiry, leaving the offline work alone', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
+  network.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const session = await db.sessionCollection.create({
     expiresAt: new Date(Date.now() - 1000),
@@ -441,7 +441,7 @@ test('it forwards a call whose session reached its own expiry, leaving the offli
 test('it sets no session-superseded header when the refresh resolves inside the window', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
+  network.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const session = await db.sessionCollection.create({
     previousRefreshToken: 'refresh-1',

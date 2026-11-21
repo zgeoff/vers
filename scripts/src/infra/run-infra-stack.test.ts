@@ -16,7 +16,7 @@ async function setupTest() {
 test("it runs the pulumi stack script under op with the infra directory's env file and its arguments", async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', String.raw`printf '%s|%s\n' "$PWD" "$*"`);
+  createStubCommand('op', String.raw`printf '%s|%s\n' "$PWD" "$*"`);
 
   const result = await runInfraStack({
     args: ['preview', '--refresh', '--diff'],
@@ -31,7 +31,7 @@ test("it runs the pulumi stack script under op with the infra directory's env fi
 test("it keeps op's output and errors apart", async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', "echo '{\"steps\": []}'\necho 'warning: slow provider' >&2");
+  createStubCommand('op', "echo '{\"steps\": []}'\necho 'warning: slow provider' >&2");
 
   const result = await runInfraStack({ args: ['preview', '--json'], infraPath: ctx.directory });
 
@@ -45,7 +45,7 @@ test("it keeps op's output and errors apart", async () => {
 test("it returns op's exit code when the command fails", async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
+  createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
 
   const result = await runInfraStack({
     args: ['preview', '--expect-no-changes'],

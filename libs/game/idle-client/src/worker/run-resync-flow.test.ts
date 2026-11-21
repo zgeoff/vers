@@ -13,7 +13,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
@@ -74,7 +74,7 @@ test('it reports the avatar settled once its resync completes', async () => {
 });
 
 test('it reports the avatar settled after a resync the network failed', async () => {
-  server.use(mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()));
 
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);

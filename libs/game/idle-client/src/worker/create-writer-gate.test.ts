@@ -1,5 +1,5 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createFakeWebLocks } from '../test-utils/create-fake-web-locks';
 import { WORKER_TO_CLIENT_CHANNEL, WRITER_LOCK_NAME } from '../transport/constants';
 import { WorkerMessageType } from '../types';

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createInMemoryLogs, updateEnv } from '@vers/test-utils/bun';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { checkHoneypot } from './check-honeypot';
 import { HONEYPOT_FIELD_NAME, HONEYPOT_VALID_FROM_FIELD_NAME } from './honeypot-field-names';
 

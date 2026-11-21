@@ -6,9 +6,9 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { makeAnswerQueue } from '@vers/test-utils';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { HttpResponse } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { ingestActivityStart } from './ingest-activity-start';
 import { readActivityStart } from './read-activity-start';
@@ -28,7 +28,7 @@ test('it ingests a pending activityStart and removes its durable row', async () 
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_ok', startKey: 'start_key_ok' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
   );
 
@@ -55,7 +55,7 @@ test('it reports the activityStart undelivered and keeps it on a transport failu
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_transport', startKey: 'start_key_t' });
 
-  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
   await writeActivityStart(row);
 
@@ -72,9 +72,9 @@ test('it defers and keeps the activityStart when the web app rate-limits the cal
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_throttled', startKey: 'start_key_rl' });
 
-  server.use(
-    mockActivityService.advanceActivity.handler(
-      () => new HttpResponse('Too Many Requests', { status: 429 }),
+  network.use(
+    mockActivityService.advanceActivity.handler(() =>
+      HttpResponse.text('Too Many Requests', { status: 429 }),
     ),
   );
 
@@ -93,7 +93,7 @@ test('it defers and keeps the activityStart when the avatar reads temporarily in
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_inactive', startKey: 'start_key_i' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.AVATAR_NOT_ACTIVE({
         data: { activeAvatarID: 'avatar_other', activeAvatarName: 'Other' },
@@ -117,7 +117,7 @@ test('it rejects and removes a row with no start key without reaching the server
   const row = createMockActivityData({ id: 'act_ingest_no_key', startKey: null });
   const track = mock<() => void>();
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler(() => {
       track();
 
@@ -141,7 +141,7 @@ test('it rejects and removes the activityStart once the server refuses it with N
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_rejected', startKey: 'start_key_c' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.NODE_NOT_REVEALED({ data: {} });
     }),
@@ -162,7 +162,7 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_conflict', startKey: 'start_key_d' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: { activityID: row.id, appendedHead: 3, avatarID: row.avatarID, reason: 'stale-head' },
@@ -204,7 +204,7 @@ test("it rejects a stale-chain-head start whose server anchor a rejection rewoun
     { chainIndex: 4, nextSeed: 'seed_server_4' },
   ]);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
@@ -263,7 +263,7 @@ test("it ingests a stale-chain-head start on the resend once an earlier delivery
     () => ({ activity: row, appendedHead: 0 }),
   ]);
 
-  server.use(mockActivityService.advanceActivity.handler(() => answer()()));
+  network.use(mockActivityService.advanceActivity.handler(() => answer()()));
 
   await writeActivityStart(row);
 
@@ -285,7 +285,7 @@ test("it defers a stale-chain-head start while an admitted activity's checkpoint
     startKey: 'start_key_behind_outbox',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
@@ -327,7 +327,7 @@ test('it defers a stale-chain-head refusal that carries no anchor, as an older s
     startKey: 'start_key_no_anchor',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
@@ -363,7 +363,7 @@ test('it keeps a final stale-chain-head start for the backoff when the progress 
     startKey: 'start_key_rewound_progress_down',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
@@ -396,7 +396,7 @@ test('it rejects and removes the activityStart on a permanent start-hash-mismatc
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_start_hash', startKey: 'start_key_e' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -432,7 +432,7 @@ test('it defers a build-snapshot-mismatch while the named predecessor is still a
     startKey: 'start_key_f',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -474,7 +474,7 @@ test('it defers a build-snapshot-mismatch while the named predecessor still wait
     startKey: 'start_key_pending_next',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -524,7 +524,7 @@ test('it rejects a build-snapshot-mismatch once the named predecessor has stoppe
     startKey: 'start_key_g',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -575,7 +575,7 @@ test('it rejects a build-snapshot-mismatch when the server’s active row is not
     startKey: 'start_key_divergent',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -612,7 +612,7 @@ test('it rejects a build-snapshot-mismatch on a start that names no predecessor,
     startKey: 'start_key_h',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -647,7 +647,7 @@ test('it rejects a build-snapshot-mismatch with no server row to fold from when 
     startKey: 'start_key_i2',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -680,7 +680,7 @@ test('it keeps a build-snapshot-mismatch for the backoff when the progress read 
     startKey: 'start_key_j',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -716,7 +716,7 @@ test('it defers an activityStart the account switched away from, carrying the sw
     startKey: 'start_key_switched',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.AVATAR_NOT_ACTIVE({
         data: { activeAvatarID: 'avatar_other', activeAvatarName: 'Zetha' },
@@ -743,7 +743,7 @@ test('it drops an activityStart this build can no longer replay, carrying the re
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_expired', startKey: 'start_key_expired' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: 'engine_hash_9' } });
     }),

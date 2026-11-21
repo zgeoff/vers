@@ -2,9 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { waitFor } from '@vers/test-utils';
-import { http, passthrough } from 'msw';
-import { server as mockServer } from '../mocks/node';
+import { waitFor } from '@zgeoff/testing';
 import { readFreePort } from './verify/local/read-free-port';
 
 async function setupTest() {
@@ -24,10 +22,6 @@ async function setupTest() {
   });
 
   const healthURL = `http://127.0.0.1:${port}/health`;
-
-  // the web app's preload fails a request that no handler claims, and this one goes to the real
-  // stub process
-  mockServer.use(http.get(healthURL, () => passthrough()));
 
   return { directory, server, healthURL };
 }

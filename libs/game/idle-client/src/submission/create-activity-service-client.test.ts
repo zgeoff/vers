@@ -1,11 +1,11 @@
 import { expect, mock, test } from 'bun:test';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { HttpResponse, http } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createActivityServiceClient } from './create-activity-service-client';
 
 test('it reports a superseded session when the proxy marks the refusal', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       buildSessionSupersededResponse(),
     ),
@@ -20,7 +20,7 @@ test('it reports a superseded session when the proxy marks the refusal', async (
 });
 
 test('it reports nothing when a refusal carries no superseded marker', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       HttpResponse.json(null, { status: 401 }),
     ),
@@ -35,7 +35,7 @@ test('it reports nothing when a refusal carries no superseded marker', async () 
 });
 
 test('it reports the procedure and status of an exchange the service answered with an error', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       HttpResponse.json(null, { status: 409 }),
     ),
@@ -50,7 +50,7 @@ test('it reports the procedure and status of an exchange the service answered wi
 });
 
 test('it reports an exchange the service never answered', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () => HttpResponse.error()),
   );
 
@@ -63,7 +63,7 @@ test('it reports an exchange the service never answered', async () => {
 });
 
 test('it reports nothing for an exchange the service answered with success', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       HttpResponse.json({ json: null }),
     ),

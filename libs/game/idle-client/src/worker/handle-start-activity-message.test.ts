@@ -10,7 +10,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readActivityStart } from '../submission/read-activity-start';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
@@ -271,7 +271,7 @@ test('it refuses a start with unreconstructed until a reconstruction has run sin
     createMockContentDocument({ contentVersion: seed.contentVersion }),
   );
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       throw new Error('network unreachable');
     }),
@@ -408,7 +408,7 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   const stopEffect = { current: () => {} };
   const stopTargets: Array<string> = [];
 
-  server.use(
+  network.use(
     mockActivityService.stopActivity.handler((opts) => {
       stopTargets.push(opts.input.activityID ?? '');
       throw opts.errors.NOT_FOUND({ data: {} });

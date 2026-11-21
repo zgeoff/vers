@@ -9,7 +9,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readActivityStart } from '../submission/read-activity-start';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
@@ -235,7 +235,7 @@ test('it discards the minted row when a stop cancels the content load', async ()
   const reachedLoad = buildDeferred<void>();
   const releaseLoad = buildDeferred<void>();
 
-  server.use(
+  network.use(
     mockActivityService.getContentDocument.handler(async () => {
       reachedLoad.resolve();
 

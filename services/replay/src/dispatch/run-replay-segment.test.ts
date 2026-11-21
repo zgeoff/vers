@@ -3,8 +3,7 @@ import { createMockReplaySegmentInput } from '@vers/contract-replay/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { http, passthrough } from 'msw';
-import { server } from '../mocks/server';
+import { startStubServer } from '@zgeoff/testing/server';
 import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplaySegment } from './run-replay-segment';
 
@@ -544,21 +543,20 @@ test('it attaches a traceparent to a remote dispatch', async () => {
 
   const remote = await createRemoteReplayProvider(ctx.deterministicInput.simVersion);
 
-  await createSimVersionRow(ctx.db, {
-    engineHash: ctx.deterministicInput.simVersion,
-    providerUrl: remote.url,
-    status: 'active',
-  });
-
-  const observedTraceparents: Array<string | null> = [];
-
-  server.use(
-    http.post(`${remote.url}/rpc/replaySegment`, (info) => {
-      observedTraceparents.push(info.request.headers.get('traceparent'));
-
-      return passthrough();
+  // a recording server in front of the provider: the dispatcher sends to it, it forwards each call on
+  const observer = startStubServer(async (request) =>
+    fetch(`${remote.url}${new URL(request.url).pathname}`, {
+      body: await request.text(),
+      headers: request.headers,
+      method: request.method,
     }),
   );
+
+  await createSimVersionRow(ctx.db, {
+    engineHash: ctx.deterministicInput.simVersion,
+    providerUrl: observer.url,
+    status: 'active',
+  });
 
   const response = await runReplaySegment(
     { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
@@ -567,9 +565,9 @@ test('it attaches a traceparent to a remote dispatch', async () => {
 
   expect(response).toMatchObject({ kind: 'replayed' });
 
-  const [observedTraceparent] = observedTraceparents;
+  const [observedRequest] = observer.requests;
 
-  expect(observedTraceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u);
+  expect(observedRequest?.headers['traceparent']).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u);
 });
 
 test('it reports providerUnavailable when the provider never responds', async () => {
@@ -597,7 +595,7 @@ test('it reports providerUnavailable when the provider never responds', async ()
 
   await createSimVersionRow(ctx.db, {
     engineHash: job.simVersion,
-    providerUrl: `http://localhost:${providerServer.port}`,
+    providerUrl: `http://127.0.0.1:${providerServer.port}`,
     status: 'active',
   });
 
@@ -651,7 +649,7 @@ test('it reports providerUnavailable when the provider answers with a proxy-styl
 
   await createSimVersionRow(ctx.db, {
     engineHash: job.simVersion,
-    providerUrl: `http://localhost:${providerServer.port}`,
+    providerUrl: `http://127.0.0.1:${providerServer.port}`,
     status: 'active',
   });
 

@@ -19,7 +19,9 @@ test('it appends the report to the step summary after what the summary holds', a
   const summaryPath = join(ctx.directory, 'summary.md');
 
   await writeFile(summaryPath, '## Audit\n');
-  await createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
+
+  createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
+
   await runOutdatedReport({ cwd: ctx.directory, summaryPath });
 
   const summary = await readFile(summaryPath, 'utf8');
@@ -30,7 +32,7 @@ test('it appends the report to the step summary after what the summary holds', a
 test('it returns the report for the log', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
+  createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
 
   const report = await runOutdatedReport({
     cwd: ctx.directory,
@@ -45,7 +47,8 @@ test('it runs bun outdated in the directory it is given', async () => {
 
   const argsPath = join(ctx.directory, 'args');
 
-  await createStubCommand('bun', `printf '%s %s\\n' "$PWD" "$*" > '${argsPath}'`);
+  createStubCommand('bun', `printf '%s %s\\n' "$PWD" "$*" > '${argsPath}'`);
+
   await runOutdatedReport({ cwd: ctx.directory, summaryPath: join(ctx.directory, 'summary.md') });
 
   const args = await readFile(argsPath, 'utf8');
@@ -56,7 +59,7 @@ test('it runs bun outdated in the directory it is given', async () => {
 test('it rejects a bun outdated run that fails', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('bun', "echo 'error: lockfile not found' >&2\nexit 1");
+  createStubCommand('bun', "echo 'error: lockfile not found' >&2\nexit 1");
 
   expect(
     runOutdatedReport({ cwd: ctx.directory, summaryPath: join(ctx.directory, 'summary.md') }),

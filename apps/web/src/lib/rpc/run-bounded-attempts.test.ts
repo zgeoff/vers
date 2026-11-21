@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
 import { makeHungAttempt } from '../../test-utils/make-hung-attempt';

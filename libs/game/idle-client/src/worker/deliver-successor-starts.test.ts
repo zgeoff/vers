@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -63,7 +63,7 @@ test('it leaves an unregistered successor in the outbox for the next recovery', 
 
   await writeActivityStart(successor);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       advance(opts.input);
 
@@ -95,7 +95,7 @@ test('it sends nothing when no start in the outbox follows the ended activity', 
     }),
   );
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       advance(opts.input);
       throw opts.errors.NOT_FOUND({ data: {} });

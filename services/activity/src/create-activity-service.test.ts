@@ -4,7 +4,8 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { createActivityService } from './create-activity-service';
 

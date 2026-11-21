@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { Logger } from '@openfeature/server-sdk';
 import { ErrorCode } from '@openfeature/server-sdk';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { envFlagProvider } from './env-flag-provider';
 
 function setupTest() {

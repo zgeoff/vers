@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { SpanStatusCode, context, propagation, trace } from '@opentelemetry/api';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { startTraceExport } from './start-trace-export';
 
 interface ReceivedExport {

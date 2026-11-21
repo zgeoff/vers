@@ -12,7 +12,7 @@ import { HttpResponse, http } from 'msw';
 import { readServerFnResponse } from '../../lib/offline/read-server-fn-response';
 import { readWithLastKnown } from '../../lib/offline/read-with-last-known';
 import { buildQueryClient } from '../../lib/query/build-query-client';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { GameErrorScreen } from './game-error-screen';
 
@@ -44,7 +44,7 @@ function setupTest() {
 test('it shows the offline notice when a game route fails offline with nothing known', async () => {
   const ctx = setupTest();
 
-  server.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.error()));
+  network.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.error()));
 
   const rendered = render(<RouterProvider router={ctx.router} />);
 
@@ -57,13 +57,13 @@ test('it shows the offline notice when a game route fails offline with nothing k
 test('it opens the screen when the player retries after the network returns', async () => {
   const ctx = setupTest();
 
-  server.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.error()));
+  network.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.error()));
 
   const rendered = render(<RouterProvider router={ctx.router} />);
 
   const retryButton = await rendered.findByRole('button', { name: 'Try again' });
 
-  server.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.text('market-on')));
+  network.use(http.get('http://app.test/_serverFn/flags', () => HttpResponse.text('market-on')));
 
   await userEvent.click(retryButton);
 

@@ -2,8 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { updateEnv } from '@vers/test-utils/bun';
-import { $ } from 'bun';
+import { updateEnv } from '@zgeoff/testing';
+import { createTempDir } from '@zgeoff/testing/fs';
+import { readGitEnv, runGit } from '@zgeoff/testing/git';
 import { readChangedPathsSince } from './read-changed-paths-since';
 
 async function setupTest() {
@@ -24,19 +25,17 @@ async function setupTest() {
 
   await fs.mkdir(originDir);
 
-  const runGit = async (args: ReadonlyArray<string>): Promise<string> => {
-    const stdout =
-      await $`git -c user.name=test -c user.email=test@vers.test -c commit.gpgsign=false ${args}`
-        .cwd(originDir)
-        .env({ ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' })
-        .text();
+  const gitEnv = readGitEnv(createTempDir('git-home').path);
+
+  const git = async (args: ReadonlyArray<string>): Promise<string> => {
+    const stdout = await runGit(originDir, gitEnv, args);
 
     return stdout.trim();
   };
 
-  await runGit(['init', '-q', '-b', 'main']);
+  await git(['init', '-q', '-b', 'main']);
 
-  return { root, originDir, runGit };
+  return { root, originDir, git };
 }
 
 test('it lists both the old and the new path of a renamed file', async () => {
@@ -44,14 +43,14 @@ test('it lists both the old and the new path of a renamed file', async () => {
 
   await fs.mkdir(path.join(ctx.originDir, 'services/api'), { recursive: true });
   await Bun.write(path.join(ctx.originDir, 'services/api/handler.ts'), 'export const a = 1;\n');
-  await ctx.runGit(['add', '-A']);
-  await ctx.runGit(['commit', '-q', '-m', 'add handler']);
+  await ctx.git(['add', '-A']);
+  await ctx.git(['commit', '-q', '-m', 'add handler']);
 
-  const baseSHA = await ctx.runGit(['rev-parse', 'HEAD']);
+  const baseSHA = await ctx.git(['rev-parse', 'HEAD']);
 
   await fs.mkdir(path.join(ctx.originDir, 'libs'));
-  await ctx.runGit(['mv', 'services/api/handler.ts', 'libs/handler.ts']);
-  await ctx.runGit(['commit', '-q', '-m', 'move handler']);
+  await ctx.git(['mv', 'services/api/handler.ts', 'libs/handler.ts']);
+  await ctx.git(['commit', '-q', '-m', 'move handler']);
 
   expect(readChangedPathsSince(baseSHA, { cwd: ctx.originDir })).resolves.toStrictEqual([
     'libs/handler.ts',
@@ -69,22 +68,22 @@ test('it lists the changes in a blobless clone that cannot fetch file contents',
     'export const a = 1;\nexport const b = 2;\n',
   );
 
-  await ctx.runGit(['add', '-A']);
-  await ctx.runGit(['commit', '-q', '-m', 'add handler']);
+  await ctx.git(['add', '-A']);
+  await ctx.git(['commit', '-q', '-m', 'add handler']);
 
-  const baseSHA = await ctx.runGit(['rev-parse', 'HEAD']);
+  const baseSHA = await ctx.git(['rev-parse', 'HEAD']);
 
-  await ctx.runGit(['mv', 'handler.ts', 'route.ts']);
+  await ctx.git(['mv', 'handler.ts', 'route.ts']);
 
   await Bun.write(
     path.join(ctx.originDir, 'route.ts'),
     'export const a = 1;\nexport const b = 3;\n',
   );
 
-  await ctx.runGit(['commit', '-q', '-am', 'rename handler']);
-  await ctx.runGit(['config', 'uploadpack.allowFilter', 'true']);
+  await ctx.git(['commit', '-q', '-am', 'rename handler']);
+  await ctx.git(['config', 'uploadpack.allowFilter', 'true']);
 
-  await ctx.runGit([
+  await ctx.git([
     '-c',
     'protocol.file.allow=always',
     'clone',
@@ -95,7 +94,7 @@ test('it lists the changes in a blobless clone that cannot fetch file contents',
     cloneDir,
   ]);
 
-  await ctx.runGit(['-C', cloneDir, 'remote', 'set-url', 'origin', path.join(ctx.root, 'gone')]);
+  await ctx.git(['-C', cloneDir, 'remote', 'set-url', 'origin', path.join(ctx.root, 'gone')]);
 
   expect(readChangedPathsSince(baseSHA, { cwd: cloneDir })).resolves.toStrictEqual([
     'handler.ts',
@@ -107,16 +106,16 @@ test('it lists the changes up to the head it is given in place of HEAD', async (
   const ctx = await setupTest();
 
   await Bun.write(path.join(ctx.originDir, 'handler.ts'), 'export const a = 1;\n');
-  await ctx.runGit(['add', '-A']);
-  await ctx.runGit(['commit', '-q', '-m', 'add handler']);
+  await ctx.git(['add', '-A']);
+  await ctx.git(['commit', '-q', '-m', 'add handler']);
 
-  const baseSHA = await ctx.runGit(['rev-parse', 'HEAD']);
+  const baseSHA = await ctx.git(['rev-parse', 'HEAD']);
 
   await Bun.write(path.join(ctx.originDir, 'route.ts'), 'export const b = 2;\n');
-  await ctx.runGit(['add', '-A']);
-  await ctx.runGit(['commit', '-q', '-m', 'add route']);
-  await ctx.runGit(['branch', 'released']);
-  await ctx.runGit(['checkout', '-q', baseSHA]);
+  await ctx.git(['add', '-A']);
+  await ctx.git(['commit', '-q', '-m', 'add route']);
+  await ctx.git(['branch', 'released']);
+  await ctx.git(['checkout', '-q', baseSHA]);
 
   expect(
     readChangedPathsSince(baseSHA, { cwd: ctx.originDir, head: 'released' }),

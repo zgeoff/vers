@@ -1,10 +1,10 @@
 import { expect, mock, test } from 'bun:test';
 import { getLogger } from '@logtape/logtape';
 import { mockReplayService } from '@vers/mock-services/replay';
-import { waitFor } from '@vers/test-utils';
-import { createInMemoryMetrics, updateEnv } from '@vers/test-utils/bun';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { updateEnv, waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 import { makeSendReplayWake } from './make-send-replay-wake';
 
 test('it retries a failed client build on the next call', async () => {
@@ -22,7 +22,7 @@ test('it retries a failed client build on the next call', async () => {
 
   const wakeHandler = mock(() => ({ drained: 0 }));
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  network.use(mockReplayService.wake.handler(wakeHandler));
 
   sendReplayWake();
 
@@ -61,7 +61,7 @@ test('it keeps the cached client after a wake-call failure, without rebuilding i
   // isolates a wake-call failure from an unbuilt cache
   const warmupHandler = mock(() => ({ drained: 0 }));
 
-  server.use(mockReplayService.wake.handler(warmupHandler));
+  network.use(mockReplayService.wake.handler(warmupHandler));
 
   sendReplayWake();
 
@@ -80,7 +80,7 @@ test('it keeps the cached client after a wake-call failure, without rebuilding i
     throw new Error('simulated wake delivery failure');
   });
 
-  server.use(mockReplayService.wake.handler(failingHandler));
+  network.use(mockReplayService.wake.handler(failingHandler));
 
   sendReplayWake();
 
@@ -97,7 +97,7 @@ test('it aborts its in-flight wake when its signal aborts', async () => {
     (_options: Readonly<Record<'request', Request>>) => new Promise<{ drained: number }>(() => {}),
   );
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  network.use(mockReplayService.wake.handler(wakeHandler));
 
   const lifetime = new AbortController();
 
@@ -140,7 +140,7 @@ test('it gives each instance its own coalesce state', async () => {
   // in-flight guard would let the first swallow the second, delivering one wake instead of two
   const wakeHandler = mock(() => ({ drained: 0 }));
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  network.use(mockReplayService.wake.handler(wakeHandler));
 
   const pokeFirst = makeSendReplayWake({
     coalesceWindowMs: 0,

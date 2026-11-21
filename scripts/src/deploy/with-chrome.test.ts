@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createStubChrome } from '../test-utils/create-stub-chrome';
 import { withChrome } from './with-chrome';
 

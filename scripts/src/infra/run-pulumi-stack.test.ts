@@ -18,7 +18,7 @@ test('it runs its pulumi command on the prod stack against the R2 state backend 
 
   const recordPath = join(ctx.directory, 'record');
 
-  await createStubCommand(
+  createStubCommand(
     'pulumi',
     `printf '%s\\n%s\\n%s\\n' "$PWD" "$PULUMI_BACKEND_URL" "$*" > '${recordPath}'`,
   );
@@ -46,7 +46,7 @@ test('it runs its pulumi command on the prod stack against the R2 state backend 
 test("it returns pulumi's exit code when the command fails", async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('pulumi', 'exit 255');
+  createStubCommand('pulumi', 'exit 255');
 
   const exitCode = await runPulumiStack({
     args: ['preview', '--expect-no-changes'],

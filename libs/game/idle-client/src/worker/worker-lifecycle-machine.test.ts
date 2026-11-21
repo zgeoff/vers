@@ -10,12 +10,12 @@ import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService, readAppendedAnchor } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
@@ -198,7 +198,7 @@ test('it reports continuing while a continuation flow is in flight', async () =>
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  server.use(mockActivityService.getContentDocument.handler(() => new Promise(() => {})));
+  network.use(mockActivityService.getContentDocument.handler(() => new Promise(() => {})));
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
   const simulation = createSimulation();
@@ -218,7 +218,7 @@ test('it reports continuing while a continuation flow is in flight', async () =>
 });
 
 test("it reports stopping during a stop's durable delivery, then returns to idle", async () => {
-  server.use(mockActivityService.stopActivity.handler(() => new Promise(() => {})));
+  network.use(mockActivityService.stopActivity.handler(() => new Promise(() => {})));
 
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const activity = createMockActivityData();
@@ -2012,7 +2012,7 @@ test('it clears the run and mints behind it when the worker is evicted while a r
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),
@@ -2062,7 +2062,7 @@ test('it clears the run and mints behind it when the worker is evicted while a r
 test('it discards the outbox on a takeover from another device and mints from the server after the next sign-in', async () => {
   const viewer = await createViewer({ avatar: { xp: 400 } });
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   const context = createStubWorkerContext({
     activityProxy: true,
@@ -2108,7 +2108,7 @@ test('it discards the outbox on a takeover from another device and mints from th
   await writeActivityStart(undelivered);
   await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: undelivered.id });
 
-  server.use(
+  network.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
@@ -2120,8 +2120,7 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   const outboxAfterTakeover = await readAllActivityStarts();
 
-  server.resetHandlers();
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   await ctx.setupStartableNode(viewer.avatar.id);
 
@@ -2165,7 +2164,7 @@ test('it discards the outbox on a takeover from another device and mints from th
 test('it delivers no start that a continuation held at its write mints, once a takeover discarded the outbox and the player signs back in', async () => {
   const viewer = await createViewer({ avatar: { xp: 400 } });
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   const held = buildStubHeldWriter(writeMintedActivityStart);
 
@@ -2226,7 +2225,7 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   await held.reached;
 
-  server.use(
+  network.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
@@ -2238,8 +2237,7 @@ test('it delivers no start that a continuation held at its write mints, once a t
     expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
   });
 
-  server.resetHandlers();
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
@@ -2288,7 +2286,7 @@ test('it queues one takeover discard behind the flow in flight however many call
 });
 
 test('it discards again when a later takeover marks the worker after an earlier discard ran', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       buildSessionSupersededResponse(),
     ),
@@ -2460,7 +2458,7 @@ test("it drops a start refused because its predecessor is no longer active and m
   context.setSimulation(simulation);
   context.setActivity(refused);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {

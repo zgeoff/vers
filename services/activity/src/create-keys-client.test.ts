@@ -4,7 +4,7 @@ import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { decodeJwt } from 'jose';
 import { http } from 'msw';
 import { createKeysClient } from './create-keys-client';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 
 async function setupTest() {
   const keyPair = await resolveTestServiceKeyPair();
@@ -22,7 +22,7 @@ test('it sends each keys call a service token from service-activity for the keys
 
   const authorizations: Array<string | null> = [];
 
-  server.use(
+  network.use(
     http.post(`${resolveServiceURL('keys')}/rpc/*`, (info) => {
       authorizations.push(info.request.headers.get('authorization'));
     }),

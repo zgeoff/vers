@@ -3,7 +3,7 @@ import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { HttpResponse, http } from 'msw';
 import { createEmailClient } from './create-email-client';
-import { RESEND_ENDPOINT_URL, sentEmails, server } from './mocks/node';
+import { RESEND_ENDPOINT_URL, network, sentEmails } from './mocks/network';
 
 function setupTest() {
   return createInMemoryTraces();
@@ -72,7 +72,7 @@ test('it omits the idempotency key header when none is given', async () => {
 });
 
 test('it throws when resend reports an error', () => {
-  server.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
+  network.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
 
   const client = createEmailClient({ apiKey: 'test-api-key' });
 
@@ -107,7 +107,7 @@ test('it emits a resend.send client span for a successful send', async () => {
 test('it marks the span failed when resend reports an error', async () => {
   const ctx = setupTest();
 
-  server.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
+  network.use(http.post(RESEND_ENDPOINT_URL, () => HttpResponse.error()));
 
   const client = createEmailClient({ apiKey: 'test-api-key' });
 

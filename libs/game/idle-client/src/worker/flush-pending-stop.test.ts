@@ -5,7 +5,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
@@ -183,7 +183,7 @@ test('it delivers the run that ended offline before the stopped run it chained o
 });
 
 test('it keeps the row open, the intent, and the queue when the queue a reload left cannot be delivered', async () => {
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   const viewer = await createViewer();
 
@@ -263,7 +263,7 @@ test('it never touches a row other than the targeted one', async () => {
 });
 
 test('it keeps the intent held on a transport failure', async () => {
-  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
@@ -311,7 +311,7 @@ test('it releases a stop another writer superseded, leaving the row active', asy
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ client, submitter });
 
-  server.use(
+  network.use(
     mockActivityService.stopActivity.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),

@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { buildOfflineHoldPaths } from '../qa/build-offline-hold-paths';
 import { readOfflineHoldFailures } from '../qa/read-offline-hold-failures';
 import { startStubDevTools } from '../test-utils/start-stub-devtools';

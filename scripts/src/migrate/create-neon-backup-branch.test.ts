@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { makeAnswerQueue } from '@vers/test-utils';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { HttpResponse, http } from 'msw';
-import { neonBranchCollection, server } from '../mocks/node';
+import { neonBranchCollection, network } from '../mocks/network';
 import { createNeonBackupBranch } from './create-neon-backup-branch';
 import { NEON_API_ORIGIN } from './request-neon-json';
 
@@ -85,7 +85,7 @@ test('it waits for a running branch operation to finish', async () => {
 
   const nextStatus = makeAnswerQueue(['running', 'running', 'finished']);
 
-  server.use(
+  network.use(
     http.get(`${NEON_API_ORIGIN}/projects/:projectID/operations/:operationID`, (info) =>
       HttpResponse.json({
         operation: {
@@ -112,7 +112,7 @@ test('it waits for a running branch operation to finish', async () => {
 test('it rejects a branch operation that fails', async () => {
   await neonBranchCollection.create({ name: 'main', projectID: 'quiet-river-1234' });
 
-  server.use(
+  network.use(
     http.get(`${NEON_API_ORIGIN}/projects/:projectID/operations/:operationID`, () =>
       HttpResponse.json({
         operation: { action: 'create_branch', id: 'op-failed', status: 'failed' },
@@ -135,7 +135,7 @@ test('it rejects a branch operation that fails', async () => {
 test('it rejects a branch operation still running at the deadline', async () => {
   await neonBranchCollection.create({ name: 'main', projectID: 'quiet-river-1234' });
 
-  server.use(
+  network.use(
     http.get(`${NEON_API_ORIGIN}/projects/:projectID/operations/:operationID`, () =>
       HttpResponse.json({
         operation: { action: 'create_branch', id: 'op-slow', status: 'running' },

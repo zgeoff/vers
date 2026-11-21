@@ -2,8 +2,6 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { http, passthrough } from 'msw';
-import { server } from '../mocks/node';
 import { buildChromePaths } from './build-chrome-paths';
 import { createChrome } from './create-chrome';
 import { readProcessStartTime } from './read-process-start-time';
@@ -18,7 +16,6 @@ async function setupTest() {
   const port = listener.port;
 
   listener.stop(true);
-  server.use(http.get(`http://127.0.0.1:${port}/json/version`, () => passthrough()));
 
   return { paths: buildChromePaths(stateHome, '/unused'), port, stateHome };
 }

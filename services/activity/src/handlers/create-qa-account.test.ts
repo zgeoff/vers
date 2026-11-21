@@ -11,7 +11,7 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { ORIGIN_CELL } from '@vers/worldmap-core';
 import { createActivityService } from '../create-activity-service';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 
 // the handler commits its rows in its own interactive transaction, which the default
 // transaction-isolation handle can't nest — this suite runs against a committed schema clone
@@ -176,7 +176,7 @@ test('it answers INTERNAL_SERVER_ERROR when the keys service refuses the activit
   await createSimVersionRow(ctx.db, { status: 'active' });
   await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
 
-  server.use(
+  network.use(
     mockKeysService.deriveAvatarKey.handler(() => {
       throw new ORPCError('UNAUTHORIZED');
     }),

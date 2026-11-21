@@ -1,7 +1,7 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import { getLogger, resetSync } from '@logtape/logtape';
-import { waitFor } from '@vers/test-utils';
 import { createInMemoryLogs, createInMemoryMetrics } from '@vers/test-utils/bun';
+import { waitFor } from '@zgeoff/testing';
 import { makeReplayWaker } from './make-replay-waker';
 import type { WakeAttempt } from './make-replay-waker';
 

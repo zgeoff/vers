@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { readServedCommit } from './read-served-commit';
 
 test('it reads the commit the deploy stamped', () => {

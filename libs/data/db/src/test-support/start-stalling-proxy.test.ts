@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { connect, createServer } from 'node:net';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { startStallingProxy } from './start-stalling-proxy';
 

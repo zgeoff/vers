@@ -6,7 +6,7 @@ import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { runOnboarding } from './run-onboarding';
@@ -115,7 +115,7 @@ test('it reports a generic form-level error when account creation fails', async 
     resolveContext: () => ({ actingUserID: null }),
   });
 
-  server.use(
+  network.use(
     mockUser.createUser.handler(() => {
       throw new Error('the user service is unreachable');
     }),

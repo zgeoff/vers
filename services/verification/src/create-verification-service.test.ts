@@ -1,7 +1,8 @@
 import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { VerificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createVerificationService } from './create-verification-service';
 import { readVerification } from './handlers/read-verification';
 

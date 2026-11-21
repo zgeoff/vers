@@ -5,11 +5,12 @@ import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import { makeAnswerQueue, waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { HttpResponse, delay, http } from 'msw';
 import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
@@ -245,7 +246,7 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -277,7 +278,7 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
 test('it reports the activity ended once the server acknowledges its terminal checkpoint', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   await ctx.submitter.registerActivity({
     activityID: 'ended-activity',
@@ -295,7 +296,7 @@ test('it reports the activity ended once the server acknowledges its terminal ch
 test('it reports no end when the acknowledged head stops short of the terminal checkpoint', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await ctx.submitter.registerActivity({
     activityID: 'short-ack-activity',
@@ -314,7 +315,7 @@ test('it reports no end when the acknowledged head stops short of the terminal c
 test('it reports the activity ended when the server already holds it as terminal', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 3, status: 'stopped' } });
     }),
@@ -336,7 +337,7 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -390,7 +391,7 @@ test('it sends a queue past the batch cap as a capped prefix and the tail on the
   const ctx = setupTest();
   const track = mock<(batchSize: number, expectedHead: number) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input.checkpoints.length, opts.input.expectedHead);
 
@@ -427,7 +428,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -473,7 +474,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
 test('it discards the queue on NOT_FOUND', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.NOT_FOUND({ data: {} });
     }),
@@ -498,7 +499,7 @@ test('it holds the queue on UNAUTHORIZED and resends on the next flush', async (
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -550,7 +551,7 @@ test('it resends rows already queued from a previous worker lifetime on attach',
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -587,7 +588,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -615,7 +616,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
 test('it reports each acknowledged head after a successful flush', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   await ctx.submitter.registerActivity({
     activityID: 'acked-activity',
@@ -634,7 +635,7 @@ test('it stops the stream, discards the queue, and reports the stop index when t
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
@@ -669,7 +670,7 @@ test('it discards the queue and stops the stream on a stopped terminal status', 
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 3, status: 'stopped' } });
@@ -697,7 +698,7 @@ test('it discards the queue and stops the stream on a stopped terminal status', 
 test('it reports the stop index when a resend answers with the already-capped status', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 4, status: 'capped' } });
     }),
@@ -719,7 +720,7 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.SESSION_EVICTED({ data: {} });
@@ -752,7 +753,7 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
 test('it reports the eviction and marks the activity evicted until a registration supersedes it', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),
@@ -790,7 +791,7 @@ test('it seeds a checkpoint submitted during registration from the queued cursor
 
   const ctx = setupTest({ scheduleFlush: () => {} });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
 
   // deliberately not awaited: the submit lands while the seed read is still in flight
   const registration = ctx.submitter.registerActivity({
@@ -818,7 +819,7 @@ test('it seeds a registration that arrives while another is already loading', as
 
   const ctx = setupTest({ scheduleFlush: () => {} });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 5 })));
 
   const first = ctx.submitter.registerActivity({
     activityID: 'shared-seed-activity',
@@ -859,7 +860,7 @@ test('it holds the queue on a transport failure and retries it in the background
   const track = mock<() => void>();
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -903,7 +904,7 @@ test('it holds the queue and retries in the background on UNAUTHORIZED without r
   let shouldFail = true;
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       if (shouldFail) {
         throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
@@ -951,7 +952,7 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
     },
   });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       if (transportShouldFail) {
         return HttpResponse.error();
@@ -1005,7 +1006,7 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
 test('it keeps a single retry loop per activity across repeated failures', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   await ctx.submitter.registerActivity({
     activityID: 'single-retry-activity',
@@ -1026,7 +1027,7 @@ test('it supersedes a running retry loop when flushHeld runs, delivering exactly
   const track = mock<() => void>();
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -1070,7 +1071,7 @@ test('it flushes every held activity immediately and resets their backoff', asyn
   const track = mock<() => void>();
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -1108,7 +1109,7 @@ test('it flushes only the head of a held chain, leaving each start whose predece
   const ingestActivityStart = mock(() => Promise.resolve<IngestActivityStartOutcome>('deferred'));
   const ctx = setupTest({ ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       if (!isOnline) {
         return HttpResponse.error();
@@ -1166,7 +1167,7 @@ test('it resends a held terminal checkpoint via the retry loop and empties the q
   let shouldFail = true;
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       if (shouldFail) {
         return HttpResponse.error();
@@ -1206,7 +1207,7 @@ test('it ends the retry loop silently once the shutdown signal aborts, with no f
   const track = mock<() => void>();
   const ctx = setupTest({ signal: shutdownController.signal });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -1296,7 +1297,7 @@ test('it removes only the registrations of the avatars it is given', async () =>
 test('it settles a terminal submit still flushing when its registration is removed', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     http.post(`${resolveServiceURL('activity')}/rpc/trackActivityProgress`, async () => {
       await delay('infinite');
     }),
@@ -1337,7 +1338,7 @@ test('it resolves with undefined for a checkpoint dropped by an unattached activ
 test('it reports a stall once after repeated unanswered flushes and keeps the queue', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       throw new Error('backend unreachable');
     }),
@@ -1376,7 +1377,7 @@ test('it resets the stall streak once a flush is answered', async () => {
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1412,7 +1413,7 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
   let attempt = 0;
 
   // the recording handler returns nothing, falling through to the mock service handler after it
-  server.use(
+  network.use(
     http.post(`${resolveServiceURL('activity')}/rpc/*`, (info) => {
       traceparents.push(info.request.headers.get('traceparent'));
     }),
@@ -1473,7 +1474,7 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
 
   // the partial ack leaves the second checkpoint queued, so a progress-window callback that
   // still believed itself scheduled would re-send it
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1512,7 +1513,7 @@ test('it resolves flushNow for an unknown activity without a request', async () 
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1530,7 +1531,7 @@ test('it sends no trace header for a call made without per-call context', async 
   const traceparents: Array<null | string> = [];
 
   // the recording handler returns nothing, falling through to the mock service handler after it
-  server.use(
+  network.use(
     http.post(`${resolveServiceURL('activity')}/rpc/*`, (info) => {
       traceparents.push(info.request.headers.get('traceparent'));
     }),
@@ -1550,7 +1551,7 @@ test('it evicts the activity after ACTIVITY_CAPPED so a later registration re-se
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
@@ -1568,7 +1569,7 @@ test('it evicts the activity after ACTIVITY_CAPPED so a later registration re-se
 
   expect(track).toHaveBeenCalledOnce();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1598,7 +1599,7 @@ test('it evicts the activity after ACTIVITY_TERMINAL so a later registration re-
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 0, status: 'stopped' } });
@@ -1616,7 +1617,7 @@ test('it evicts the activity after ACTIVITY_TERMINAL so a later registration re-
 
   expect(track).toHaveBeenCalledOnce();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1640,7 +1641,7 @@ test('it evicts the activity after SESSION_EVICTED so a later registration re-se
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.SESSION_EVICTED({ data: {} });
@@ -1658,7 +1659,7 @@ test('it evicts the activity after SESSION_EVICTED so a later registration re-se
 
   expect(track).toHaveBeenCalledOnce();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1682,7 +1683,7 @@ test('it evicts the activity after NOT_FOUND so a later registration re-seeds an
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -1700,7 +1701,7 @@ test('it evicts the activity after NOT_FOUND so a later registration re-seeds an
 
   expect(track).toHaveBeenCalledOnce();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1724,7 +1725,7 @@ test('it keeps the tombstoned registration on CHECKPOINT_INVALID so a later regi
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1771,7 +1772,7 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1824,7 +1825,7 @@ test('it evicts a hydrated terminal row once its resend drains fully confirmed',
   const ctx = setupTest();
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
 
@@ -1872,7 +1873,7 @@ test('it evicts safely when a concurrent flush call sets flushPending during a t
   const track = mock<(input: unknown) => void>();
   let releaseFirstCall: (() => void) | undefined;
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(async (opts) => {
       track(opts.input);
 
@@ -1915,7 +1916,7 @@ test('it evicts safely when a concurrent flush call sets flushPending during a t
 test('it reports server contact on a successful flush', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   await ctx.submitter.registerActivity({
     activityID: 'contact-ack-activity',
@@ -1932,7 +1933,7 @@ test('it reports server contact on a successful flush', async () => {
 test('it reports server contact on a stream-ending contract rejection', async () => {
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.ACTIVITY_CAPPED({ data: { appendedHead: 0 } });
     }),
@@ -1953,7 +1954,7 @@ test('it reports server contact on a stream-ending contract rejection', async ()
 test('it reports no server contact on a transport failure', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   await ctx.submitter.registerActivity({
     activityID: 'contact-transport-activity',
@@ -1971,10 +1972,10 @@ test('it holds the queue on a rate limit without reporting it held or as server 
   let isRateLimited = true;
   const ctx = setupTest();
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       if (isRateLimited) {
-        return new HttpResponse('Too Many Requests', { status: 429 });
+        return HttpResponse.text('Too Many Requests', { status: 429 });
       }
 
       return { appendedHead: 1 };
@@ -2019,7 +2020,7 @@ test('it reports server contact only after the answered flush settles the local 
     },
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   await ctx.submitter.registerActivity({
     activityID: 'contact-order-activity',
@@ -2041,7 +2042,7 @@ test('it reports server contact only after the answered flush settles the local 
 test("it persists the registered node's cached anchor as the write cursor advances past the start", async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-anchor-persist',
@@ -2078,7 +2079,7 @@ test("it persists the registered node's cached anchor as the write cursor advanc
 test("it leaves the node's cached anchor at the start on a started checkpoint, as the server's anchor stays", async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-anchor-started',
@@ -2110,7 +2111,7 @@ test("it leaves the node's cached anchor at the start on a started checkpoint, a
 test("it leaves the node's cached anchor at the start on registration when the queue holds only the started checkpoint", async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-anchor-started-queued',
@@ -2143,7 +2144,7 @@ test("it leaves the node's cached anchor at the start on registration when the q
 test('it never persists a node anchor when the registration carries no scope', async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-no-scope',
@@ -2170,7 +2171,7 @@ test('it never persists a node anchor when the registration carries no scope', a
 test("it raises the node's cached anchor to the last queued checkpoint on registration, and keeps the undelivered queue", async () => {
   const ctx = setupTest();
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-anchor-behind',
@@ -2223,7 +2224,7 @@ test("it rejects a registration whose anchor repair fails, and repairs the ancho
     },
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-repair-refused',
@@ -2276,7 +2277,7 @@ test('it keeps the device online when a pending activity start defers, retrying 
 
   const ctx = setupTest({ ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });

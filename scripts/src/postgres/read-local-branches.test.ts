@@ -2,8 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { updateEnv } from '@vers/test-utils/bun';
-import { $ } from 'bun';
+import { updateEnv } from '@zgeoff/testing';
+import { createTempDir } from '@zgeoff/testing/fs';
+import { readGitEnv, runGit } from '@zgeoff/testing/git';
 import { readLocalBranches } from './read-local-branches';
 
 async function setupTest() {
@@ -20,24 +21,23 @@ async function setupTest() {
     await fs.rm(repoRoot, { force: true, recursive: true });
   });
 
-  const runGit = async (args: ReadonlyArray<string>): Promise<void> => {
-    await $`git -c user.name=test -c user.email=test@vers.test -c commit.gpgsign=false ${args}`
-      .cwd(repoRoot)
-      .env({ ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' })
-      .quiet();
+  const gitEnv = readGitEnv(createTempDir('git-home').path);
+
+  const git = async (args: ReadonlyArray<string>): Promise<void> => {
+    await runGit(repoRoot, gitEnv, args);
   };
 
-  await runGit(['init', '--quiet', '--initial-branch=main']);
+  await git(['init', '--quiet', '--initial-branch=main']);
 
-  return { repoRoot, runGit };
+  return { repoRoot, git };
 }
 
 test('it reads the short name of every local branch', async () => {
   const ctx = await setupTest();
 
-  await ctx.runGit(['commit', '--quiet', '--allow-empty', '-m', 'start']);
-  await ctx.runGit(['branch', 'feature/trail-map']);
-  await ctx.runGit(['branch', 'fix-lantern']);
+  await ctx.git(['commit', '--quiet', '--allow-empty', '-m', 'start']);
+  await ctx.git(['branch', 'feature/trail-map']);
+  await ctx.git(['branch', 'fix-lantern']);
 
   const branches = await readLocalBranches(ctx.repoRoot);
 

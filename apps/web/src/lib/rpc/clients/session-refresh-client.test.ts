@@ -3,7 +3,7 @@ import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
-import { server } from '../../../mocks/node';
+import { network } from '../../../mocks/network';
 import { SERVICE_URLS } from '../service-urls';
 import { sessionRefreshClient } from './session-refresh-client';
 
@@ -18,7 +18,7 @@ test('it attaches a traceparent header to the outbound refreshTokens call', asyn
 
   const observedTraceparents: Array<string | null> = [];
 
-  server.use(
+  network.use(
     mockSession.refreshTokens.handler(async (args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 

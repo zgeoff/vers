@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { resolveServiceURL } from '@vers/mock-services';
 import { createActivityService } from '@vers/service-activity';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import fc from 'fast-check';
 import { buildSettlementCaseArbitrary } from './build-settlement-case-arbitrary';
 import { runSettlementSequence } from './run-settlement-sequence';

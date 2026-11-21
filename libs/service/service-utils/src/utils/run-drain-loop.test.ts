@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'bun:test';
-import { makeAnswerQueue } from '@vers/test-utils';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { runDrainLoop } from './run-drain-loop';
 
 test('it runs steps until one reports the queue idle and returns the steps in order', async () => {

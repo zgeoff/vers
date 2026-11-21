@@ -1,6 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { WorkerDebugSnapshot } from '@vers/idle-client';
-import { makeAnswerQueue, waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import invariant from 'tiny-invariant';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { createQARecordStore } from './create-qa-record-store';

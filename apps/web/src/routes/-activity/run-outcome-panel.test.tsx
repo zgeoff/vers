@@ -6,7 +6,7 @@ import { createMockRunOutcome } from '@vers/idle-client/test-utils';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -98,7 +98,7 @@ test('it says the rewards are still being read while the first page is in flight
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
 
-  server.use(mockActivityService.getActivityRewards.handler(() => new Promise(() => {})));
+  network.use(mockActivityService.getActivityRewards.handler(() => new Promise(() => {})));
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(
@@ -121,7 +121,7 @@ test('it reports rewards it could not load instead of calling them absent', asyn
   const activity = await db.activityCollection.create({ avatarID: avatar.id, status: 'stopped' });
 
   // a refused read: the server holds no row for the run this device played
-  server.use(
+  network.use(
     mockActivityService.getActivityRewards.handler(() => {
       throw new ORPCError('NOT_FOUND');
     }),

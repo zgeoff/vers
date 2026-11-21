@@ -2,8 +2,8 @@ import { expect, onTestFinished, test } from 'bun:test';
 import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/node';
 import { withTraceContext } from '@vers/service-utils';
-import { waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { reportFunctionFault } from './report-function-fault';
 

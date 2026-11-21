@@ -4,7 +4,7 @@ import { verificationContract } from '@vers/contract-verification';
 import * as db from '@vers/mock-services/db';
 import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -69,7 +69,7 @@ test('it logs an unexpected code-check failure while reporting the generic form 
     resolveContext: () => ({ actingUserID: null }),
   });
 
-  server.use(
+  network.use(
     mockVerification.verifyCode.handler(() => {
       throw new Error('the verification service is unreachable');
     }),

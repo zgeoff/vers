@@ -3,7 +3,7 @@ import { ORPCError } from '@orpc/client';
 import * as Sentry from '@sentry/react';
 import type { ErrorEvent } from '@sentry/react';
 import { notFound, redirect } from '@tanstack/react-router';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { NetworkFailureError } from '../offline/network-failure-error';
 import { buildQueryClient } from './build-query-client';
 

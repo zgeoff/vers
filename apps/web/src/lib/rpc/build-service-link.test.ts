@@ -4,10 +4,10 @@ import type { ContractRouterClient } from '@orpc/contract';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import * as db from '@vers/mock-services/db';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { delay } from 'msw';
 import { SimulatedClock } from 'xstate';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { buildServiceLink } from './build-service-link';
 import { SERVICE_URLS } from './service-urls';
 import type { ServiceLinkContext } from './types';
@@ -25,7 +25,7 @@ test('it resends a GET-declared procedure whose first attempt hangs past its bou
 
   let callCount = 0;
 
-  server.use(
+  network.use(
     mockUser.getCurrentUser.handler(async () => {
       callCount += 1;
 
@@ -66,7 +66,7 @@ test('it sends a mutating procedure once and reports SERVICE_UNAVAILABLE when th
 
   let callCount = 0;
 
-  server.use(
+  network.use(
     mockUser.updateEmail.handler(async () => {
       callCount += 1;
 

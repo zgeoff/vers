@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { makeCoalescedDrain } from './make-coalesced-drain';
 
 test('it runs the drain once for a single request', async () => {

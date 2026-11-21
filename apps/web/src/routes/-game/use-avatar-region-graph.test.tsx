@@ -21,7 +21,7 @@ import {
 } from '@vers/worldmap-client';
 import { REVEAL_RADIUS, collectNodeEdges, toCellCoord, toNodeID } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createMockCheckpointBatchEntry } from '../../test-utils/create-mock-checkpoint-batch-entry';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -290,7 +290,7 @@ test('it queries revealed nodes for a chunk-aligned, cap-shrunk viewport once th
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler((opts) => {
       track(opts.input);
 
@@ -329,7 +329,7 @@ test('it queries no revealed nodes before the camera has reported a viewport', a
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler((opts) => {
       track(opts.input);
 
@@ -384,7 +384,7 @@ test('it extends the selectable set to a real neighbour once the revealed-nodes 
   const [aID = '', bID = ''] = edge.id.split('|');
   const neighbourID = aID === originID ? bID : aID;
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler(() => ({
       completedNodeIDs: [originID],
       contentVersion: 'v1',
@@ -426,7 +426,7 @@ test('it publishes the origin reveal disc on the region build and extends it onc
 
   invariant(expectedOrigin, 'the initial viewport always contains its origin cell');
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler(() => ({
       completedNodeIDs: ['1_0'],
       contentVersion: 'v1',
@@ -478,7 +478,7 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
   let fetchCount = 0;
   let resolveSecondFetch: (() => void) | undefined;
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler(async () => {
       fetchCount += 1;
 
@@ -544,7 +544,7 @@ test('it returns the fog-revealed node id set, growing it once a completed grant
   // cell — exercising the growth path rather than a cell the origin disc already covers
   const completedID = toNodeID(6, 0);
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler(() => ({
       completedNodeIDs: [completedID],
       contentVersion: 'v1',
@@ -585,7 +585,7 @@ test("it drops the selectable set to origin-only on an avatar switch, not carryi
   const firstNeighbourID = aID === originID ? bID : aID;
   const requestedAvatarIDs: Array<string> = [];
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler((opts) => {
       requestedAvatarIDs.push(opts.input.avatarID);
 
@@ -655,7 +655,7 @@ test("it returns an empty frontier through an avatar switch, never the outgoing 
   // origin-only frontier never covers, so the cell distinguishes the two avatars' frontiers
   const firstOnlyID = toNodeID(6, 0);
 
-  server.use(
+  network.use(
     mockActivityService.getRevealedNodes.handler((opts) => ({
       completedNodeIDs: opts.input.avatarID === first.id ? [firstOnlyID] : [],
       contentVersion: 'v1',

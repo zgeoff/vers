@@ -20,7 +20,7 @@ import invariant from 'tiny-invariant';
 import { readAvatarGrants } from '../apply/read-avatar-grants';
 import { readAvatarItems } from '../apply/read-avatar-items';
 import { readAvatarProgress } from '../apply/read-avatar-progress';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 import { readReplayProgress } from '../queue/read-replay-progress';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
@@ -589,7 +589,7 @@ test('it makes no keys dispatch when the target has already verified part of the
     .execute();
 
   // a mock that throws proves a segment past its first pass never reads the keys service
-  server.use(
+  network.use(
     mockKeysService.deriveScopeSecret.handler(() => {
       throw new Error('a segment past verifiedHead 0 must never dispatch to the keys service');
     }),

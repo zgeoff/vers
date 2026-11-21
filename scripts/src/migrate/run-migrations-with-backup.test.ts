@@ -5,7 +5,7 @@ import { applyMigrations, migrationsFolder, readPendingMigrations } from '@vers/
 import { removeTestDatabase, resolveTestDBTarget } from '@vers/db/test-support';
 import { HttpResponse, http } from 'msw';
 import postgres from 'postgres';
-import { neonBranchCollection, server } from '../mocks/node';
+import { neonBranchCollection, network } from '../mocks/network';
 import { NEON_API_ORIGIN } from './request-neon-json';
 import { runMigrationsWithBackup } from './run-migrations-with-backup';
 import type { NeonBranch } from './types';
@@ -70,7 +70,7 @@ test('it applies no migration when the backup fails', async () => {
 
   await neonBranchCollection.create({ name: 'main', projectID: 'quiet-river-1234' });
 
-  server.use(
+  network.use(
     http.post(`${NEON_API_ORIGIN}/projects/:projectID/branches`, () =>
       HttpResponse.json({ code: '', message: 'branches limit exceeded' }, { status: 422 }),
     ),

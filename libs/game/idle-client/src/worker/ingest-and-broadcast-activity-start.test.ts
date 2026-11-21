@@ -6,10 +6,10 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { makeAnswerQueue } from '@vers/test-utils';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readActivityStart } from '../submission/read-activity-start';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
@@ -27,7 +27,7 @@ test('it announces an ingested activity start to connected tabs', async () => {
   const context = createStubWorkerContext();
   const row = createMockActivityData({ id: 'act_broadcast_ok', startKey: 'start_key_ok' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
   );
 
@@ -47,7 +47,7 @@ test('it shows no refusal and keeps the start when the network fails on its deli
   const context = createStubWorkerContext();
   const row = createMockActivityData({ id: 'act_network_delivery', startKey: 'start_key_nd' });
 
-  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
   await writeActivityStart(row);
 
@@ -63,7 +63,7 @@ test('it shows no refusal and keeps the start when the network fails on the prog
   const context = createStubWorkerContext();
   const row = createMockActivityData({ id: 'act_network_build', startKey: 'start_key_nb' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -113,7 +113,7 @@ test('it shows no refusal and keeps the start when the network fails on the rese
     () => HttpResponse.error(),
   ]);
 
-  server.use(mockActivityService.advanceActivity.handler(() => answer()()));
+  network.use(mockActivityService.advanceActivity.handler(() => answer()()));
 
   await writeActivityStart(row);
 
@@ -134,7 +134,7 @@ test('it shows no refusal and keeps the start when the network fails on the prog
     startKey: 'start_key_nsp',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
@@ -163,7 +163,7 @@ test('it broadcasts the avatar-switched notice when the account moved to another
   const context = createStubWorkerContext();
   const row = createMockActivityData({ id: 'act_broadcast_switch', startKey: 'start_key_switch' });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.AVATAR_NOT_ACTIVE({
         data: { activeAvatarID: 'avatar_other', activeAvatarName: 'Zetha' },
@@ -191,7 +191,7 @@ test('it broadcasts the sim-version-expired notice when this build can no longer
     startKey: 'start_key_expired',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: 'engine_hash_9' } });
     }),
@@ -228,7 +228,7 @@ test('it halts a live run whose own start the server refused for good and tells 
     startKey: 'start_key_refused_live',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -278,7 +278,7 @@ test('it keeps a live run and its start, and tells the player nothing, when the 
     startKey: 'start_key_transport_live',
   });
 
-  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
   await writeActivityStart(live);
 
@@ -324,7 +324,7 @@ test("it mints the next start at a node on the server's anchor after one refusal
     startKey: 'start_key_rewound',
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {

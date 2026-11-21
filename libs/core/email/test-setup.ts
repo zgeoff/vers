@@ -1,6 +1,6 @@
 import { afterEach, expect } from 'bun:test';
-import { registerHappyDOM, registerMSWLifecycle } from '@vers/test-utils/bun';
-import { sentEmails, server } from './src/mocks/node';
+import { registerHappyDOM } from '@vers/test-utils/bun';
+import { sentEmails } from './src/mocks/network';
 
 registerHappyDOM();
 
@@ -9,8 +9,6 @@ registerHappyDOM();
 const { default: _, ...jestDOMMatchers } = await import('@testing-library/jest-dom/matchers');
 
 expect.extend(jestDOMMatchers);
-
-registerMSWLifecycle(server);
 
 // dynamic import: RTL reads `document` at import time, so it must load after registration
 const reactTestingLibrary = await import('@testing-library/react');

@@ -1,7 +1,8 @@
 import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { AvatarContract } from '@vers/contract-avatar';
 import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createAvatarService } from './create-avatar-service';
 import { readAvatars } from './handlers/read-avatars';
 

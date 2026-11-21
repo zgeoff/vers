@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { registerSimulationListeners } from './register-simulation-listeners';
 

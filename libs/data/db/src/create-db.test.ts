@@ -2,8 +2,8 @@
 
 import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
-import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics, createInMemoryTraces } from '@vers/test-utils/bun';
+import { waitFor } from '@zgeoff/testing';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';

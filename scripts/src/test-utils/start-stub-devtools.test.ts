@@ -1,22 +1,11 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
-import { http, passthrough, ws } from 'msw';
-import { server } from '../mocks/node';
+import { waitFor } from '@zgeoff/testing';
 import { createCDPClient } from '../qa/create-cdp-client';
 import { readDevToolsTargets } from '../qa/read-devtools-targets';
 import { startStubDevTools } from './start-stub-devtools';
 
 function setupTest() {
   const devtools = startStubDevTools();
-
-  server.use(
-    http.get(`http://${devtools.endpoint}/json`, () => passthrough()),
-    ws
-      .link(`ws://${devtools.endpoint}/devtools/page/*`)
-      .addEventListener('connection', (connection) => {
-        connection.server.connect();
-      }),
-  );
 
   return { devtools };
 }

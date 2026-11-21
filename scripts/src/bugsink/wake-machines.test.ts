@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'bun:test';
-import { makeAnswerQueue } from '@vers/test-utils';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import type { FlyMachine } from './types';
 import { wakeMachines } from './wake-machines';
 

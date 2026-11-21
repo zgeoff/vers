@@ -5,7 +5,7 @@ import { sessionContract } from '@vers/contract-session';
 import { createTestAccessToken, resolveSessionContext } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import * as jose from 'jose';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { loadSessionActor } from './load-session-actor';
 import { SERVICE_URLS } from './service-urls';
@@ -179,7 +179,7 @@ test('it hits getSession at most once per request for a fresh access token', asy
 
   let callCount = 0;
 
-  server.use(
+  network.use(
     mockSession.getSession.handler(() => {
       callCount += 1;
 
@@ -217,7 +217,7 @@ test('it fails the call and keeps the cookie when the session cannot be confirme
     resolveContext: resolveSessionContext,
   });
 
-  server.use(
+  network.use(
     mockSession.getSession.handler(() => {
       throw new Error('session service unreachable');
     }),
@@ -326,7 +326,7 @@ test('it fails the call and keeps the cookie when the refresh errors without a v
     resolveContext: resolveSessionContext,
   });
 
-  server.use(
+  network.use(
     mockSession.refreshTokens.handler(() => {
       throw new Error('session service unreachable');
     }),

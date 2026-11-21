@@ -4,7 +4,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { render } from '../../test-utils/render';
@@ -126,7 +126,7 @@ test('it withholds the live overlay until the settled read lands', async () => {
 
   // the read never lands, holding the screen in the window where no per-activity settled total is
   // available for the overlay to net against
-  server.use(mockActivityService.getAvatarProgression.handler(() => new Promise<never>(() => {})));
+  network.use(mockActivityService.getAvatarProgression.handler(() => new Promise<never>(() => {})));
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(<AvatarProgression />);

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -90,7 +90,7 @@ test('it keeps the dirty flag when the server push fails', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  server.use(
+  network.use(
     mockActivityService.updateFailureAction.handler(() => {
       throw new Error('unreachable service');
     }),

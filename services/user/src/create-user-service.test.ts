@@ -1,7 +1,8 @@
 import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { UserContract } from '@vers/contract-user';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createUserService } from './create-user-service';
 import { readUser } from './handlers/read-user';
 

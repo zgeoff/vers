@@ -1,7 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { findTraceContext } from '@vers/service-utils';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { PgBoss } from 'pg-boss';
