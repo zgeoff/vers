@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir, userInfo } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runE2EBrowserInstall } from './run-e2e-browser-install';
 
 async function setupTest() {
@@ -18,9 +20,11 @@ test('it points apt at the archives folder before playwright installs', async ()
 
   const aptConfigPath = join(ctx.directory, '90-browser-packages');
   const archivesPath = join(ctx.directory, 'apt-archives');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('sudo', 'exec "$@"');
-  createStubCommand('bun', ':');
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'sudo', { script: '#!/bin/sh\nexec "$@"' });
+  createStubBin(stubDirectory, 'bun', { script: '#!/bin/sh\n:' });
 
   await runE2EBrowserInstall({
     aptConfigPath,
@@ -41,9 +45,14 @@ test("it creates the archives folder with apt's partial folder inside", async ()
 
   const archivesPath = join(ctx.directory, 'apt-archives');
   const listPath = join(ctx.directory, 'list');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('sudo', 'exec "$@"');
-  createStubCommand('bun', `ls '${archivesPath}' > '${listPath}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'sudo', { script: '#!/bin/sh\nexec "$@"' });
+
+  createStubBin(stubDirectory, 'bun', {
+    script: `#!/bin/sh\nls '${archivesPath}' > '${listPath}'`,
+  });
 
   await runE2EBrowserInstall({
     aptConfigPath: join(ctx.directory, '90-browser-packages'),
@@ -61,9 +70,14 @@ test('it installs each browser it is given with its system packages', async () =
   const ctx = await setupTest();
 
   const argsPath = join(ctx.directory, 'args');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('sudo', 'exec "$@"');
-  createStubCommand('bun', `printf '%s\\n' "$*" > '${argsPath}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'sudo', { script: '#!/bin/sh\nexec "$@"' });
+
+  createStubBin(stubDirectory, 'bun', {
+    script: `#!/bin/sh\nprintf '%s\\n' "$*" > '${argsPath}'`,
+  });
 
   await runE2EBrowserInstall({
     aptConfigPath: join(ctx.directory, '90-browser-packages'),
@@ -81,9 +95,15 @@ test('it gives the archives folder back to the job user for the cache save', asy
   const ctx = await setupTest();
 
   const commandsPath = join(ctx.directory, 'commands');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('sudo', `printf '%s\\n' "$1" >> '${commandsPath}'\nexec "$@"`);
-  createStubCommand('bun', ':');
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'sudo', {
+    script: `#!/bin/sh\nprintf '%s\\n' "$1" >> '${commandsPath}'\nexec "$@"`,
+  });
+
+  createStubBin(stubDirectory, 'bun', { script: '#!/bin/sh\n:' });
 
   await runE2EBrowserInstall({
     aptConfigPath: join(ctx.directory, '90-browser-packages'),
@@ -100,8 +120,14 @@ test('it gives the archives folder back to the job user for the cache save', asy
 test('it rejects a playwright install that fails', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('sudo', 'exec "$@"');
-  createStubCommand('bun', "echo 'E: Unable to fetch some archives' >&2\nexit 100");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'sudo', { script: '#!/bin/sh\nexec "$@"' });
+
+  createStubBin(stubDirectory, 'bun', {
+    script: "#!/bin/sh\necho 'E: Unable to fetch some archives' >&2\nexit 100",
+  });
 
   const install = runE2EBrowserInstall({
     aptConfigPath: join(ctx.directory, '90-browser-packages'),

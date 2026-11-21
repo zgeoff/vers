@@ -1,20 +1,25 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { applyBuild } from './apply-build';
 
 test('it retries a build whose push goes silent and returns the pushed image ref', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    [
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\n${[
       'calls="$(dirname "$0")/calls"',
       'echo call >> "$calls"',
       'echo "#19 pushing layer sha256:5e1f0c2a"',
       'if [ "$(wc -l < "$calls")" -eq 1 ]; then exec sleep 30; fi',
       'echo "#19 DONE 1.2s"',
-    ].join('\n'),
-  );
+    ].join('\n')}`,
+  }).path;
 
   const imageRef = await applyBuild(
     {
@@ -37,7 +42,13 @@ test('it retries a build whose push goes silent and returns the pushed image ref
 });
 
 test('it fails a build that goes silent on every attempt', () => {
-  createStubCommand('flyctl', 'echo "#19 pushing layer sha256:5e1f0c2a"\nexec sleep 30');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'flyctl', {
+    script: '#!/bin/sh\necho "#19 pushing layer sha256:5e1f0c2a"\nexec sleep 30',
+  });
 
   expect(
     applyBuild(
@@ -58,10 +69,14 @@ test('it fails a build that goes silent on every attempt', () => {
 });
 
 test('it fails a build that flyctl rejects without a retry', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    'echo call >> "$(dirname "$0")/calls"\necho "Error: failed to solve: exit code: 1" >&2\nexit 1',
-  );
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script:
+      '#!/bin/sh\necho call >> "$(dirname "$0")/calls"\necho "Error: failed to solve: exit code: 1" >&2\nexit 1',
+  }).path;
 
   const build = applyBuild(
     {
@@ -83,10 +98,13 @@ test('it fails a build that flyctl rejects without a retry', async () => {
 });
 
 test('it passes a build secret to flyctl as a build secret, never as a build arg', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    String.raw`printf "%s\n" "$@" > "$(dirname "$0")/args"`,
-  );
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\n${String.raw`printf "%s\n" "$@" > "$(dirname "$0")/args"`}`,
+  }).path;
 
   process.env['LEDGER_UPLOAD_TOKEN'] = 'ledger-token-value';
 

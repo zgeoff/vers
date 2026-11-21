@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommands, readStubCommandCalls } from '../../create-stub-commands';
+import { createStubBin } from '@zgeoff/testing/bin';
 
 // Each test runs the real runLocalStack in its own process, through run-stub-local-stack.ts, with
 // stand-in `docker` and `bunx` on PATH. A process of its own lets a test send it SIGTERM and
@@ -35,7 +35,12 @@ async function setupTest() {
     await rm(directory, { recursive: true, force: true });
   });
 
-  const stubs = await createStubCommands(directory, ['docker', 'bunx']);
+  const binDirectory = join(directory, 'bin');
+  const scriptPath = join(import.meta.dir, '..', '..', 'run-stub-command.ts');
+  const stubScript = (name: string) => `#!/bin/sh\nexec bun '${scriptPath}' '${name}' "$@"\n`;
+  const docker = createStubBin(binDirectory, 'docker', { script: stubScript('docker') });
+
+  createStubBin(binDirectory, 'bunx', { script: stubScript('bunx') });
 
   return {
     startStack: (run: StackRun) => {
@@ -44,8 +49,7 @@ async function setupTest() {
         {
           env: {
             ...process.env,
-            PATH: `${stubs.binDirectory}:${process.env['PATH'] ?? ''}`,
-            STUB_COMMAND_LOG: stubs.logPath,
+            PATH: `${binDirectory}:${process.env['PATH'] ?? ''}`,
             STUB_COMMAND_ANSWERS: JSON.stringify(run.answers),
             STUB_PID_DIRECTORY: pidDirectory,
             STUB_STACK_PARTS: JSON.stringify({
@@ -65,11 +69,7 @@ async function setupTest() {
 
       return stack;
     },
-    readDockerCalls: async () => {
-      const calls = await readStubCommandCalls(stubs.logPath);
-
-      return calls.filter((call) => call.name === 'docker').map((call) => call.args[0]);
-    },
+    readDockerCalls: () => docker.readCalls().map((call) => call.argv[0]),
 
     // signal 0 checks that a process exists without touching it
     countLiveChildren: async () => {
@@ -102,7 +102,8 @@ test('it exits 1 and removes the container when the web build fails before the c
   });
 
   const exitCode = await stack.exited;
-  const docker = await ctx.readDockerCalls();
+
+  const docker = ctx.readDockerCalls();
 
   expect({ exitCode, docker }).toStrictEqual({ exitCode: 1, docker: ['run', 'port', 'rm'] });
 });
@@ -127,8 +128,7 @@ test('it exits 1 and removes the container at once when the web build fails whil
   const exitCode = await stack.exited;
 
   const elapsedMs = performance.now() - startedAt;
-
-  const docker = await ctx.readDockerCalls();
+  const docker = ctx.readDockerCalls();
 
   expect({ exitCode, exitedWithin3s: elapsedMs < 3000, last: docker.at(-1) }).toStrictEqual({
     exitCode: 1,
@@ -152,7 +152,8 @@ test('it exits 1 and removes the container when Postgres is not ready by the dea
   });
 
   const exitCode = await stack.exited;
-  const docker = await ctx.readDockerCalls();
+
+  const docker = ctx.readDockerCalls();
 
   expect({ exitCode, last: docker.at(-1) }).toStrictEqual({ exitCode: 1, last: 'rm' });
 });
@@ -172,7 +173,8 @@ test('it exits 1 and removes the container when a readiness check hangs past the
   });
 
   const exitCode = await stack.exited;
-  const docker = await ctx.readDockerCalls();
+
+  const docker = ctx.readDockerCalls();
 
   expect({ exitCode, last: docker.at(-1) }).toStrictEqual({ exitCode: 1, last: 'rm' });
 });
@@ -205,7 +207,9 @@ test('it removes the container and stops every child before the SIGKILL when chi
   });
 
   const exitCode = await stack.exited;
-  const docker = await ctx.readDockerCalls();
+
+  const docker = ctx.readDockerCalls();
+
   const liveChildren = await ctx.countLiveChildren();
 
   expect({ exitCode, docker, liveChildren }).toStrictEqual({

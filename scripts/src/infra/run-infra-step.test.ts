@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runInfraStep } from './run-infra-step';
 
 async function setupTest() {
@@ -22,7 +24,10 @@ test.each([
 ])('it runs the %s step as pulumi %s', async (stepName, pulumiArgs) => {
   const ctx = await setupTest();
 
-  createStubCommand('op', 'shift 5\necho "$*"');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: '#!/bin/sh\nshift 5\necho "$*"' });
 
   const result = await runInfraStep({
     infraPath: ctx.directory,
@@ -38,10 +43,14 @@ test("it adds the step's output and errors to the step summary under the step's 
 
   await writeFile(ctx.summaryPath, '## Install\n');
 
-  createStubCommand(
-    'op',
-    "echo '  ~ github:index/issueLabel:IssueLabel bug update'\necho 'error: 1 change found' >&2\nexit 255",
-  );
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script:
+      "#!/bin/sh\necho '  ~ github:index/issueLabel:IssueLabel bug update'\necho 'error: 1 change found' >&2\nexit 255",
+  });
 
   await runInfraStep({ infraPath: ctx.directory, stepName: 'drift', summaryPath: ctx.summaryPath });
 
@@ -64,7 +73,13 @@ test("it adds the step's output and errors to the step summary under the step's 
 test("it returns the pulumi command's exit code when the step fails", async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: "#!/bin/sh\necho 'error: 1 change found' >&2\nexit 255",
+  });
 
   const result = await runInfraStep({
     infraPath: ctx.directory,
@@ -78,7 +93,10 @@ test("it returns the pulumi command's exit code when the step fails", async () =
 test('it says the step wrote nothing when the command printed no output', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', 'exit 1');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: '#!/bin/sh\nexit 1' });
 
   await runInfraStep({ infraPath: ctx.directory, stepName: 'apply', summaryPath: ctx.summaryPath });
 
@@ -91,8 +109,10 @@ test('it refuses a step name the workflows never use, and runs nothing', async (
   const ctx = await setupTest();
 
   const recordPath = join(ctx.directory, 'record');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('op', `touch '${recordPath}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: `#!/bin/sh\ntouch '${recordPath}'` });
 
   const result = await runInfraStep({
     infraPath: ctx.directory,

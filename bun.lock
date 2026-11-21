@@ -1558,7 +1558,7 @@
     "@zgeoff/oxlint-config": "0.11.1",
     "@zgeoff/rig": "0.3.0",
     "@zgeoff/std": "0.4.5",
-    "@zgeoff/testing": "0.4.0",
+    "@zgeoff/testing": "0.4.1",
     "@zgeoff/umami-mcp": "0.1.2",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3140,7 +3140,7 @@
 
     "@zgeoff/std": ["@zgeoff/std@0.4.5", "", {}, "sha512-Z2rD5v0OVXRZTa3Jh2I8zmx9znzvnAa/bC5Ai0NidPh+pfJGfDLmQIVZhshbGXPu/S/9SFdP/chDw+N5Pk/lzg=="],
 
-    "@zgeoff/testing": ["@zgeoff/testing@0.4.0", "", { "dependencies": { "@zgeoff/std": "0.4.5", "bun-pty": "0.6.0" }, "peerDependencies": { "@mswjs/interceptors": ">=0.45.11 <0.46", "msw": ">=3.0.4 <4" }, "optionalPeers": ["@mswjs/interceptors", "msw"] }, "sha512-m2d0aQ4JFA3+ZOis7aMVs5UZ31zUu3VhAI22c4bot7lFYT6a6m17ajo1Srefgk3C8mgY7mCH0h54R6Lsg2kFvg=="],
+    "@zgeoff/testing": ["@zgeoff/testing@0.4.1", "", { "dependencies": { "@zgeoff/std": "0.4.5", "bun-pty": "0.6.0" }, "peerDependencies": { "@mswjs/interceptors": ">=0.45.11 <0.46", "msw": ">=3.0.4 <4" }, "optionalPeers": ["@mswjs/interceptors", "msw"] }, "sha512-kShvM/rZB0Im2K0tKmBWP3tMTUrTka0PMDpcan+TdQvxENFZbQ+urRHCuFJvLzg+0zqdgH2aSoCSoTt115GpZA=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.2", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "4.6.7" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-IrmplU9ovxXn6pIE9pVjTo1RwABFY2KD2ibROCzEChVuzMrqayS9ICJbqByDKg4qlvyzWK/eLq03rl++ss0Evw=="],
 

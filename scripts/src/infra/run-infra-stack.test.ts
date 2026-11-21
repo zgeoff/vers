@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runInfraStack } from './run-infra-stack';
 
 async function setupTest() {
@@ -16,7 +18,13 @@ async function setupTest() {
 test("it runs the pulumi stack script under op with the infra directory's env file and its arguments", async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', String.raw`printf '%s|%s\n' "$PWD" "$*"`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: `#!/bin/sh\n${String.raw`printf '%s|%s\n' "$PWD" "$*"`}`,
+  });
 
   const result = await runInfraStack({
     args: ['preview', '--refresh', '--diff'],
@@ -31,7 +39,13 @@ test("it runs the pulumi stack script under op with the infra directory's env fi
 test("it keeps op's output and errors apart", async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', "echo '{\"steps\": []}'\necho 'warning: slow provider' >&2");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: "#!/bin/sh\necho '{\"steps\": []}'\necho 'warning: slow provider' >&2",
+  });
 
   const result = await runInfraStack({ args: ['preview', '--json'], infraPath: ctx.directory });
 
@@ -45,7 +59,13 @@ test("it keeps op's output and errors apart", async () => {
 test("it returns op's exit code when the command fails", async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: "#!/bin/sh\necho 'error: 1 change found' >&2\nexit 255",
+  });
 
   const result = await runInfraStack({
     args: ['preview', '--expect-no-changes'],
