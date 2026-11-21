@@ -290,7 +290,7 @@ export function createVerifyRegistry(options: VerifyRegistryOptions): Wringer {
       )
       .hook(
         'upload',
-        createHostUploader({ urlEnv: 'VERIFY_UPLOAD_URL', tokenEnv: 'VERIFY_UPLOAD_TOKEN' }),
+        createHostUploader({ urlEnv: 'CLOUD_FILES_URL', tokenEnv: 'CLOUD_FILES_TOKEN' }),
       )
       .shared(...sharedPaths)
       .ignore(...ignoredPaths)
