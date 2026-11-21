@@ -112,7 +112,7 @@
       "@zgeoff/format-codemod": "0.3.6",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.11.1",
-      "@zgeoff/rig": "0.2.6",
+      "@zgeoff/rig": "0.3.0",
       "@zgeoff/std": "0.4.5",
       "@zgeoff/umami-mcp": "0.1.2",
       "autoprefixer": "10.6.2",
@@ -247,7 +247,8 @@
     "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true",
     "check:docs": "chex prose length links readmes skill",
     "test:related": "rig related",
-    "bench": "rig bench"
+    "bench": "rig bench",
+    "test:e2e": "rig e2e"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
