@@ -1,4 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { chmodSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { updateEnv, waitFor } from '@zgeoff/testing';
@@ -84,11 +85,17 @@ test('it ends a flyctl call that is still pending when the cancel signal aborts'
   const stubDirectory = createTempDir('stubs').path;
 
   updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
-  createStubBin(stubDirectory, 'flyctl', { script: '#!/bin/sh\nexec sleep 30' });
+
+  // the script is the command itself, with no stand-in in front of it: a stand-in passes SIGTERM on
+  // and exits with 143, so the error would carry no signal, and this test asserts that field
+  const flyctlPath = join(stubDirectory, 'flyctl');
+
+  writeFileSync(flyctlPath, '#!/bin/sh\nexec sleep 30\n');
+  chmodSync(flyctlPath, 0o755);
 
   expect(
     runFlyctl(['machines', 'list'], { cancelSignal: AbortSignal.timeout(50) }),
-  ).rejects.toMatchObject({ exitCode: 143 });
+  ).rejects.toMatchObject({ signal: 'SIGTERM' });
 });
 
 // the stub loops for as long as the stand-in that runs it lives, because a SIGKILL ends the
