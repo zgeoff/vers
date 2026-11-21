@@ -4,7 +4,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -31,7 +31,7 @@ test('it delivers the targeted stop and leaves no intent held', async () => {
 });
 
 test('it keeps the intent held when delivery fails', async () => {
-  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
   const context = createStubWorkerContext();
 

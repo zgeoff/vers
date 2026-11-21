@@ -1,5 +1,5 @@
 import { onTestFinished } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { createReplayProvider } from '../create-replay-provider';
 import type { ReplayProvider } from '../create-replay-provider';
@@ -24,5 +24,5 @@ export async function createRemoteReplayProvider(
 
   invariant(port !== undefined, 'provider service did not bind a port');
 
-  return { provider, url: `http://localhost:${port}` };
+  return { provider, url: `http://127.0.0.1:${port}` };
 }

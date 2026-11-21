@@ -22,7 +22,7 @@ test.each([
 ])('it runs the %s step as pulumi %s', async (stepName, pulumiArgs) => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', 'shift 5\necho "$*"');
+  createStubCommand('op', 'shift 5\necho "$*"');
 
   const result = await runInfraStep({
     infraPath: ctx.directory,
@@ -38,7 +38,7 @@ test("it adds the step's output and errors to the step summary under the step's 
 
   await writeFile(ctx.summaryPath, '## Install\n');
 
-  await createStubCommand(
+  createStubCommand(
     'op',
     "echo '  ~ github:index/issueLabel:IssueLabel bug update'\necho 'error: 1 change found' >&2\nexit 255",
   );
@@ -64,7 +64,7 @@ test("it adds the step's output and errors to the step summary under the step's 
 test("it returns the pulumi command's exit code when the step fails", async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
+  createStubCommand('op', "echo 'error: 1 change found' >&2\nexit 255");
 
   const result = await runInfraStep({
     infraPath: ctx.directory,
@@ -78,7 +78,8 @@ test("it returns the pulumi command's exit code when the step fails", async () =
 test('it says the step wrote nothing when the command printed no output', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', 'exit 1');
+  createStubCommand('op', 'exit 1');
+
   await runInfraStep({ infraPath: ctx.directory, stepName: 'apply', summaryPath: ctx.summaryPath });
 
   const summary = await readFile(ctx.summaryPath, 'utf8');
@@ -91,7 +92,7 @@ test('it refuses a step name the workflows never use, and runs nothing', async (
 
   const recordPath = join(ctx.directory, 'record');
 
-  await createStubCommand('op', `touch '${recordPath}'`);
+  createStubCommand('op', `touch '${recordPath}'`);
 
   const result = await runInfraStep({
     infraPath: ctx.directory,

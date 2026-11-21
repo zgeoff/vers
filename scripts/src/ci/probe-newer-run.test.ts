@@ -1,10 +1,10 @@
 import { expect, mock, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { probeNewerRun } from './probe-newer-run';
 
 test('it finds a newer run of the workflow on the same branch', async () => {
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
     ),
@@ -26,7 +26,7 @@ test('it finds a newer run of the workflow on the same branch', async () => {
 });
 
 test('it finds no newer run when the latest run of the workflow is this run', async () => {
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
     ),
@@ -50,7 +50,7 @@ test('it finds no newer run when the latest run of the workflow is this run', as
 test('it lists the runs of the branch with the step token', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'glaze/picker' }),
     ),
@@ -78,7 +78,7 @@ test('it lists the runs of the branch with the step token', async () => {
 });
 
 test('it rejects a GitHub API answer that is not a success', () => {
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ message: 'Not Found' }, { status: 404 }),
     ),
@@ -95,7 +95,7 @@ test('it rejects a GitHub API answer that is not a success', () => {
 });
 
 test('it rejects a run without its workflow, number and branch', () => {
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77 }),
     ),
@@ -112,7 +112,7 @@ test('it rejects a run without its workflow, number and branch', () => {
 });
 
 test('it rejects a run list without workflow_runs', () => {
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
     ),

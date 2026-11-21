@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { resolveServiceURL } from './resolve-service-url';
 
 test('it falls back to the dev port when no env var is set', () => {

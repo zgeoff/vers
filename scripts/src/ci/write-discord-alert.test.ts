@@ -1,12 +1,12 @@
 import { expect, mock, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { writeDiscordAlert } from './write-discord-alert';
 
 test('it posts the alert to the webhook as one critical embed', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.post('https://discord.test/api/webhooks/7/token', async (info) => {
       const body: unknown = await info.request.json();
 
@@ -42,7 +42,7 @@ test('it posts the alert to the webhook as one critical embed', async () => {
 test('it leaves out the failed-jobs field when the step passes an empty list', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.post('https://discord.test/api/webhooks/7/token', async (info) => {
       const body: unknown = await info.request.json();
 
@@ -75,7 +75,7 @@ test('it leaves out the failed-jobs field when the step passes an empty list', a
 test('it sends the alert after a timed-out need when no newer run exists', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
     ),
@@ -124,7 +124,7 @@ test('it sends the alert after a timed-out need when no newer run exists', async
 test('it sends nothing after a cancelled need when a newer run exists', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
     ),
@@ -160,7 +160,7 @@ test('it sends nothing after a cancelled need when a newer run exists', async ()
 test('it sends the alert after a cancelled need when the newer-run lookup fails', async () => {
   const received = mock();
 
-  server.use(
+  network.use(
     http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
       HttpResponse.json({ message: 'Server Error' }, { status: 502 }),
     ),
@@ -200,7 +200,7 @@ test('it sends nothing when the webhook secret is empty', async () => {
 });
 
 test('it rejects a webhook answer that is not a success', () => {
-  server.use(
+  network.use(
     http.post('https://discord.test/api/webhooks/7/token', () =>
       HttpResponse.json({ message: 'Unknown Webhook' }, { status: 404 }),
     ),

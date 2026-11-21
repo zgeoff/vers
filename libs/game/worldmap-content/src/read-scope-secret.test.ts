@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 import { readScopeSecret } from './read-scope-secret';
 
 test('it reads the mocked scope secret over real s2s auth against the mocked keys backend', async () => {
@@ -72,7 +72,7 @@ test('it reads a different secret for a different avatar', async () => {
 test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and version', async () => {
   const keyPair = await resolveTestServiceKeyPair();
 
-  server.use(
+  network.use(
     mockKeysService.deriveScopeSecret.handler((args) => {
       throw args.errors.NOT_FOUND({
         data: { secretRef: args.input.secretRef, secretVersion: args.input.secretVersion },
@@ -95,7 +95,7 @@ test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and v
 test('it rejects when the keys service never responds', async () => {
   const keyPair = await resolveTestServiceKeyPair();
 
-  server.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
+  network.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
 
   await expect(
     readScopeSecret(

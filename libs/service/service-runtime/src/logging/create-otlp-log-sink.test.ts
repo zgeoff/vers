@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { configureLogging } from './configure-logging';
 import { createOTLPLogSink } from './create-otlp-log-sink';
 

@@ -28,6 +28,7 @@
     "@vers/game-utils": "workspace:*",
     "@vers/item-gen": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }

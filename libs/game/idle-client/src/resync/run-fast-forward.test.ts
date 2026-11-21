@@ -13,7 +13,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import type { ActivityServiceClient } from '../submission/types';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { runFastForward } from './run-fast-forward';
@@ -52,7 +52,7 @@ function setupTest() {
     }),
   ];
 
-  server.use(...handlers);
+  network.use(...handlers);
 
   return {
     buildWaveTemplate: () => ({
@@ -308,7 +308,7 @@ test('it splits a large plan into bounded batches, awaiting each in order', asyn
 test('it bails to displaced and reports zero tallies when a batch is rejected', async () => {
   const progress = createMockLatestActivityProgress();
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({
         data: { activityID: opts.input.activityID, appendedHead: opts.input.expectedHead },
@@ -359,7 +359,7 @@ test('it bails to displaced and reports zero tallies when a batch is rejected', 
 test('it propagates a transport failure rather than reporting it as displaced', () => {
   const progress = createMockLatestActivityProgress();
 
-  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 

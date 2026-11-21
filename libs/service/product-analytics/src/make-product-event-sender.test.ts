@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
 import { makeProductEventSender } from './make-product-event-sender';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 
 test('it posts the encoded row to the events endpoint with the append token', async () => {
   const received: Array<{ authorization: string | null; body: string; url: string }> = [];
 
-  server.use(
+  network.use(
     http.post('https://api.example.tinybird.co/v0/events', async (info) => {
       const body = await info.request.text();
 
@@ -49,7 +49,7 @@ test('it posts the encoded row to the events endpoint with the append token', as
 });
 
 test('it resolves false when the events endpoint rejects the row', async () => {
-  server.use(
+  network.use(
     http.post('https://api.example.tinybird.co/v0/events', () =>
       HttpResponse.json({ error: 'invalid token' }, { status: 403 }),
     ),
@@ -72,7 +72,7 @@ test('it resolves false when the events endpoint rejects the row', async () => {
 });
 
 test('it resolves false when the events endpoint quarantines the row', async () => {
-  server.use(
+  network.use(
     http.post('https://api.example.tinybird.co/v0/events', () =>
       HttpResponse.json({ quarantined_rows: 1, successful_rows: 0 }, { status: 202 }),
     ),
@@ -95,7 +95,7 @@ test('it resolves false when the events endpoint quarantines the row', async () 
 });
 
 test('it resolves false when the events endpoint is unreachable', async () => {
-  server.use(http.post('https://api.example.tinybird.co/v0/events', () => HttpResponse.error()));
+  network.use(http.post('https://api.example.tinybird.co/v0/events', () => HttpResponse.error()));
 
   const sendProductEvent = makeProductEventSender({
     url: 'https://api.example.tinybird.co',

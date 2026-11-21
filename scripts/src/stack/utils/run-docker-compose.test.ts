@@ -1,12 +1,12 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createStubCommand } from '../../test-utils/create-stub-command';
 import { runDockerCompose } from './run-docker-compose';
 
 test('it runs docker compose against the repo compose file with the args it gets', async () => {
-  const dockerPath = await createStubCommand('docker', 'echo "$@" > "$(dirname "$0")/args"');
+  const dockerPath = createStubCommand('docker', 'echo "$@" > "$(dirname "$0")/args"');
 
   await runDockerCompose(['logs', '--tail=0', 'postgres']);
 
@@ -18,11 +18,7 @@ test('it runs docker compose against the repo compose file with the args it gets
 });
 
 test('it ends docker compose when the process that ran it gets SIGTERM', async () => {
-  const dockerPath = await createStubCommand(
-    'docker',
-    'echo $$ > "$(dirname "$0")/pid"\nexec sleep 30',
-  );
-
+  const dockerPath = createStubCommand('docker', 'echo $$ > "$(dirname "$0")/pid"\nexec sleep 30');
   const pidPath = join(dirname(dockerPath), 'pid');
 
   const cli = Bun.spawn(
@@ -52,8 +48,8 @@ test('it ends docker compose when the process that ran it gets SIGTERM', async (
   });
 });
 
-test('it rejects when docker compose exits with a failure', async () => {
-  await createStubCommand('docker', 'exit 1');
+test('it rejects when docker compose exits with a failure', () => {
+  createStubCommand('docker', 'exit 1');
 
   expect(runDockerCompose(['ps', '--all'])).rejects.toThrowWithMessage(
     Error,

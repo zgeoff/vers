@@ -17,7 +17,8 @@ async function setupTest() {
 
 test('it refuses a --netns start when pasta is not on PATH', async () => {
   const ctx = await setupTest();
-  const chromium = await createStubCommand('chromium', 'exit 1');
+
+  const chromium = createStubCommand('chromium', 'exit 1');
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: { PATH: dirname(chromium), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
@@ -37,7 +38,8 @@ test('it refuses a --netns start when pasta is not on PATH', async () => {
 
 test('it refuses a start when chromium is not on PATH', async () => {
   const ctx = await setupTest();
-  const pasta = await createStubCommand('pasta', 'exit 1');
+
+  const pasta = createStubCommand('pasta', 'exit 1');
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: { PATH: dirname(pasta), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
@@ -57,8 +59,9 @@ test('it refuses a start when chromium is not on PATH', async () => {
 
 test('it refuses a start under a TMPDIR too long for Chromium', async () => {
   const ctx = await setupTest();
-  const chromium = await createStubCommand('chromium', 'exit 1');
-  const pasta = await createStubCommand('pasta', 'exit 1');
+
+  const chromium = createStubCommand('chromium', 'exit 1');
+  const pasta = createStubCommand('pasta', 'exit 1');
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: {
@@ -95,7 +98,7 @@ test.skipIf(process.getuid?.() === 0)(
     const pidFile = join(ctx.stateHome, 'browser.pid');
     const fakeBrowser = `Bun.serve({ hostname: '127.0.0.1', port: ${port}, fetch: () => Response.json({}) })`;
 
-    const chromium = await createStubCommand(
+    const chromium = createStubCommand(
       'chromium',
       `echo $$ > '${pidFile}'\nexec '${process.execPath}' -e "${fakeBrowser}"`,
     );

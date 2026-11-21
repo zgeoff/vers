@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { useIdleStore } from '../state/use-idle-store';
 import { RPC_CLIENT_TO_WORKER_CHANNEL, RPC_WORKER_TO_CLIENT_CHANNEL } from './constants';
 import { createWebLocksClient } from './create-web-locks-client';

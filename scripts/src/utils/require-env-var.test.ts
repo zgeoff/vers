@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { requireEnvVar } from './require-env-var';
 
 test('it returns the value of a set environment variable', () => {

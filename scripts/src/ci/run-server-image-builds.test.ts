@@ -24,7 +24,9 @@ test('it builds the web image, then one image for each service with a fly config
   await mkdir(join(rootPath, 'services/notes'), { recursive: true });
   await writeFile(join(rootPath, 'services/kiln/fly.toml'), "app = 'kiln'\n");
   await writeFile(join(rootPath, 'services/glaze/fly.toml'), "app = 'glaze'\n");
-  await createStubCommand('docker', `printf '%s|%s\\n' "$PWD" "$*" >> '${argsPath}'`);
+
+  createStubCommand('docker', `printf '%s|%s\\n' "$PWD" "$*" >> '${argsPath}'`);
+
   await runServerImageBuilds({ rootPath, writeLine: () => {} });
 
   const args = await readFile(argsPath, 'utf8');
@@ -46,7 +48,9 @@ test('it folds each image build into its own log group', async () => {
 
   await mkdir(join(ctx.directory, 'services/kiln'), { recursive: true });
   await writeFile(join(ctx.directory, 'services/kiln/fly.toml'), "app = 'kiln'\n");
-  await createStubCommand('docker', ':');
+
+  createStubCommand('docker', ':');
+
   await runServerImageBuilds({ rootPath: ctx.directory, writeLine });
 
   expect(writeLine.mock.calls).toStrictEqual([
@@ -60,7 +64,7 @@ test('it folds each image build into its own log group', async () => {
 test('it rejects an image build that fails', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('docker', "echo 'failed to solve' >&2\nexit 1");
+  createStubCommand('docker', "echo 'failed to solve' >&2\nexit 1");
 
   expect(runServerImageBuilds({ rootPath: ctx.directory, writeLine: () => {} })).rejects.toThrow();
 });

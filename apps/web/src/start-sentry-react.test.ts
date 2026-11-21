@@ -1,8 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import * as Sentry from '@sentry/react';
 import type { Event } from '@sentry/react';
-import { waitFor } from '@vers/test-utils';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv, waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { startSentryReact } from './start-sentry-react';
 

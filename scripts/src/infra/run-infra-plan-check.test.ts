@@ -22,7 +22,7 @@ test('it previews the prod stack as JSON with a refresh', async () => {
 
   const recordPath = join(ctx.directory, 'record');
 
-  await createStubCommand('op', `shift 5\necho "$*" > '${recordPath}'\necho '{"steps": []}'`);
+  createStubCommand('op', `shift 5\necho "$*" > '${recordPath}'\necho '{"steps": []}'`);
 
   await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -49,7 +49,7 @@ test('it passes a plan that creates and updates resources, and reports it in the
     ],
   });
 
-  await createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -97,7 +97,7 @@ test('it holds a plan that replaces a resource', async () => {
     changeSummary: { replace: 1 },
   });
 
-  await createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -128,7 +128,7 @@ test('it holds a plan that replaces a resource', async () => {
 test('it holds a plan that changes nothing when the drift check before it failed', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', `echo '{"steps": [], "changeSummary": {"same": 40}}'`);
+  createStubCommand('op', `echo '{"steps": [], "changeSummary": {"same": 40}}'`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -156,7 +156,7 @@ test('it applies a plan that deletes a resource when a person dispatched the run
     steps: [{ op: 'delete', urn: 'urn:pulumi:prod::vers-infra::neon:index/role:Role::reader' }],
   });
 
-  await createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -181,7 +181,7 @@ test("it holds a dispatched run whose commit is no longer main's tip, whatever t
     steps: [{ op: 'delete', urn: 'urn:pulumi:prod::vers-infra::neon:index/role:Role::reader' }],
   });
 
-  await createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -210,10 +210,7 @@ test("it fails with the preview's errors and writes no outcome when the preview 
     ],
   });
 
-  await createStubCommand(
-    'op',
-    `printf '%s\\n' '${plan}'\necho 'error: preview failed' >&2\nexit 255`,
-  );
+  createStubCommand('op', `printf '%s\\n' '${plan}'\necho 'error: preview failed' >&2\nexit 255`);
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -247,7 +244,7 @@ test("it fails with the preview's errors and writes no outcome when the preview 
 test('it fails and writes no outcome when the preview prints no plan', async () => {
   const ctx = await setupTest();
 
-  await createStubCommand('op', "echo 'Previewing update (prod)'");
+  createStubCommand('op', "echo 'Previewing update (prod)'");
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',

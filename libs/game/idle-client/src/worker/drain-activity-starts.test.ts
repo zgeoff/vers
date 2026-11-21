@@ -5,7 +5,7 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
@@ -40,7 +40,7 @@ test("it ingests and registers the recovery avatar's row, leaving another avatar
   await writeActivityStart(matching);
   await writeActivityStart(other);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: matching, appendedHead: 0 })),
   );
 
@@ -73,7 +73,7 @@ test('it announces a drained activity start to connected tabs', async () => {
 
   await writeActivityStart(row);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
   );
 
@@ -98,7 +98,7 @@ test('it discards the queued checkpoints of a refused activityStart without regi
   await writeActivityStart(row);
   await writeQueuedCheckpoint(row.id, createMockCheckpointBatchEntry({ version: 1 }));
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.NODE_NOT_REVEALED({ data: {} });
     }),
@@ -147,7 +147,7 @@ test('it drops a start the server permanently refuses, its successor, and the la
   await writeActivityStart(successor);
   await writeLastStartedActivity({ avatarID: successor.avatarID, lastActivityID: successor.id });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {
@@ -199,7 +199,7 @@ test('it submits a start refused while its predecessor is still active server-si
   await writeActivityStart(deferred);
   await writeActivityStart(successor);
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       track(opts.input.activityID);
 
@@ -273,7 +273,7 @@ test('it drops a start whose snapshot the server refused for good, halts the liv
     tail: null,
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       track(opts.input.activityID);
 
@@ -356,7 +356,7 @@ test('it clears the fold records when a start is refused for good and the server
     tail: null,
   });
 
-  server.use(
+  network.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
         data: {

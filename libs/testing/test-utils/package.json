@@ -24,9 +24,9 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "happy-dom": "catalog:",
     "jose": "catalog:",
-    "msw": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

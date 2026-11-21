@@ -8,8 +8,8 @@ import {
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { waitFor } from '@vers/test-utils';
-import { server } from '../mocks/node';
+import { waitFor } from '@zgeoff/testing';
+import { network } from '../mocks/network';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
@@ -378,7 +378,7 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
     createMockCheckpointBatchEntry({ hash: 'stranded_hash_6', version: 6 }),
   );
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       throw new Error('unreachable service');
     }),
@@ -512,7 +512,7 @@ test('it resolves active-elsewhere without claiming when another session holds t
 
   const resume = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -572,7 +572,7 @@ test('it takes over the writer before planning when claiming a run another sessi
 
   const resume = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -632,7 +632,7 @@ test('it skips the claim when this session already holds the writer', async () =
 
   const resume = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.resumeActivity.handler((opts) => {
       resume(opts.input);
 
@@ -682,7 +682,7 @@ test('it refetches after a claim that reveals appends the fetch missed', async (
 
   let fetches = 0;
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 
@@ -744,7 +744,7 @@ test('it plans the terminal outcome without claiming when the run ends before th
 
   let fetches = 0;
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 
@@ -811,7 +811,7 @@ test('it drains a stale fork before claiming, so the fork lands as an eviction, 
   const track = mock<(input: unknown) => void>();
   const resume = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -878,7 +878,7 @@ test('it reports a lost writer for a live run another session took, then resolve
     verifiedHead: 0,
   });
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => ({
       activity,
       anchor: null,
@@ -936,7 +936,7 @@ test('it yields to a third session that claims over this one before the refetch'
 
   let fetches = 0;
 
-  server.use(
+  network.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       fetches += 1;
 

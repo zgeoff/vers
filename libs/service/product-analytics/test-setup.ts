@@ -1,5 +1,3 @@
-import { registerBunTestCleanup, registerMSWLifecycle } from '@vers/test-utils/bun';
-import { server } from './src/mocks/server';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
 registerBunTestCleanup();
-registerMSWLifecycle(server);

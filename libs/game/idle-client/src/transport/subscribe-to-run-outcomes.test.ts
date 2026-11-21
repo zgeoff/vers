@@ -1,5 +1,5 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { WorkerMessageType } from '../types';
 import { WORKER_TO_CLIENT_CHANNEL } from './constants';
 import type { ReceivedRunOutcome } from './subscribe-to-run-outcomes';

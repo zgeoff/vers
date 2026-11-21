@@ -3,10 +3,10 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { HttpResponse } from 'msw';
 import { SimulatedClock, createActor } from 'xstate';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
@@ -85,7 +85,7 @@ test('it arms the shared progress window and waits for an explicit flush-due eve
 test('it flushes immediately on a terminal checkpoint, bypassing the progress window', async () => {
   const ctx = setupTest({ activityID: 'terminal-flush-activity' });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await writeQueuedCheckpoint(
     'terminal-flush-activity',
@@ -105,7 +105,7 @@ test('it flushes immediately on a terminal checkpoint, bypassing the progress wi
 test('it moves to retrying and reports the batch held on a transport failure', async () => {
   const ctx = setupTest({ activityID: 'transport-failure-machine-activity' });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   await writeQueuedCheckpoint(
     'transport-failure-machine-activity',
@@ -128,7 +128,7 @@ test('it retries once the backoff delay elapses, until the batch lands', async (
   const track = mock<() => void>();
   const ctx = setupTest({ activityID: 'backoff-machine-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -166,7 +166,7 @@ test('it runs an immediate attempt from retrying without advancing the backoff a
   const track = mock<() => void>();
   const ctx = setupTest({ activityID: 'flush-now-retrying-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       track();
 
@@ -201,7 +201,7 @@ test('it resets the backoff attempt counter and re-flushes when flushHeld arrive
   let shouldFail = true;
   const ctx = setupTest({ activityID: 'flush-held-retrying-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       if (shouldFail) {
         return HttpResponse.error();
@@ -245,7 +245,7 @@ test('it never cancels an in-flight attempt when flushHeld arrives mid-flight', 
   let release: (() => void) | undefined;
   const ctx = setupTest({ activityID: 'mid-flight-flush-held-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(async () => {
       track();
 
@@ -288,7 +288,7 @@ test('it exits retrying with no re-entry once the shutdown signal aborts', async
     signal: shutdownController.signal,
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   await writeQueuedCheckpoint(
     'shutdown-abort-activity',
@@ -317,7 +317,7 @@ test('it reaches invalid on CHECKPOINT_INVALID and never flushes again', async (
   const track = mock<() => void>();
   const ctx = setupTest({ activityID: 'invalid-machine-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
 
@@ -357,7 +357,7 @@ test('it reaches evicted once a terminal checkpoint fully drains', async () => {
     terminalQueued: true,
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await writeQueuedCheckpoint(
     'evicted-machine-activity',
@@ -383,7 +383,7 @@ test('it reports a callback failure and holds the batch without starting a retry
     },
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await writeQueuedCheckpoint(
     'callback-failed-machine-activity',
@@ -405,7 +405,7 @@ test('it resets the backoff attempt counter once a retried batch lands, so a lat
   let shouldFail = true;
   const ctx = setupTest({ activityID: 'backoff-reset-machine-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(() => {
       if (shouldFail) {
         return HttpResponse.error();
@@ -458,7 +458,7 @@ test('it ingests a pending activityStart and re-flushes once on NOT_FOUND, succe
 
   const ctx = setupTest({ activityID: 'not-found-ingested-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
 
@@ -499,7 +499,7 @@ test('it re-flushes on an absent ingest, delivering against an activity start a 
 
   const ctx = setupTest({ activityID: 'not-found-absent-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
 
@@ -540,7 +540,7 @@ test('it discards the queue after a second NOT_FOUND on the post-ingest retry, i
 
   const ctx = setupTest({ activityID: 'not-found-twice-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -575,7 +575,7 @@ test('it holds the queue on NOT_FOUND when ingestActivityStart defers, without r
 
   const ctx = setupTest({ activityID: 'not-found-deferred-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -610,7 +610,7 @@ test('it retries a deferred activity start on exponential backoff up to the cap,
 
   const ctx = setupTest({ activityID: 'deferred-backoff-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -669,7 +669,7 @@ test('it keeps a deferred activity start on its backoff while progress checkpoin
 
   const ctx = setupTest({ activityID: 'deferred-progress-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -734,7 +734,7 @@ test('it flushes a terminal checkpoint at once while a deferred activity start w
 
   const ctx = setupTest({ activityID: 'deferred-terminal-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -770,7 +770,7 @@ test('it arms the progress window for a checkpoint queued while a flush was in f
   let release: (() => void) | undefined;
   const ctx = setupTest({ activityID: 'mid-flight-progress-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(async () => {
       track();
 
@@ -821,7 +821,7 @@ test('it discards the queue on NOT_FOUND when ingestActivityStart reports the ac
 
   const ctx = setupTest({ activityID: 'not-found-rejected-activity', ingestActivityStart });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.NOT_FOUND({ data: {} });
     }),
@@ -845,7 +845,7 @@ test('it discards the queue on NOT_FOUND with no ingestActivityStart hook config
   const track = mock<() => void>();
   const ctx = setupTest({ activityID: 'not-found-no-hook-activity' });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
       throw opts.errors.NOT_FOUND({ data: {} });
@@ -877,7 +877,7 @@ test('it arms the progress window for a checkpoint queued while a flush was in f
     },
   });
 
-  server.use(
+  network.use(
     mockActivityService.trackActivityProgress.handler(async () => {
       track();
 
@@ -929,7 +929,7 @@ test('it reports every flush outcome to the settled observer', async () => {
   const onFlushSettled = mock<(activityID: string, outcome: Readonly<FlushOutcome>) => void>();
   const ctx = setupTest({ activityID: 'observed-flush-activity', onFlushSettled });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await writeQueuedCheckpoint(
     'observed-flush-activity',
@@ -957,7 +957,7 @@ test('it settles the flush even when the settled observer throws', async () => {
     },
   });
 
-  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+  network.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   await writeQueuedCheckpoint(
     'throwing-observer-activity',

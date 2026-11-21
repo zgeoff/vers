@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import type { SimulationDriver } from '@vers/idle-core';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { REPLAY_CACHE_CAP, createReplayCache } from './create-replay-cache';
 
 function setupTest() {

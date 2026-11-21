@@ -33,11 +33,12 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/oxlint-config",
   "@zgeoff/rig",
   "@zgeoff/std",
+  "@zgeoff/testing",
   "@zgeoff/umami-mcp",
 ]
 
 [test]
 # registers jest-extended matchers for any root-invoked `bun test`; each
 # bun-test package's own bunfig.toml adds its own DB-setup preload
-preload = ["@zgeoff/bun-test-extended"]
+preload = ["@zgeoff/testing/preload", "@zgeoff/bun-test-extended"]
 

@@ -8,7 +8,7 @@ import { implement } from '@orpc/server';
 import * as z from 'zod';
 import { buildContractMock } from './build-contract-mock';
 import { buildMockService } from './build-mock-service';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 
 type SecretContext = Record<string, unknown> & { actingUserID: string | null };
 
@@ -28,7 +28,7 @@ function setupTest() {
 
   const implementer = implement(contract).$context<SecretContext>();
 
-  server.use(
+  network.use(
     ...buildMockService({
       baseUrl: 'http://secret.test',
       contract,
@@ -79,7 +79,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
     },
   });
 
-  server.use(
+  network.use(
     mock.getSecret.handler((opts) => ({
       value: `overridden-for-${opts.context.actingUserID}`,
     })),
@@ -113,7 +113,7 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
     },
   });
 
-  server.use(
+  network.use(
     mock.getSecret.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
     }),
@@ -146,7 +146,7 @@ test('it overrides a nested-namespace procedure while a sibling top-level call s
 
   const implementer = implement(authContract);
 
-  server.use(
+  network.use(
     ...buildMockService({
       baseUrl: 'http://auth.test',
       contract: authContract,
@@ -168,7 +168,7 @@ test('it overrides a nested-namespace procedure while a sibling top-level call s
     resolveContext: () => ({}),
   });
 
-  server.use(
+  network.use(
     mock.stepUp.getPendingTransaction.handler(() => ({ transactionID: 'overridden-txn' })),
   );
 
@@ -197,7 +197,7 @@ test('it surfaces a raw Response returned by a mock handler verbatim to the clie
     resolveContext: () => ({}),
   });
 
-  server.use(
+  network.use(
     mock.getSecret.handler(
       () =>
         new Response('teapot', {

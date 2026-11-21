@@ -2,7 +2,7 @@ import { expect, mock, onTestFinished, test } from 'bun:test';
 import { onlineManager } from '@tanstack/react-query';
 import { isRedirect, redirect } from '@tanstack/react-router';
 import { HttpResponse, http } from 'msw';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { buildQueryClient } from '../query/build-query-client';
 import { NetworkFailureError } from './network-failure-error';
 import { readServerFnResponse } from './read-server-fn-response';
@@ -24,11 +24,11 @@ function setupTest() {
 test('it reads the server again on each call while the network answers', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-off')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-off')));
 
   await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
 
   const flags = await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
@@ -38,13 +38,13 @@ test('it reads the server again on each call while the network answers', async (
 test('it answers with the last-known value, in one attempt, when the network fails', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
 
   await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
   const resolver = mock(() => HttpResponse.error());
 
-  server.use(http.get(ctx.flagsURL, resolver));
+  network.use(http.get(ctx.flagsURL, resolver));
 
   const flags = await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
@@ -55,7 +55,7 @@ test('it answers with the last-known value, in one attempt, when the network fai
 test('it answers with the last-known value while the browser reports offline', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
 
   await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
@@ -65,7 +65,7 @@ test('it answers with the last-known value while the browser reports offline', a
     onlineManager.setOnline(true);
   });
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.error()));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.error()));
 
   const flags = await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
@@ -75,7 +75,7 @@ test('it answers with the last-known value while the browser reports offline', a
 test('it keeps the last-known value past the idle time after which Query collects a query', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('market-on')));
 
   await readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags);
 
@@ -87,7 +87,7 @@ test('it keeps the last-known value past the idle time after which Query collect
 test('it rethrows the network failure when no value is known yet', () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.error()));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.error()));
 
   expect(readWithLastKnown(ctx.queryClient, 'flags', ctx.readFlags)).rejects.toBeInstanceOf(
     NetworkFailureError,
@@ -97,7 +97,7 @@ test('it rethrows the network failure when no value is known yet', () => {
 test('it rethrows a redirect even when a value is known', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('signed-in')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('signed-in')));
 
   await readWithLastKnown(ctx.queryClient, 'auth', ctx.readFlags);
 
@@ -114,7 +114,7 @@ test('it rethrows a redirect even when a value is known', async () => {
 test('it rethrows a server fault even when a value is known', async () => {
   const ctx = setupTest();
 
-  server.use(http.get(ctx.flagsURL, () => HttpResponse.text('signed-in')));
+  network.use(http.get(ctx.flagsURL, () => HttpResponse.text('signed-in')));
 
   await readWithLastKnown(ctx.queryClient, 'auth', ctx.readFlags);
 

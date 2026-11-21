@@ -43,6 +43,7 @@
         "src/start-sentry-react.ts",
         "src/router.tsx",
         "src/mocks/browser.ts",
+        "src/mocks/dev-network.ts",
         "src/lib/scene/types.ts",
         "src/test-utils/serve-mock-services.ts",
         "src/test-utils/verify/serve-resend-stub.ts",

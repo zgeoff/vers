@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createFakeWebLocks } from './create-fake-web-locks';
 
 test('it grants a free lock synchronously', () => {

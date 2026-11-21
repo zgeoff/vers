@@ -5,7 +5,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createKeysClient } from './create-keys-client';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 import { readAvatarKeys } from './read-avatar-keys';
 
 async function setupTest() {
@@ -22,7 +22,7 @@ async function setupTest() {
 test("it reads the avatar's roll key from the keys service", async () => {
   const ctx = await setupTest();
 
-  server.use(mockKeysService.deriveAvatarKey.handler(() => ({ key: 'ab'.repeat(32) })));
+  network.use(mockKeysService.deriveAvatarKey.handler(() => ({ key: 'ab'.repeat(32) })));
 
   const keys = await readAvatarKeys(ctx.keysClient, {
     avatarID: 'avatar_heron',
@@ -52,7 +52,7 @@ test("it reads the avatar's worldmap scope secret from the keys service", async 
 test('it fails with a plain error that names the code and status of a keys refusal', async () => {
   const ctx = await setupTest();
 
-  server.use(
+  network.use(
     mockKeysService.deriveScopeSecret.handler(() => {
       throw new ORPCError('NOT_FOUND');
     }),
@@ -73,7 +73,7 @@ test('it asks the keys service for the roll key of the trade population at the g
 
   const requested: Array<unknown> = [];
 
-  server.use(
+  network.use(
     mockKeysService.deriveAvatarKey.handler((args) => {
       requested.push(args.input);
 

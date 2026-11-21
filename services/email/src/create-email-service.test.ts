@@ -4,7 +4,8 @@ import type { EmailContract } from '@vers/contract-email';
 import { createEmailClient } from '@vers/email';
 import { sentEmails } from '@vers/email/mocks';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createEmailJobQueue } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
 

@@ -9,7 +9,7 @@ import { HttpResponse } from 'msw';
 import { NetworkFailureError } from '../../lib/offline/network-failure-error';
 import { buildQueryClient } from '../../lib/query/build-query-client';
 import { orpc } from '../../lib/rpc/orpc';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { renderWithRouter } from '../../test-utils/render-with-router';
@@ -287,7 +287,7 @@ test('it shows that log out needs the network, and does not sign out, when the a
 
   await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(mockAvatarService.getAvatars.handler(() => HttpResponse.error()));
+  network.use(mockAvatarService.getAvatars.handler(() => HttpResponse.error()));
 
   setIdleWorkerHandle({
     activity: undefined,
@@ -325,7 +325,7 @@ test('it shows that log out needs the network, and does not sign out, when the b
 
   await db.avatarCollection.create({ userID: signedIn.userID });
 
-  server.use(mockAvatarService.getAvatars.handler(() => HttpResponse.error()));
+  network.use(mockAvatarService.getAvatars.handler(() => HttpResponse.error()));
   onlineManager.setOnline(false);
 
   onTestFinished(() => {

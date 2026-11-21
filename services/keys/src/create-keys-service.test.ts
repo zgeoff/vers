@@ -3,7 +3,8 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import type { KeysContract } from '@vers/contract-keys';
 import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
 import { createAnonymousViewer } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { createKeysService } from './create-keys-service';
 

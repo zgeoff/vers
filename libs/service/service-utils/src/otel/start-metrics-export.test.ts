@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { metrics } from '@opentelemetry/api';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { startMetricsExport } from './start-metrics-export';
 
 interface ReceivedExport {

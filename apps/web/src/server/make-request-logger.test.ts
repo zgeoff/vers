@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { makeRequestLogger } from './make-request-logger';
 

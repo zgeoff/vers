@@ -23,6 +23,7 @@
     "@vers/service-utils": "workspace:*",
     "@vers/sim-registry": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
+    "@zgeoff/testing": "catalog:",
     "gunshi": "catalog:",
     "iron-session": "catalog:",
     "jose": "catalog:",

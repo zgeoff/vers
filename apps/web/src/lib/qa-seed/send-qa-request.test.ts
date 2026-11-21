@@ -2,13 +2,13 @@ import { expect, mock, test } from 'bun:test';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { sendQARequest } from './send-qa-request';
 
 test('it answers 404 without forwarding when no QA token is configured', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
+  network.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
 
   const response = await sendQARequest(
     new Request('http://app.test/api/qa/createQAAccount', {
@@ -26,7 +26,7 @@ test('it answers 404 without forwarding when no QA token is configured', async (
 test('it answers 401 without forwarding a request that lacks the QA token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
+  network.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
 
   const response = await sendQARequest(
     new Request('http://app.test/api/qa/createQAAccount', {
@@ -44,7 +44,7 @@ test('it answers 401 without forwarding a request that lacks the QA token', asyn
 test('it answers 404 without forwarding when the QA token holder calls another activity procedure', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3006/rpc/stopActivity', resolver));
+  network.use(http.post('http://localhost:3006/rpc/stopActivity', resolver));
 
   const response = await sendQARequest(
     new Request('http://app.test/api/qa/stopActivity', {
@@ -64,7 +64,7 @@ test("it forwards the QA token holder's createQAAccount call under an anonymous 
     HttpResponse.json({ json: { kind: 'created' } }, { status: 200 }),
   );
 
-  server.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
+  network.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
 
   const response = await sendQARequest(
     new Request('http://app.test/api/qa/createQAAccount', {

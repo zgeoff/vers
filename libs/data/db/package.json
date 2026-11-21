@@ -33,6 +33,7 @@
     "@vers/game-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "kysely-codegen": "catalog:",
     "kysely-ctl": "catalog:",
     "pg": "catalog:",

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { call, os } from '@orpc/server';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import * as z from 'zod';
 import { requireFlag } from './require-flag';
 

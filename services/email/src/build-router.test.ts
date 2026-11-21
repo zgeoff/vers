@@ -3,13 +3,14 @@ import { getLogger } from '@logtape/logtape';
 import { call } from '@orpc/server';
 import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
-import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
+import { RESEND_ENDPOINT_URL, network, sentEmails } from '@vers/email/mocks';
 import type { JobQueue, JobState } from '@vers/jobs';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
+import { waitFor } from '@zgeoff/testing';
 import { HttpResponse, http } from 'msw';
 import { buildEmailRouter } from './build-router';
 import { createBackgroundDrains } from './create-background-drains';
@@ -198,7 +199,7 @@ test('#sendPasswordChanged it enqueues and delivers', async () => {
 test('it keeps a job left failed by a downstream error for a later sweep', async () => {
   await using ctx = await setupTest();
 
-  server.use(
+  network.use(
     http.post(
       RESEND_ENDPOINT_URL,
       () =>

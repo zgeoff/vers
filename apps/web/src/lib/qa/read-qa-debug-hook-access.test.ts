@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import { resolveSessionContext } from '@vers/mock-services';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { SERVICE_URLS } from '../rpc/service-urls';
@@ -49,7 +49,7 @@ test('it refuses, rather than rejects, when the user service fails', async () =>
 
   const signedIn = await createSignedInUser({ email: 'qa+hook-2@qa.versidle.com' });
 
-  server.use(
+  network.use(
     ctx.mockUser.getCurrentUser.handler(() => {
       throw new Error('user service unreachable');
     }),

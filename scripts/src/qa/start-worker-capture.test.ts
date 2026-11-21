@@ -1,22 +1,11 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
-import { http, passthrough, ws } from 'msw';
-import { server } from '../mocks/node';
+import { waitFor } from '@zgeoff/testing';
 import { startStubDevTools } from '../test-utils/start-stub-devtools';
 import { startWorkerCapture } from './start-worker-capture';
 
 function setupTest() {
   const devtools = startStubDevTools();
   const lines: Array<string> = [];
-
-  server.use(
-    http.get(`http://${devtools.endpoint}/json`, () => passthrough()),
-    ws
-      .link(`ws://${devtools.endpoint}/devtools/page/*`)
-      .addEventListener('connection', (connection) => {
-        connection.server.connect();
-      }),
-  );
 
   const startCapture = () => {
     const stop = startWorkerCapture({

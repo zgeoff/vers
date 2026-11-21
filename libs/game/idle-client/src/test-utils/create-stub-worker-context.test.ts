@@ -3,9 +3,9 @@ import type { ActivityData } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { http } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
@@ -41,7 +41,7 @@ test('it writes a start row and its last-started record to the outbox by default
 });
 
 test('it discards the outbox when its proxy client meets the superseded marker', async () => {
-  server.use(
+  network.use(
     http.post(`${self.location.origin}/api/rpc/activity/getCurrentActivity`, () =>
       buildSessionSupersededResponse(),
     ),

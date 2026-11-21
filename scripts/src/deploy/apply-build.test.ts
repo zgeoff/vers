@@ -5,7 +5,7 @@ import { createStubCommand } from '../test-utils/create-stub-command';
 import { applyBuild } from './apply-build';
 
 test('it retries a build whose push goes silent and returns the pushed image ref', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     [
       'calls="$(dirname "$0")/calls"',
@@ -36,8 +36,8 @@ test('it retries a build whose push goes silent and returns the pushed image ref
   });
 });
 
-test('it fails a build that goes silent on every attempt', async () => {
-  await createStubCommand('flyctl', 'echo "#19 pushing layer sha256:5e1f0c2a"\nexec sleep 30');
+test('it fails a build that goes silent on every attempt', () => {
+  createStubCommand('flyctl', 'echo "#19 pushing layer sha256:5e1f0c2a"\nexec sleep 30');
 
   expect(
     applyBuild(
@@ -58,7 +58,7 @@ test('it fails a build that goes silent on every attempt', async () => {
 });
 
 test('it fails a build that flyctl rejects without a retry', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     'echo call >> "$(dirname "$0")/calls"\necho "Error: failed to solve: exit code: 1" >&2\nexit 1',
   );
@@ -83,7 +83,7 @@ test('it fails a build that flyctl rejects without a retry', async () => {
 });
 
 test('it passes a build secret to flyctl as a build secret, never as a build arg', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     String.raw`printf "%s\n" "$@" > "$(dirname "$0")/args"`,
   );

@@ -1,7 +1,7 @@
-import { setupServer } from 'msw/node';
+import { createTestNetwork } from '@zgeoff/testing/fetch';
 import { handlers } from './handlers';
 
-export const server = setupServer(...handlers);
+export const network = createTestNetwork({ handlers });
 
 export {
   ENDPOINT_URL as RESEND_ENDPOINT_URL,

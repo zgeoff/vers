@@ -38,6 +38,7 @@
     "@vers/contract-avatar": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "typescript": "catalog:"
   }
 }

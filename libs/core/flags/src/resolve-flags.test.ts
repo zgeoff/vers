@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { resolveFlags } from './resolve-flags';
 
 test('it resolves every registered flag to its default when no env vars are set', async () => {

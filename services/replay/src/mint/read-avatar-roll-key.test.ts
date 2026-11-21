@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 import { readAvatarRollKey } from './read-avatar-roll-key';
 
 test('it reads the avatar roll key over real s2s auth against the mocked keys backend', async () => {
@@ -55,7 +55,7 @@ test('it attaches a traceparent header to the outbound request', async () => {
 
   const observedTraceparents: Array<string | null> = [];
 
-  server.use(
+  network.use(
     mockKeysService.deriveAvatarKey.handler((args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 
@@ -76,7 +76,7 @@ test('it attaches a traceparent header to the outbound request', async () => {
 test('it rejects when the keys service never responds', async () => {
   const keyPair = await resolveTestServiceKeyPair();
 
-  server.use(mockKeysService.deriveAvatarKey.handler(() => new Promise<never>(() => {})));
+  network.use(mockKeysService.deriveAvatarKey.handler(() => new Promise<never>(() => {})));
 
   await expect(
     readAvatarRollKey(

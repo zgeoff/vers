@@ -8,7 +8,7 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readAllQueuedCheckpoints } from '../submission/read-all-queued-checkpoints';
 import { writeActivityStart } from '../submission/write-activity-start';
@@ -68,7 +68,7 @@ test("it keeps another avatar's pending start and its queued checkpoints", async
 test('it delivers no start that a continuation held at its write mints, once the sign-out discard ran and the player signs back in', async () => {
   const viewer = await createViewer({ avatar: { xp: 400 } });
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   const held = buildStubHeldWriter(writeMintedActivityStart);
 

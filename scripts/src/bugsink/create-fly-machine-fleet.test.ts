@@ -18,7 +18,7 @@ test('it lists the machines of the app it names', async () => {
 
   const argsPath = join(ctx.directory, 'args');
 
-  await createStubCommand(
+  createStubCommand(
     'flyctl',
     `printf '%s\\n' "$*" > '${argsPath}'\necho '[{"id":"1781e2db","state":"suspended","region":"syd"}]'`,
   );
@@ -35,7 +35,8 @@ test('it starts one machine of the app it names', async () => {
 
   const argsPath = join(ctx.directory, 'args');
 
-  await createStubCommand('flyctl', `printf '%s\\n' "$*" > '${argsPath}'`);
+  createStubCommand('flyctl', `printf '%s\\n' "$*" > '${argsPath}'`);
+
   await createFlyMachineFleet('kiln-errors').start('1781e2db');
 
   const args = await readFile(argsPath, 'utf8');
@@ -43,8 +44,8 @@ test('it starts one machine of the app it names', async () => {
   expect(args).toBe('machine start 1781e2db --app kiln-errors\n');
 });
 
-test('it rejects a start that flyctl refuses', async () => {
-  await createStubCommand('flyctl', "echo 'machine not found' >&2\nexit 1");
+test('it rejects a start that flyctl refuses', () => {
+  createStubCommand('flyctl', "echo 'machine not found' >&2\nexit 1");
 
   expect(createFlyMachineFleet('kiln-errors').start('1781e2db')).rejects.toThrowWithMessage(
     Error,

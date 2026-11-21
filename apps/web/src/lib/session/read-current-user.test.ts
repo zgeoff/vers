@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import { resolveSessionContext } from '@vers/mock-services';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { SERVICE_URLS } from '../rpc/service-urls';
@@ -25,7 +25,7 @@ test('it resolves null and never calls the user service when no session cookie i
     throw new Error('unexpected call to getCurrentUser');
   });
 
-  server.use(ctx.mockUser.getCurrentUser.handler(getCurrentUser));
+  network.use(ctx.mockUser.getCurrentUser.handler(getCurrentUser));
 
   const outcome = await withRequestContext({}, () => readCurrentUser());
 
@@ -45,7 +45,7 @@ test('it resolves null when the service rejects the session as unauthorized', as
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockUser.getCurrentUser.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'expired-session' } });
     }),
@@ -61,7 +61,7 @@ test('it rejects when the service fails in a way that is not a declared unauthor
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockUser.getCurrentUser.handler(() => {
       throw new Error('the user service is unreachable');
     }),
@@ -81,7 +81,7 @@ test('it rejects when the service declares a contract error other than unauthori
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockUser.getCurrentUser.handler((opts) => {
       throw opts.errors.FORBIDDEN({ data: {} });
     }),

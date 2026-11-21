@@ -1,12 +1,12 @@
 import '@zgeoff/bun-test-extended';
 import { afterEach } from 'bun:test';
-import { sentEmails, server } from '@vers/email/mocks';
+import { sentEmails } from '@vers/email/mocks';
 import {
   resolveTestDBTarget,
   resolveTestServiceKeyPair,
   setupBunTestDB,
 } from '@vers/service-test-utils/bun';
-import { registerBunTestCleanup, registerMSWLifecycle } from '@vers/test-utils/bun';
+import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
 await setupBunTestDB();
 
@@ -18,7 +18,6 @@ process.env['SERVICE_AUTH_JWKS'] = serviceKeyPair.jwksJSON;
 // `queueConnectionString` directly
 process.env['DATABASE_URL'] = `${resolveTestDBTarget().baseURI}/postgres`;
 
-registerMSWLifecycle(server);
 registerBunTestCleanup();
 
 afterEach(() => {

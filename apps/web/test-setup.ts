@@ -3,13 +3,8 @@ import '@zgeoff/bun-test-extended';
 import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import { registerMockDBReset } from '@vers/mock-services/bun';
-import {
-  registerBunTestCleanup,
-  registerHappyDOM,
-  registerMSWLifecycle,
-} from '@vers/test-utils/bun';
+import { registerBunTestCleanup, registerHappyDOM } from '@vers/test-utils/bun';
 import { resetZustandStores } from './reset-zustand-stores';
-import { server } from './src/mocks/node';
 import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
 import { registerIdleCheckpointDBReset } from './src/test-utils/register-idle-checkpoint-db-reset';
@@ -43,7 +38,6 @@ expect.extend(jestDOMMatchers);
 
 // the zustand reset wrapper (worldmap selection, idle sync state) is installed by the
 // `reset-zustand-stores.ts` preload, ahead of this file's own imports below
-registerMSWLifecycle(server);
 registerMockDBReset();
 registerRequestContextMock();
 registerIdleWorkerHandleMock();

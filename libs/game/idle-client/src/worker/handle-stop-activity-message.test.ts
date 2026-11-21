@@ -7,7 +7,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -132,7 +132,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
 });
 
 test('it keeps the intent held when delivery fails, with the local halt already done', async () => {
-  server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
+  network.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
   const simulation = createSimulation();

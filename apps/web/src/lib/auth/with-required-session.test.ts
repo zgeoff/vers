@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { avatarContract } from '@vers/contract-avatar';
 import { resolveSessionContext } from '@vers/mock-services';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { avatarClient } from '../rpc/clients/avatar-client';
@@ -35,7 +35,7 @@ test('it signs the caller out and redirects to login when the service rejects th
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockAvatar.getAvatars.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
     }),
@@ -63,7 +63,7 @@ test('it redirects a server function call that loses its session back to the pag
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockAvatar.getAvatars.handler((opts) => {
       throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
     }),
@@ -88,7 +88,7 @@ test('it rethrows a service fault and keeps the caller signed in', async () => {
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockAvatar.getAvatars.handler(() => {
       throw new Error('the avatar service is unreachable');
     }),
@@ -112,7 +112,7 @@ test('it rethrows a declared error other than unauthorized and keeps the caller 
 
   const signedIn = await createSignedInUser();
 
-  server.use(
+  network.use(
     ctx.mockAvatar.getAvatars.handler((opts) => {
       throw opts.errors.FORBIDDEN({ data: {} });
     }),

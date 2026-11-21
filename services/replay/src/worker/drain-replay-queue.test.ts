@@ -10,7 +10,7 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import invariant from 'tiny-invariant';
 import { readChainAnchors } from '../queue/read-chain-anchors';
 import { readReplayProgress } from '../queue/read-replay-progress';

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createStubActivityProxy } from './create-stub-activity-proxy';
 
@@ -9,7 +9,7 @@ test('it answers the proxy path as the given user', async () => {
   const viewer = await createViewer();
   const activity = await db.activityCollection.create({ avatarID: viewer.avatar.id });
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   const client = createActivityServiceClient({
     onExchangeFailed: () => {},
@@ -27,7 +27,7 @@ test("it hides another user's avatar from the given user", async () => {
 
   await db.activityCollection.create({ avatarID: other.avatar.id });
 
-  server.use(createStubActivityProxy(viewer.user.id));
+  network.use(createStubActivityProxy(viewer.user.id));
 
   const client = createActivityServiceClient({
     onExchangeFailed: () => {},

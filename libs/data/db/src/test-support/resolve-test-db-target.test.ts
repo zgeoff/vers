@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
+import { updateEnv } from '@zgeoff/testing';
 import { buildTestTemplateDBName } from './build-test-template-db-name';
 import { readCurrentBranch } from './read-current-branch';
 import { resolveTestDBTarget } from './resolve-test-db-target';

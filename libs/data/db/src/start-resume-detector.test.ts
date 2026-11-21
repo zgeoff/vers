@@ -1,5 +1,5 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { startResumeDetector } from './start-resume-detector';
 
 test('it reports the elapsed wall time once when the clock jumps past the threshold between ticks', async () => {

@@ -12,20 +12,20 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
-import { mockKeysService } from '@vers/mock-services/keys';
+import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { waitFor } from '@vers/test-utils';
 import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { createTraceContext } from '@vers/trace';
+import { waitFor } from '@zgeoff/testing';
 import type { Selectable } from 'kysely';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { readAvatarItems } from '../apply/read-avatar-items';
 import { readAvatarProgress } from '../apply/read-avatar-progress';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 import { readChainAnchors } from '../queue/read-chain-anchors';
 import { readReplayProgress } from '../queue/read-replay-progress';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -1082,9 +1082,21 @@ test('it backs off an activity when the keys service is unreachable on its first
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  server.use(
-    mockKeysService.deriveScopeSecret.handler(() => {
-      throw new Error('keys backend unreachable');
+  let keysReachable = false;
+
+  network.use(
+    mockKeysService.deriveScopeSecret.handler((args) => {
+      if (!keysReachable) {
+        throw new Error('keys backend unreachable');
+      }
+
+      const secret = buildMockScopeSecret(
+        args.input.avatarID,
+        args.input.secretRef,
+        args.input.secretVersion,
+      );
+
+      return { secret: Buffer.from(secret).toString('hex') };
     }),
   );
 
@@ -1119,7 +1131,7 @@ test('it backs off an activity when the keys service is unreachable on its first
     verifiedHead: 0,
   });
 
-  server.resetHandlers();
+  keysReachable = true;
 
   await ctx.db
     .updateTable('activities')
@@ -1152,7 +1164,7 @@ test('it backs off an activity and settles nothing when the keys service fails d
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  server.use(
+  network.use(
     mockKeysService.deriveAvatarKey.handler(() => {
       throw new Error('keys backend unreachable');
     }),
@@ -1199,7 +1211,7 @@ test('it backs off an activity when the iteration deadline fires while a depende
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  server.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
+  network.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
 
   const cache = createReplayCache();
 

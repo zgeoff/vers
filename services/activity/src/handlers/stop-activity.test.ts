@@ -14,9 +14,10 @@ import {
   resolveTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { createActivityService } from '../create-activity-service';
-import { server } from '../mocks/server';
+import { network } from '../mocks/network';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 import { toActivityData } from './to-activity-data';
 
@@ -475,7 +476,7 @@ test('it attempts a wake delivery after a successful stop', async () => {
 
   const wakeHandler = mock(() => ({ drained: 0 }));
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  network.use(mockReplayService.wake.handler(wakeHandler));
 
   await client.stopActivity({ avatarID: avatar.id });
 

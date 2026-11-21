@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import { reportWorkerFault } from './report-worker-fault';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';

@@ -2,7 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
-import { server } from '../../mocks/node';
+import { network } from '../../mocks/network';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderHook } from '../../test-utils/render-hook';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -29,7 +29,7 @@ test('it fetches the first page, then passes the cursor from the merged cache on
 
   const track = mock<(input: unknown) => void>();
 
-  server.use(
+  network.use(
     mockActivityService.getActivityRewards.handler((opts) => {
       track(opts.input);
 

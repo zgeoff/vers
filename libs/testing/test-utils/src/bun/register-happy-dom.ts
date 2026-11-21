@@ -1,7 +1,11 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { Element, Node } from 'happy-dom';
 
-export function registerHappyDOM(): void {
+interface RegisterHappyDOMOptions {
+  readonly url?: string;
+}
+
+export function registerHappyDOM(options: Readonly<RegisterHappyDOMOptions> = {}): void {
   const nativeFetchStack = {
     AbortController: globalThis.AbortController,
     AbortSignal: globalThis.AbortSignal,
@@ -15,7 +19,9 @@ export function registerHappyDOM(): void {
     WritableStream: globalThis.WritableStream,
   };
 
-  GlobalRegistrator.register();
+  const registration = options.url === undefined ? {} : { url: options.url };
+
+  GlobalRegistrator.register(registration);
 
   registerCompactNodeInspection();
 

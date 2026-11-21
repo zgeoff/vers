@@ -5,7 +5,7 @@ import { createStubCommand } from '../test-utils/create-stub-command';
 import { applyScheduledMachineActions } from './apply-scheduled-machine-actions';
 
 test('it replaces a scheduled machine whose host has no room for the new image', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     [
       'echo "$*" >> "$(dirname "$0")/calls"',
@@ -41,7 +41,7 @@ test('it replaces a scheduled machine whose host has no room for the new image',
 });
 
 test('it keeps the old scheduled machine and fails when its replacement cannot be created', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     [
       'echo "$*" >> "$(dirname "$0")/calls"',
@@ -82,7 +82,7 @@ test('it keeps the old scheduled machine and fails when its replacement cannot b
 });
 
 test('it destroys a scheduled machine the plan retires', async () => {
-  const flyctlPath = await createStubCommand('flyctl', 'echo "$*" >> "$(dirname "$0")/calls"');
+  const flyctlPath = createStubCommand('flyctl', 'echo "$*" >> "$(dirname "$0")/calls"');
 
   await applyScheduledMachineActions('vers-service-ledger', '4f0c2e9a7b1d3c5e8f6a', [
     { kind: 'destroy', machineID: '3d8d9e1f2a7b68' },
@@ -94,7 +94,7 @@ test('it destroys a scheduled machine the plan retires', async () => {
 });
 
 test('it fails an image roll that flyctl rejects for a reason other than host capacity, after its retries', async () => {
-  const flyctlPath = await createStubCommand(
+  const flyctlPath = createStubCommand(
     'flyctl',
     [
       'echo "$*" >> "$(dirname "$0")/calls"',

@@ -41,12 +41,14 @@
   "devDependencies": {
     "@faker-js/faker": "catalog:",
     "@logtape/logtape": "catalog:",
+    "@mswjs/interceptors": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/mock-services": "workspace:*",
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/testing": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:"
   }

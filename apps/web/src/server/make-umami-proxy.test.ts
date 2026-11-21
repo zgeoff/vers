@@ -1,11 +1,11 @@
 import { expect, mock, test } from 'bun:test';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
-import { server } from '../mocks/node';
+import { network } from '../mocks/network';
 import { makeUmamiProxy } from './make-umami-proxy';
 
 test('it relays the tracker script from the upstream deployment', async () => {
-  server.use(
+  network.use(
     http.get('https://umami.test/script.js', () =>
       HttpResponse.text('tracker-source', { headers: { 'content-type': 'text/javascript' } }),
     ),
@@ -26,7 +26,7 @@ test('it relays the tracker script from the upstream deployment', async () => {
 test('it forwards a beacon with the client address and user agent', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({ cache: 'token' }));
 
-  server.use(http.post('https://umami.test/api/send', resolver));
+  network.use(http.post('https://umami.test/api/send', resolver));
 
   const proxy = makeUmamiProxy({ upstream: 'https://umami.test' });
   const next = mock(() => Promise.resolve(new Response('next')));
@@ -82,7 +82,7 @@ test('it defers the tracker paths when no upstream is configured', async () => {
 });
 
 test('it answers 502 when the upstream is unreachable', async () => {
-  server.use(http.post('https://umami.test/api/send', () => HttpResponse.error()));
+  network.use(http.post('https://umami.test/api/send', () => HttpResponse.error()));
 
   const proxy = makeUmamiProxy({ upstream: 'https://umami.test' });
   const next = mock(() => Promise.resolve(new Response('next')));

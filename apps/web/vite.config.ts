@@ -84,30 +84,32 @@ function buildMockBackendPlugin(): Plugin {
       // Goes through `ssrLoadModule` rather than a plain top-level import: this config file loads
       // outside Vite's own resolver, and this app's workspace packages (`@vers/contract-*`) are
       // extensionless-TS source that only that resolver handles.
-      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/src/mocks/node.ts');
+      const mocks: Record<string, unknown> = await viteServer.ssrLoadModule(
+        '/src/mocks/dev-network.ts',
+      );
 
-      if (!isMockBackendServer(mocks['server'])) {
-        throw new Error('/src/mocks/node.ts must export an MSW server as `server`');
+      if (!isMockBackendNetwork(mocks['network'])) {
+        throw new Error('/src/mocks/dev-network.ts must export an MSW network as `network`');
       }
 
-      mocks['server'].listen({ onUnhandledRequest: 'bypass' });
+      mocks['network'].enable();
     },
   };
 }
 
-interface MockBackendServer {
-  readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
+interface MockBackendNetwork {
+  readonly enable: () => void;
 }
 
 // a structural check rather than `instanceof`: the bundled config and the ssr-loaded mock module
 // each get their own copy of msw, so class identity fails across that boundary even for a genuine
 // server
-function isMockBackendServer(value: unknown): value is MockBackendServer {
+function isMockBackendNetwork(value: unknown): value is MockBackendNetwork {
   return (
     typeof value === 'object' &&
     value !== null &&
-    'listen' in value &&
-    typeof value.listen === 'function'
+    'enable' in value &&
+    typeof value.enable === 'function'
   );
 }
 

@@ -2,7 +2,7 @@ import { expect, mock, onTestFinished, test } from 'bun:test';
 import { onMessagePortClose } from '@orpc/client/message-port';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
-import { waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
 import type { ActivityServiceClient } from '../submission/types';
 import { buildProtocolStamp } from '../transport/build-protocol-stamp';
 import { RPC_CLIENT_TO_WORKER_CHANNEL } from '../transport/constants';

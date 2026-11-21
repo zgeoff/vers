@@ -7,7 +7,8 @@ import {
   createTestDB,
   createTestUser,
 } from '@vers/service-test-utils/bun';
-import { makeAnswerQueue, waitFor } from '@vers/test-utils';
+import { waitFor } from '@zgeoff/testing';
+import { makeAnswerQueue } from '@zgeoff/testing/mocks';
 import { sql } from 'kysely';
 import { createLoadSampler } from './create-load-sampler';
 

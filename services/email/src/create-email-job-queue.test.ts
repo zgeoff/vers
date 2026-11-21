@@ -1,7 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { getLogger } from '@logtape/logtape';
 import { createEmailClient } from '@vers/email';
-import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
+import { RESEND_ENDPOINT_URL, network, sentEmails } from '@vers/email/mocks';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { createInMemoryLogs, createInMemoryMetrics } from '@vers/test-utils/bun';
 import { HttpResponse, http } from 'msw';
@@ -10,7 +10,7 @@ import { EMAIL_JOB_DEFS, createEmailJobQueue } from './create-email-job-queue';
 test('it reports a failed email delivery to the failure callback', async () => {
   const connectionString = await createDatabaseFromTemplate();
 
-  server.use(
+  network.use(
     http.post(
       RESEND_ENDPOINT_URL,
       () =>

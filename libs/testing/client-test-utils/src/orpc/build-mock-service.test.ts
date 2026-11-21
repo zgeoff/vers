@@ -7,7 +7,7 @@ import { oc } from '@orpc/contract';
 import { implement } from '@orpc/server';
 import * as z from 'zod';
 import { buildMockService } from './build-mock-service';
-import { server } from './mocks/server';
+import { network } from './mocks/network';
 
 function setupTest() {
   const contract = {
@@ -38,7 +38,7 @@ test('it serves a stateful value from an @msw/data-backed router', async () => {
     router: { getWidget },
   });
 
-  server.use(...handlers);
+  network.use(...handlers);
 
   const link = new RPCLink<Record<string, never>>({ url: 'http://widget.test/rpc' });
 
@@ -60,7 +60,7 @@ test('it 404s a call the router does not implement', async () => {
     router: { getWidget },
   });
 
-  server.use(...handlers);
+  network.use(...handlers);
 
   const response = await fetch('http://widget.test/rpc/nonexistentProcedure', { method: 'POST' });
 
