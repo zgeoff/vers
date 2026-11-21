@@ -17,7 +17,7 @@ every token, secret and piece of personal data out of it.
 ## Key rules
 
 - [Pick the upload path](#pick-the-upload-path): the `cloud` CLI, or `curl` to the address in
-  `VERIFY_UPLOAD_URL`; otherwise stop before you capture.
+  `CLOUD_FILES_URL`; otherwise stop before you capture.
 - [Save and capture](#save-and-capture): each file in `.scratch/`, kept out of git, named for what
   it shows.
 - [Upload it](#upload-it): with a label and a 30-day expiry, and check the file host's response.
@@ -28,9 +28,8 @@ every token, secret and piece of personal data out of it.
 
 The user sets two variables on the machine:
 
-- `VERIFY_UPLOAD_URL`: the file host's upload address, such as
-  `https://files.example.com/api/files`.
-- `VERIFY_UPLOAD_TOKEN_REF`: where 1Password keeps the upload token, as a full
+- `CLOUD_FILES_URL`: the file host's upload address, such as `https://files.example.com/api/files`.
+- `CLOUD_FILES_TOKEN_REF`: where 1Password keeps the upload token, as a full
   `op://<vault>/<item>/<field>` reference.
 
 Never set either variable yourself. Never write the value of either one in a file you commit.
@@ -42,17 +41,17 @@ for that command only, as [Publish a verify report](#publish-a-verify-report) do
 Run every command in this skill from the root of the checkout. Pick the path before you capture
 anything. Take the first row that matches:
 
-| Check                                                                        | Path                                        |
-| ---------------------------------------------------------------------------- | ------------------------------------------- |
-| `command -v cloud` prints a path                                             | the `cloud` CLI, the file host's own client |
-| `test -n "$VERIFY_UPLOAD_URL" && test -n "$VERIFY_UPLOAD_TOKEN_REF"` is true | `curl`                                      |
-| neither                                                                      | none: stop and tell the user                |
+| Check                                                                    | Path                                        |
+| ------------------------------------------------------------------------ | ------------------------------------------- |
+| `command -v cloud` prints a path                                         | the `cloud` CLI, the file host's own client |
+| `test -n "$CLOUD_FILES_URL" && test -n "$CLOUD_FILES_TOKEN_REF"` is true | `curl`                                      |
+| neither                                                                  | none: stop and tell the user                |
 
 The `curl` path also needs the 1Password `op` CLI, signed in. Run this check, and when it fails,
 stop and give the user `op`'s error:
 
 ```bash
-op read "$VERIFY_UPLOAD_TOKEN_REF" > /dev/null
+op read "$CLOUD_FILES_TOKEN_REF" > /dev/null
 ```
 
 ## Save and capture
@@ -118,7 +117,7 @@ days, which breaks the image in a PR that stays open longer than a week. Never s
 - With `curl`, pass the label with `--form-string`. `-F` cuts a label at a `;`.
 
   ```bash
-  (token="$(op read "$VERIFY_UPLOAD_TOKEN_REF")" && curl -sS -w '\nHTTP %{http_code}\n' --oauth2-bearer "$token" -F file=@.scratch/settings-page-layout.png --form-string 'label=Settings page with the new layout' -F expires=30d "$VERIFY_UPLOAD_URL")
+  (token="$(op read "$CLOUD_FILES_TOKEN_REF")" && curl -sS -w '\nHTTP %{http_code}\n' --oauth2-bearer "$token" -F file=@.scratch/settings-page-layout.png --form-string 'label=Settings page with the new layout' -F expires=30d "$CLOUD_FILES_URL")
   ```
 
   The subshell keeps the token out of your shell. When `op read` fails, `curl` never runs and no
@@ -164,11 +163,11 @@ The command needs both variables set, even on a machine with the `cloud` CLI. Ru
 check and the `op read` check from [Pick the upload path](#pick-the-upload-path) first.
 
 Push the branch and open the PR first: without an open PR, the command fails. The command reads the
-address from `VERIFY_UPLOAD_URL` and the raw token from `VERIFY_UPLOAD_TOKEN`. Set the token from
+address from `CLOUD_FILES_URL` and the raw token from `CLOUD_FILES_TOKEN`. Set the token from
 1Password for this command only:
 
 ```bash
-(token="$(op read "$VERIFY_UPLOAD_TOKEN_REF")" && VERIFY_UPLOAD_TOKEN="$token" bun verify publish --pr <n>)
+(token="$(op read "$CLOUD_FILES_TOKEN_REF")" && CLOUD_FILES_TOKEN="$token" bun verify publish --pr <n>)
 ```
 
 Expect `ok: true` and the PR's URL in the output. When `op read` fails, `publish` never runs: stop,
