@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { createFlyMachineFleet } from './create-fly-machine-fleet';
 
 async function setupTest() {
@@ -17,11 +19,13 @@ test('it lists the machines of the app it names', async () => {
   const ctx = await setupTest();
 
   const argsPath = join(ctx.directory, 'args');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand(
-    'flyctl',
-    `printf '%s\\n' "$*" > '${argsPath}'\necho '[{"id":"1781e2db","state":"suspended","region":"syd"}]'`,
-  );
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\nprintf '%s\\n' "$*" > '${argsPath}'\necho '[{"id":"1781e2db","state":"suspended","region":"syd"}]'`,
+  });
 
   const machines = await createFlyMachineFleet('kiln-errors').list();
   const args = await readFile(argsPath, 'utf8');
@@ -34,8 +38,13 @@ test('it starts one machine of the app it names', async () => {
   const ctx = await setupTest();
 
   const argsPath = join(ctx.directory, 'args');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('flyctl', `printf '%s\\n' "$*" > '${argsPath}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\nprintf '%s\\n' "$*" > '${argsPath}'`,
+  });
 
   await createFlyMachineFleet('kiln-errors').start('1781e2db');
 
@@ -45,7 +54,13 @@ test('it starts one machine of the app it names', async () => {
 });
 
 test('it rejects a start that flyctl refuses', () => {
-  createStubCommand('flyctl', "echo 'machine not found' >&2\nexit 1");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'flyctl', {
+    script: "#!/bin/sh\necho 'machine not found' >&2\nexit 1",
+  });
 
   expect(createFlyMachineFleet('kiln-errors').start('1781e2db')).rejects.toThrowWithMessage(
     Error,

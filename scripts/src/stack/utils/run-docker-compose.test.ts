@@ -1,12 +1,19 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { waitFor } from '@zgeoff/testing';
-import { createStubCommand } from '../../test-utils/create-stub-command';
+import { updateEnv, waitFor } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runDockerCompose } from './run-docker-compose';
 
 test('it runs docker compose against the repo compose file with the args it gets', async () => {
-  const dockerPath = createStubCommand('docker', 'echo "$@" > "$(dirname "$0")/args"');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const dockerPath = createStubBin(stubDirectory, 'docker', {
+    script: '#!/bin/sh\necho "$@" > "$(dirname "$0")/args"',
+  }).path;
 
   await runDockerCompose(['logs', '--tail=0', 'postgres']);
 
@@ -18,7 +25,14 @@ test('it runs docker compose against the repo compose file with the args it gets
 });
 
 test('it ends docker compose when the process that ran it gets SIGTERM', async () => {
-  const dockerPath = createStubCommand('docker', 'echo $$ > "$(dirname "$0")/pid"\nexec sleep 30');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const dockerPath = createStubBin(stubDirectory, 'docker', {
+    script: '#!/bin/sh\necho $$ > "$(dirname "$0")/pid"\nexec sleep 30',
+  }).path;
+
   const pidPath = join(dirname(dockerPath), 'pid');
 
   const cli = Bun.spawn(
@@ -49,7 +63,10 @@ test('it ends docker compose when the process that ran it gets SIGTERM', async (
 });
 
 test('it rejects when docker compose exits with a failure', () => {
-  createStubCommand('docker', 'exit 1');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'docker', { script: '#!/bin/sh\nexit 1' });
 
   expect(runDockerCompose(['ps', '--all'])).rejects.toThrowWithMessage(
     Error,

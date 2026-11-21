@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runInfraPlanCheck } from './run-infra-plan-check';
 
 async function setupTest() {
@@ -21,8 +23,13 @@ test('it previews the prod stack as JSON with a refresh', async () => {
   const ctx = await setupTest();
 
   const recordPath = join(ctx.directory, 'record');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('op', `shift 5\necho "$*" > '${recordPath}'\necho '{"steps": []}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: `#!/bin/sh\nshift 5\necho "$*" > '${recordPath}'\necho '{"steps": []}'`,
+  });
 
   await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -49,7 +56,10 @@ test('it passes a plan that creates and updates resources, and reports it in the
     ],
   });
 
-  createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: `#!/bin/sh\nprintf '%s\\n' '${plan}'` });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -97,7 +107,10 @@ test('it holds a plan that replaces a resource', async () => {
     changeSummary: { replace: 1 },
   });
 
-  createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: `#!/bin/sh\nprintf '%s\\n' '${plan}'` });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -128,7 +141,13 @@ test('it holds a plan that replaces a resource', async () => {
 test('it holds a plan that changes nothing when the drift check before it failed', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', `echo '{"steps": [], "changeSummary": {"same": 40}}'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: `#!/bin/sh\necho '{"steps": [], "changeSummary": {"same": 40}}'`,
+  });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -156,7 +175,10 @@ test('it applies a plan that deletes a resource when a person dispatched the run
     steps: [{ op: 'delete', urn: 'urn:pulumi:prod::vers-infra::neon:index/role:Role::reader' }],
   });
 
-  createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: `#!/bin/sh\nprintf '%s\\n' '${plan}'` });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -181,7 +203,10 @@ test("it holds a dispatched run whose commit is no longer main's tip, whatever t
     steps: [{ op: 'delete', urn: 'urn:pulumi:prod::vers-infra::neon:index/role:Role::reader' }],
   });
 
-  createStubCommand('op', `printf '%s\\n' '${plan}'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: `#!/bin/sh\nprintf '%s\\n' '${plan}'` });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -210,7 +235,13 @@ test("it fails with the preview's errors and writes no outcome when the preview 
     ],
   });
 
-  createStubCommand('op', `printf '%s\\n' '${plan}'\necho 'error: preview failed' >&2\nexit 255`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'op', {
+    script: `#!/bin/sh\nprintf '%s\\n' '${plan}'\necho 'error: preview failed' >&2\nexit 255`,
+  });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',
@@ -244,7 +275,10 @@ test("it fails with the preview's errors and writes no outcome when the preview 
 test('it fails and writes no outcome when the preview prints no plan', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('op', "echo 'Previewing update (prod)'");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'op', { script: "#!/bin/sh\necho 'Previewing update (prod)'" });
 
   const result = await runInfraPlanCheck({
     commit: 'a1b2c3d4',

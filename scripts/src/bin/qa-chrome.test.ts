@@ -2,10 +2,12 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { buildChromePaths } from '../qa-chrome/build-chrome-paths';
 import { readProcessStartTime } from '../qa-chrome/read-process-start-time';
 import { removeProcessGroup } from '../qa-chrome/remove-process-group';
-import { createStubCommand } from '../test-utils/create-stub-command';
 
 async function setupTest() {
   const stateHome = await mkdtemp(join(tmpdir(), 'qa-chrome-bin-'));
@@ -18,7 +20,13 @@ async function setupTest() {
 test('it refuses a --netns start when pasta is not on PATH', async () => {
   const ctx = await setupTest();
 
-  const chromium = createStubCommand('chromium', 'exit 1');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const chromium = createStubBin(stubDirectory, 'chromium', {
+    script: '#!/bin/sh\nexit 1',
+  }).path;
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: { PATH: dirname(chromium), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
@@ -39,7 +47,11 @@ test('it refuses a --netns start when pasta is not on PATH', async () => {
 test('it refuses a start when chromium is not on PATH', async () => {
   const ctx = await setupTest();
 
-  const pasta = createStubCommand('pasta', 'exit 1');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const pasta = createStubBin(stubDirectory, 'pasta', { script: '#!/bin/sh\nexit 1' }).path;
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: { PATH: dirname(pasta), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
@@ -60,8 +72,15 @@ test('it refuses a start when chromium is not on PATH', async () => {
 test('it refuses a start under a TMPDIR too long for Chromium', async () => {
   const ctx = await setupTest();
 
-  const chromium = createStubCommand('chromium', 'exit 1');
-  const pasta = createStubCommand('pasta', 'exit 1');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const chromium = createStubBin(stubDirectory, 'chromium', {
+    script: '#!/bin/sh\nexit 1',
+  }).path;
+
+  const pasta = createStubBin(stubDirectory, 'pasta', { script: '#!/bin/sh\nexit 1' }).path;
 
   const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--netns'], {
     env: {
@@ -97,11 +116,13 @@ test.skipIf(process.getuid?.() === 0)(
 
     const pidFile = join(ctx.stateHome, 'browser.pid');
     const fakeBrowser = `Bun.serve({ hostname: '127.0.0.1', port: ${port}, fetch: () => Response.json({}) })`;
+    const stubDirectory = createTempDir('stubs').path;
 
-    const chromium = createStubCommand(
-      'chromium',
-      `echo $$ > '${pidFile}'\nexec '${process.execPath}' -e "${fakeBrowser}"`,
-    );
+    updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+    const chromium = createStubBin(stubDirectory, 'chromium', {
+      script: `#!/bin/sh\necho $$ > '${pidFile}'\nexec '${process.execPath}' -e "${fakeBrowser}"`,
+    }).path;
 
     const paths = buildChromePaths(ctx.stateHome, '/unused');
 

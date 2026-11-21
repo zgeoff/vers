@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runPulumiStack } from './run-pulumi-stack';
 
 async function setupTest() {
@@ -17,11 +19,13 @@ test('it runs its pulumi command on the prod stack against the R2 state backend 
   const ctx = await setupTest();
 
   const recordPath = join(ctx.directory, 'record');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand(
-    'pulumi',
-    `printf '%s\\n%s\\n%s\\n' "$PWD" "$PULUMI_BACKEND_URL" "$*" > '${recordPath}'`,
-  );
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'pulumi', {
+    script: `#!/bin/sh\nprintf '%s\\n%s\\n%s\\n' "$PWD" "$PULUMI_BACKEND_URL" "$*" > '${recordPath}'`,
+  });
 
   const exitCode = await runPulumiStack({
     args: ['preview', '--refresh', '--diff'],
@@ -46,7 +50,10 @@ test('it runs its pulumi command on the prod stack against the R2 state backend 
 test("it returns pulumi's exit code when the command fails", async () => {
   const ctx = await setupTest();
 
-  createStubCommand('pulumi', 'exit 255');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+  createStubBin(stubDirectory, 'pulumi', { script: '#!/bin/sh\nexit 255' });
 
   const exitCode = await runPulumiStack({
     args: ['preview', '--expect-no-changes'],

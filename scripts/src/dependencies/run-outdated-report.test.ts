@@ -2,7 +2,9 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { runOutdatedReport } from './run-outdated-report';
 
 async function setupTest() {
@@ -20,7 +22,13 @@ test('it appends the report to the step summary after what the summary holds', a
 
   await writeFile(summaryPath, '## Audit\n');
 
-  createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'bun', {
+    script: `#!/bin/sh\n${String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`}`,
+  });
 
   await runOutdatedReport({ cwd: ctx.directory, summaryPath });
 
@@ -32,7 +40,13 @@ test('it appends the report to the step summary after what the summary holds', a
 test('it returns the report for the log', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('bun', String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`);
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'bun', {
+    script: `#!/bin/sh\n${String.raw`printf '| zod | 4.1.0 | 4.2.0 |\n'`}`,
+  });
 
   const report = await runOutdatedReport({
     cwd: ctx.directory,
@@ -46,8 +60,13 @@ test('it runs bun outdated in the directory it is given', async () => {
   const ctx = await setupTest();
 
   const argsPath = join(ctx.directory, 'args');
+  const stubDirectory = createTempDir('stubs').path;
 
-  createStubCommand('bun', `printf '%s %s\\n' "$PWD" "$*" > '${argsPath}'`);
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'bun', {
+    script: `#!/bin/sh\nprintf '%s %s\\n' "$PWD" "$*" > '${argsPath}'`,
+  });
 
   await runOutdatedReport({ cwd: ctx.directory, summaryPath: join(ctx.directory, 'summary.md') });
 
@@ -59,7 +78,13 @@ test('it runs bun outdated in the directory it is given', async () => {
 test('it rejects a bun outdated run that fails', async () => {
   const ctx = await setupTest();
 
-  createStubCommand('bun', "echo 'error: lockfile not found' >&2\nexit 1");
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  createStubBin(stubDirectory, 'bun', {
+    script: "#!/bin/sh\necho 'error: lockfile not found' >&2\nexit 1",
+  });
 
   expect(
     runOutdatedReport({ cwd: ctx.directory, summaryPath: join(ctx.directory, 'summary.md') }),

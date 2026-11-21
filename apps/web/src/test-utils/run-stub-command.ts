@@ -1,4 +1,3 @@
-import { appendFile } from 'node:fs/promises';
 import { z } from 'zod';
 
 const answerSchema = z.object({
@@ -10,12 +9,6 @@ const answerSchema = z.object({
 const answersSchema = z.record(z.string(), answerSchema);
 const [name = '', ...args] = process.argv.slice(2);
 const answers = answersSchema.parse(JSON.parse(process.env['STUB_COMMAND_ANSWERS'] ?? '{}'));
-
-await appendFile(
-  process.env['STUB_COMMAND_LOG'] ?? '/dev/null',
-  `${JSON.stringify({ name, args })}\n`,
-);
-
 const answer = answers[`${name} ${args[0] ?? ''}`] ?? answers[name] ?? {};
 
 await Bun.sleep(answer.delayMs ?? 0);

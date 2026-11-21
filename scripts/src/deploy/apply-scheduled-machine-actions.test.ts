@@ -1,20 +1,25 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { createStubCommand } from '../test-utils/create-stub-command';
+import { updateEnv } from '@zgeoff/testing';
+import { createStubBin } from '@zgeoff/testing/bin';
+import { createTempDir } from '@zgeoff/testing/fs';
 import { applyScheduledMachineActions } from './apply-scheduled-machine-actions';
 
 test('it replaces a scheduled machine whose host has no room for the new image', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    [
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\n${[
       'echo "$*" >> "$(dirname "$0")/calls"',
       'if [ "$2" = update ]; then',
       '  echo "Error: could not reserve resource for machine: insufficient memory available to fulfill request on the current host" >&2',
       '  exit 1',
       'fi',
-    ].join('\n'),
-  );
+    ].join('\n')}`,
+  }).path;
 
   await applyScheduledMachineActions('vers-service-ledger', '4f0c2e9a7b1d3c5e8f6a', [
     {
@@ -41,9 +46,12 @@ test('it replaces a scheduled machine whose host has no room for the new image',
 });
 
 test('it keeps the old scheduled machine and fails when its replacement cannot be created', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    [
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\n${[
       'echo "$*" >> "$(dirname "$0")/calls"',
       'if [ "$2" = update ]; then',
       '  echo "Error: could not reserve resource for machine: insufficient memory available to fulfill request on the current host" >&2',
@@ -53,8 +61,8 @@ test('it keeps the old scheduled machine and fails when its replacement cannot b
       '  echo "Error: could not launch machine: failed to launch VM: insufficient resources" >&2',
       '  exit 1',
       'fi',
-    ].join('\n'),
-  );
+    ].join('\n')}`,
+  }).path;
 
   const apply = applyScheduledMachineActions('vers-service-ledger', '4f0c2e9a7b1d3c5e8f6a', [
     {
@@ -82,7 +90,13 @@ test('it keeps the old scheduled machine and fails when its replacement cannot b
 });
 
 test('it destroys a scheduled machine the plan retires', async () => {
-  const flyctlPath = createStubCommand('flyctl', 'echo "$*" >> "$(dirname "$0")/calls"');
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: '#!/bin/sh\necho "$*" >> "$(dirname "$0")/calls"',
+  }).path;
 
   await applyScheduledMachineActions('vers-service-ledger', '4f0c2e9a7b1d3c5e8f6a', [
     { kind: 'destroy', machineID: '3d8d9e1f2a7b68' },
@@ -94,14 +108,17 @@ test('it destroys a scheduled machine the plan retires', async () => {
 });
 
 test('it fails an image roll that flyctl rejects for a reason other than host capacity, after its retries', async () => {
-  const flyctlPath = createStubCommand(
-    'flyctl',
-    [
+  const stubDirectory = createTempDir('stubs').path;
+
+  updateEnv('PATH', `${stubDirectory}:${process.env['PATH'] ?? ''}`);
+
+  const flyctlPath = createStubBin(stubDirectory, 'flyctl', {
+    script: `#!/bin/sh\n${[
       'echo "$*" >> "$(dirname "$0")/calls"',
       'echo "Error: failed to update machine: unauthorized" >&2',
       'exit 1',
-    ].join('\n'),
-  );
+    ].join('\n')}`,
+  }).path;
 
   const apply = applyScheduledMachineActions(
     'vers-service-ledger',
