@@ -19,9 +19,10 @@ metadata:
   its interface's methods by name, and a contract's procedure names are the public API.
 - Baseline a violation that predates a lint rule with a disable comment on the line above it, in
   place of the baseline file that the correct skill describes, as
-  [Lint directives](#lint-directives) says. The comment takes no expiry date and no PR link, though
-  docs-writing and the correct skill ask both of a disable comment. Lint fails on an unused
-  directive, so each baseline comment has to go when someone fixes its site.
+  [Lint directives](#lint-directives) says. Lint fails on an unused directive, so each baseline
+  comment has to go when someone fixes its site. The comment takes no expiry date and no PR link,
+  and it names issue #236, as [project-docs-writing](../project-docs-writing/SKILL.md#departures)
+  allows.
 
 ## Names
 

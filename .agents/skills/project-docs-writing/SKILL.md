@@ -30,6 +30,13 @@ metadata:
   To sort a sentence, ask whether a reader needs it to predict what the code does today. If they do,
   it belongs in the doc. A sentence about an option the code never took belongs in the PR.
 
+- Write a lint baseline comment as
+  [project-code-style](../project-code-style/SKILL.md#lint-directives) says: `baseline(#236)`, with
+  no expiry date and no PR link. docs-writing asks a comment that turns off a check for both, and
+  keeps tracker links out of committed prose. A baseline comment marks a violation older than its
+  rule, and lint fails on the comment once someone fixes the site, so the comment can't outlive the
+  violation.
+
 ## Game-design notes
 
 - Write what the player experiences in a game-design note, and how the code delivers it in an

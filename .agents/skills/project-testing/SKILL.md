@@ -13,17 +13,17 @@ metadata:
 
 ## Facts
 
-| Fact          | Where                                                                                                                         |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Test commands | `bun run e2e` runs [`apps/web/e2e/`](../../../apps/web/e2e/), with each timeout in the `timeout` of a `playwright*.config.ts` |
-| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                        |
+| Fact          | Where                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Test commands | `bun run e2e` runs [`apps/web/e2e/`](../../../apps/web/e2e/), with each suite's timeout in the `timeout` of a `playwright*.config.ts` |
+| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                                |
 
 ## Departures
 
-- Run each package's tests with plain `bun test --randomize`, in one process. The run-mode rule in
-  [testing](../testing/SKILL.md) passes `--parallel=<N> --no-isolate` instead. Turbo runs four
-  packages at once in CI, and plain mode uses the least memory. The comment above the Unit Tests
-  step in [`pr.yml`](../../../.github/workflows/pr.yml) gives the times.
+- Run each package's `bun test` suites with plain `bun test --randomize`, in one process. The
+  run-mode rule in [testing](../testing/SKILL.md) passes `--parallel=<N> --no-isolate` instead.
+  Turbo runs four packages at once in CI, and plain mode uses the least memory. The comment above
+  the Unit Tests step in [`pr.yml`](../../../.github/workflows/pr.yml) gives the times.
 
 ## The run mode
 
@@ -41,8 +41,7 @@ Read a stored row through the module that creates it, by the
 functions for those tables by the package your test is in:
 
 - In `@vers/service-activity`, read `activities` and `activityChains` directly, `status` included.
-  Its `src/handlers/` creates those rows and picks each status move, so its tests are that module's
-  own tests.
+  Its `src/handlers/` creates those rows, so its tests are that module's own tests.
 - In `@vers/service-activity`, read `avatars` directly too. The replay service depends on
   `@vers/service-activity`, so an import of the replay read functions makes a cycle.
 - In every other package, read the `status` and `parkedFrom` of an `activities` row with
