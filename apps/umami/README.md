@@ -17,8 +17,8 @@ of its own.
 ## Storage
 
 Analytics data lives in a dedicated `umami` database in the shared Neon project (`DATABASE_URL`
-secret). No app runs its own database, and the machine keeps no volume. Umami migrates its schema
-itself on boot.
+secret). No app runs a Postgres server of its own, and the machine keeps no volume. Umami migrates
+its schema itself on boot.
 
 ## Secrets
 

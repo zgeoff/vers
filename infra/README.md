@@ -24,6 +24,7 @@ bun run up        # op run --env-file=.env -- pulumi up
 ```
 
 A merge to `main` that changes this program applies it from CI, unless a guard holds the plan for a
-person. On a pull request, the infra-drift workflow's `preview` job checks `main` for drift and
-shows the planned change in its summary.
-[Infra deploys](../docs/architecture/platform/infra-deploys.md) covers both workflows.
+person. Run `bun run up` yourself only where [provisioning](../docs/runbooks/provisioning.md) says
+to. Apply a held plan through the workflow, as the infra runbook says. On a pull request, the
+infra-drift workflow's `preview` job checks `main` for drift and shows the planned change in its
+summary. [Infra deploys](../docs/architecture/platform/infra-deploys.md) covers both workflows.

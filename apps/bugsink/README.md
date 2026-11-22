@@ -18,10 +18,11 @@ workflow runs it on changes to this directory.
 ## Storage
 
 Event data lives in a dedicated `bugsink` database in the shared Neon project (`DATABASE_URL`
-secret). No app runs its own database, and the machine keeps no volume. Bugsink stores uploaded
-files (sourcemap artifact bundles) in the database by default. Here they go to the Cloudflare R2
-bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs and their read
-traffic off Neon. Existing files move across with `bugsink-manage migrate_to_current_objectstorage`.
+secret). No app runs a Postgres server of its own, and the machine keeps no volume. Bugsink stores
+uploaded files (sourcemap artifact bundles) in the database by default. Here they go to the
+Cloudflare R2 bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs
+and their read traffic off Neon. Existing files move across with
+`bugsink-manage migrate_to_current_objectstorage`.
 
 ## Secrets
 
