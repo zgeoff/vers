@@ -102,7 +102,7 @@ Repo scripts:
 - `scripts/src/<domain>/` holds the logic, and `scripts/src/utils/` takes only domain-free pieces.
   Decision logic is pure, data in and findings out, with tests beside it.
 - A tool that imports a `server-only` package lives in its own `server-only` package with its own
-  `src/bin/`, such as `libs/testing/qa-account`. The root manifest and the e2e app depend on
+  `src/bin/`, such as `libs/testing/qa-account`. The root manifest and `apps/web` depend on
   `@vers/scripts`, and the boundaries check follows that edge.
 
 ## Commands

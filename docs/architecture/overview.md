@@ -2,7 +2,8 @@
 
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
 client, the server verifies its results by replay, and each release
-[deploys](./platform/deployment.md) the whole repo from a single SHA.
+[deploys](./platform/deployment.md) every app from a single SHA. The replay provider apps of older
+engine builds are the one exception, described under [Topology](#topology).
 
 ## Request path
 
@@ -67,9 +68,9 @@ compute identical encounters from the same inputs.
 The server trusts progress only through replay. The client submits checkpoint batches to the
 activity service, and the verifier replays the same seeds server-side and compares results before
 progress settles ([replay verification](./game/replay-verification.md)). The checkpoint hashes chain
-the stream together but do not attest combat outcomes. Replay is the proof, and the same replay path
-generates offline progress by simulating forward from the last verified checkpoint. Progress made
-without the server waits on the device and settles in play order on reconnect
+the stream together but do not attest combat outcomes. Replay is the proof, for offline progress
+too: the device simulates the time it spent out of contact, delivers that progress on reconnect, and
+the verifier replays it and settles it in play order
 ([offline reconcile](./game/offline-reconcile.md)).
 
 Every random outcome comes from a named entropy source, whose security properties decide whether a
@@ -92,7 +93,8 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
   contract-first with Zod schemas owned by the declaring contract
   ([service contracts](./services/service-contracts.md)).
 - **Single-SHA release** — contracts are unversioned workspace source packages, and each release
-  deploys the repo as one unit from one SHA ([deployment](./platform/deployment.md)).
+  deploys every app from one SHA, apart from the older replay provider apps
+  ([deployment](./platform/deployment.md)).
   [Service contracts](./services/service-contracts.md#change-discipline) owns the change discipline
   that keeps consumers and services in step.
 - **Observability** — OpenTelemetry sends traces, logs, and metrics to Axiom; the Sentry SDK sends
