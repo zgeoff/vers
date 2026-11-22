@@ -1,6 +1,7 @@
 # QA debug hook
 
-From the console of a game page, `window.__versQA` reads the state of the
+Use this runbook as a QA tester, when a run on a game page behaves wrong or a QA avatar's run needs
+to go faster. From the console of a game page, `window.__versQA` reads the state of the
 [writer worker](../architecture/game/glossary.md) and sets the simulation speed of a
 [QA avatar](qa.md#accounts). [Manual QA](qa.md#debug-hook) lists the pages that carry the object.
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer

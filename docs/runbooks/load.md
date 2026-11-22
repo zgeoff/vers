@@ -11,11 +11,12 @@ never touched: every scenario runs against its own fresh stack on the local mach
 
 Each scenario boots a fresh stack, so one scenario's backlog never weighs on the next. The stack
 holds app-web, the activity, keys, session, and replay services, a second replay provider, and
-postgres, each container capped at the memory and CPU of its Fly machine. The second provider is the
-replay image built under another engine hash, with a registry row of its own, so the share of
-players that `--retained-every` sets stamps a retained sim version and the verifier replays that
-player's segments over the cross-version dispatch path. Both versions run the same engine code, so
-the retained share measures the dispatch path, not old code.
+postgres, each container capped at the memory of its Fly machine and at the CPU that `--cpu-profile`
+sets (see resource use under the report). The second provider is the replay image built under
+another engine hash, with a registry row of its own, so the share of players that `--retained-every`
+sets stamps a retained sim version and the verifier replays that player's segments over the
+cross-version dispatch path. Both versions run the same engine code, so the retained share measures
+the dispatch path, not old code.
 
 Players sign in through the session service and carry the sealed cookie app-web reads, so every call
 takes the production path: app-web resolves the session and forwards the call to the activity
@@ -28,11 +29,11 @@ from run to run. A connected player simulates on its own clock, as the writer wo
 what it cannot deliver in an ordered outbox, so an outage grows the backlog it returns with instead
 of pausing play.
 
-| Scenario         | Players                                                       | Measured window                                           |
-| ---------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
-| `steady-<n>`     | a ramp of connected players, one step per count               | live play at the client's flush interval, then the drain  |
-| `offline-return` | players who closed the game on a fresh activity               | every fast-forward delivered at once, then the settlement |
-| `recovery`       | connected players while one dependency stops and starts again | the outage, the backlog it leaves, and its drain          |
+| Scenario         | Players                                                                        | Measured window                                           |
+| ---------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `steady`         | a ramp of connected players, one step per count, each reported as `steady-<n>` | live play at the client's flush interval, then the drain  |
+| `offline-return` | players who closed the game on a fresh activity                                | every fast-forward delivered at once, then the settlement |
+| `recovery`       | connected players while one dependency stops and starts again                  | the outage, the backlog it leaves, and its drain          |
 
 The compose stack runs no scheduled replay drain, so between wake requests nothing retries a
 backed-off activity until a later append or a progression read wakes the verifier. A recovery
