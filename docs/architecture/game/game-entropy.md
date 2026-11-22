@@ -86,12 +86,13 @@ Every checkpoint's hashed field set carries an `entropySource` tag naming which 
 outcomes. The tag holds the custody, server or device, that a client claims the roll ran under.
 Replay recomputes each checkpoint hash with the server-custody tag, so a checkpoint tagged with
 device custody diverges whatever the avatar's mode. Settlement stamps an outcome's provenance from
-server records and the tag, never from a client claim.
+server records. The tag cannot raise it, because replay has already rejected every checkpoint whose
+tag claims device custody.
 
 Tradeability keys on one security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
-the property; device-custody rolls do not. An outcome with a heavy upper tail, such as an affix
-roll, is the one an automated reroll scan selects for, so its entropy stays sealed on the server
-until the player commits; the
+the property. Device-custody rolls, which the self-found design describes and no avatar runs today,
+do not. An outcome with a heavy upper tail, such as an affix roll, is the one an automated reroll
+scan selects for, so its entropy stays sealed on the server until the player commits; the
 [crafting entropy note](../../game-design/crafting-entropy.md#sealed-pre-commit-salt) owns that
 mechanism.
