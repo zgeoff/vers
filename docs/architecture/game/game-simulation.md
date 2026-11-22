@@ -3,9 +3,9 @@
 The client computes and records all gameplay, and the server decides by replay whether to trust it.
 The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
 random stream, and writes each step to an append-only checkpoint stream. The server never simulates
-on a player's request path. One exception: the activity service's QA seeding procedure simulates up
-to 20 runs for a new QA account ([manual QA](../../runbooks/qa.md#accounts)). The same inputs re-run
-to byte-identical results, which lets a verifier check a stream it did not compute and lets a
+on a player's request path, except in the activity service's QA seeding procedure, which simulates
+up to 20 runs for a new QA account ([manual QA](../../runbooks/qa.md#accounts)). The same inputs
+re-run to byte-identical results, which lets a verifier check a stream it did not compute and lets a
 returning client rebuild simulation state it no longer holds.
 [Replay verification](./replay-verification.md) owns the verifier and settlement, the
 [seed chain](./seed-chain.md) owns where an activity's randomness comes from, and
@@ -32,7 +32,7 @@ pure function of the node, the seed, and the content, and the idle engine runs a
 
 ## The deterministic core
 
-Purity rests on four invariants:
+Purity rests on these invariants:
 
 - Every random draw comes from the seeded stream. No draw reads a system random source or a wall
   clock.
@@ -108,8 +108,8 @@ and content versions, the key version ([game entropy](./game-entropy.md#version-
 snapshot, the encounter node, and the chain index the activity started from
 ([seed chain](./seed-chain.md#positions-on-the-chain)). The `Started` checkpoint, the activity's
 first checkpoint, carries the start seed and no version. The activity's id is a client-assigned
-label with no cryptographic role, which is what lets the client compute a whole fast-forward run
-with no per-row round trip.
+label with no cryptographic role, which lets the client compute a whole fast-forward run with no
+per-row round trip.
 
 A node's encounter parameters freeze onto the head row at the content version the start pins, and
 every continuation in the same request inherits them. They fold into the start hash, so a later
@@ -130,8 +130,8 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
   loses, or repurposes a member, and the set includes the previous checkpoint's hash. The chain
   position sits inside the hash, so replay reproduces every reward coordinate keyed on it, and the
   entropy-source tag makes a checkpoint's provenance derivable from the stream alone.
-- The hash links; it does not prove. The stream carries rewards outside the hashed set, so the hash
-  proves nothing about them. Only a replay validates a reward.
+- The hash proves nothing about rewards. The stream carries rewards outside the hashed set, and only
+  a replay validates a reward.
 - An append is a guarded update of the head row. The append advances the appended head only if the
   head still holds its expected value. A stale head fails the append with a retryable conflict
   carrying the current head, and the client resends the tail. A resend deduplicates on the
@@ -158,7 +158,7 @@ checkpoint batch debits its simulated-time delta: the last checkpoint's cumulati
 head row's accounted time, never a sum of per-checkpoint times. Apart from an initial grant that
 absorbs tick-boundary and network jitter, elapsed wall clock is the only credit source, so no path
 earns simulated time faster than real time. Live play self-funds, because each flush banks the wall
-clock it consumed. One exception: a QA avatar's meter refills at a multiple of wall clock
+clock it consumed. A QA avatar's meter is the exception: it refills at a multiple of wall clock
 ([QA debug hook](../../runbooks/qa-debug-hook.md#set-the-speed)).
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
