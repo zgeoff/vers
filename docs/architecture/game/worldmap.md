@@ -97,12 +97,12 @@ it counts every refusal.
 
 Travel selection is narrow, and it uses a different rule from reveal. A node is selectable when it
 is the origin, or when an edge joins it to a node the avatar has cleared, which covers any cleared
-node that borders another. Reveal measures hex distance; selection follows edges. A revealed node
-two hops away with no edge to a cleared node is visible and unreachable, and that is the intended
-shape of the boundary.
+node with an edge to another cleared node. Reveal measures hex distance; selection follows edges. A
+revealed node two hops away with no edge to a cleared node is visible and unreachable, and that is
+the intended shape of the boundary.
 
 The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
-has verified, bounds travel: replay rejects an activity at a node that borders no node on the
+has verified, bounds travel: replay rejects an activity at a node with no edge to a node on the
 frontier, except at the origin, which always counts as reachable
 ([replay verification](./replay-verification.md#replay)). Client and server derive edges from
 identical inputs, so they never disagree about which nodes connect.
