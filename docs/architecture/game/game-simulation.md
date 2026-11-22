@@ -1,16 +1,16 @@
 # Game simulation
 
-The client computes and records all gameplay, and the server decides by replay whether to trust it.
-The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
-random stream, and writes each step to an append-only checkpoint stream. The server never simulates
-on a player's request path, except in the activity service's QA seeding procedure, which simulates
-up to 20 runs for a new QA account ([manual QA](../../runbooks/qa.md#accounts)). The same inputs
-re-run to byte-identical results, which lets a verifier check a stream it did not compute and lets a
-returning client rebuild simulation state it no longer holds.
-[Replay verification](./replay-verification.md) owns the verifier and settlement, the
-[seed chain](./seed-chain.md) owns where an activity's randomness comes from, and
-[offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on reconnect. The
-[glossary](./glossary.md) defines the terms these docs share.
+The client computes and records the gameplay of every activity a player plays, and the server
+decides by replay whether to trust it. The client runs every real-time simulation as a pure function
+of a fixed set of inputs and a seeded random stream, and writes each step to an append-only
+checkpoint stream. The server never simulates on a player's request path, except in the activity
+service's QA seeding procedure, which simulates up to 20 runs for a new QA account
+([manual QA](../../runbooks/qa.md#accounts)). The same inputs re-run to byte-identical results,
+which lets a verifier check a stream it did not compute and lets a returning client rebuild
+simulation state it no longer holds. [Replay verification](./replay-verification.md) owns the
+verifier and settlement, the [seed chain](./seed-chain.md) owns where an activity's randomness comes
+from, and [offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on
+reconnect. The [glossary](./glossary.md) defines the terms these docs share.
 
 A checkpoint's path from the writer to settled progress:
 
@@ -95,11 +95,11 @@ counting it could stamp XP that never settles into this snapshot and every later
 quantity a snapshot draws ahead of proof, because an item mints only for a proved segment.
 
 The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
-XP, and the server folds the same rule from its own rows. A worker with no record of the previous
-activity, on a fresh device or after the server closed it, mints from the snapshot the server
-returns beside the avatar's latest activity. When the server holds no activity for the avatar, as
-after an account reset, a refused start clears any record of a previous activity that the outbox
-does not hold, so the next start folds from no previous activity.
+XP, and the server folds the same rule from its own rows, leaving out a held activity. A worker with
+no record of the previous activity, on a fresh device or after the server closed it, mints from the
+snapshot the server returns beside the avatar's latest activity. When the server holds no activity
+for the avatar, as after an account reset, a refused start clears any record of a previous activity
+that the outbox does not hold, so the next start folds from no previous activity.
 
 ## What replay pins
 
@@ -156,9 +156,10 @@ A per-avatar simulated-time meter bounds offline progress, and the append path e
 meter refills at wall-clock rate since it was last banked, never past its cap. Every accepted
 checkpoint batch debits its simulated-time delta: the last checkpoint's cumulative time minus the
 head row's accounted time, never a sum of per-checkpoint times. Apart from an initial grant that
-absorbs tick-boundary and network jitter, elapsed wall clock is the only credit source, so no path
-earns simulated time faster than real time. Live play self-funds, because each flush banks the wall
-clock it consumed. A QA avatar's meter is the exception: it refills at a multiple of wall clock
+absorbs tick-boundary and network jitter, elapsed wall clock is the only credit source for a player
+avatar, so no player avatar earns simulated time faster than real time. Live play self-funds,
+because each flush banks the wall clock it consumed. A QA avatar's meter is the exception: it
+refills at a multiple of wall clock
 ([QA debug hook](../../runbooks/qa-debug-hook.md#set-the-speed)).
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the

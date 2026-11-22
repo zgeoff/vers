@@ -1,10 +1,11 @@
 # Checkpoint archive
 
-The checkpoint retention workflow runs the archive sweep once a day against the production database.
-The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to the
-`vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it. The
-same purge removes a 90-day-old archive whose activity row is gone, such as one of a deleted avatar.
-For the tiers and the rules that move rows between them, read
+Read this before you turn on the checkpoint archive or restore an archived activity for an
+investigation. The checkpoint retention workflow runs the archive sweep once a day against the
+production database. Once it is turned on, the sweep archives the checkpoint rows of each activity
+verified more than 24 hours ago to the `vers-checkpoint-archive` R2 bucket, and purges an archive 90
+days after the sweep wrote it. The same purge removes a 90-day-old archive whose activity row is
+gone, such as one of a deleted avatar. For the tiers and the rules that move rows between them, read
 [Database](../architecture/platform/database.md#checkpoint-retention). Turn on the sweep and restore
 one activity's rows with the steps below.
 
@@ -58,5 +59,5 @@ investigation before that run, or run the restore again.
    Expect `restored <row_count> row(s) of activity <activity_id>`. The output
    `✗ no archive at checkpoints/<avatar_id>/<activity_id>.jsonl.gz` means the sweep never archived
    the activity or has purged its archive. The output that starts with
-   `✗ checkpoint archive — another sweep or restore holds the archive lock` means a sweep is
-   running: wait for its workflow run to end, then run the restore again.
+   `✗ checkpoint archive — another sweep or restore holds the archive lock` means a sweep's workflow
+   run or another restore is still running: wait for it to end, then run the restore again.

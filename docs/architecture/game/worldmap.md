@@ -82,10 +82,11 @@ discs. The radius is a security limit, because look-ahead value climbs with it.
 No reveal state is stored, so the projection is idempotent by construction, and storage grows with
 the nodes an avatar has completed, never with the area it can see.
 
-The server discloses a node only after the clear that opened it verifies, never on an optimistic
-one. It discloses the node's difficulty and its sealed content fields, never the secret those fields
-derive from, and it caps how many nodes one clear can fan out to. A request for one specific node is
-served ahead of the bulk fan-out, so the online path stays responsive.
+Apart from the origin's disc, the server discloses a node only after the clear that opened it
+verifies, never on an optimistic one. It discloses the node's difficulty and its sealed content
+fields, never the secret those fields derive from, and it caps how many nodes one clear can fan out
+to. A request for one specific node is served ahead of the bulk fan-out, so the online path stays
+responsive.
 
 A reveal request names specific nodes, and the server authorizes each against its own projection
 rather than trusting the list. A node the projection does not cover discloses nothing and mints no
@@ -95,10 +96,10 @@ it counts every refusal.
 ## Where a player may travel
 
 Travel selection is narrow, and it uses a different rule from reveal. A node is selectable when it
-is the origin, when the avatar has already cleared it, or when an edge joins it to a node the avatar
-has cleared. Reveal measures hex distance; selection follows edges. A revealed node two hops away
-with no edge to a cleared node is visible and unreachable, and that is the intended shape of the
-boundary.
+is the origin, or when an edge joins it to a node the avatar has cleared, which covers any cleared
+node that borders another. Reveal measures hex distance; selection follows edges. A revealed node
+two hops away with no edge to a cleared node is visible and unreachable, and that is the intended
+shape of the boundary.
 
 The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
 has verified, bounds travel: replay rejects an activity at a node that borders no node on the
@@ -108,12 +109,11 @@ identical inputs, so they never disagree about which nodes connect.
 
 ### Playing past the frontier offline
 
-The server discloses every node in the revealed region, which reaches past what the avatar can
-travel to, and the client caches them. Offline, a player farms the nodes they can see and pushes
-outward into ground the fog has already lifted from. Reward-magnitude variance lives in sealed
-entropy drawn online
-([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)), so reading a
-node's base early buys nothing.
+The revealed region reaches past what the avatar can travel to, and the client caches every node the
+server discloses from it. Offline, a player farms the nodes they can see and pushes outward into
+ground the fog has already lifted from. Reward-magnitude variance lives in sealed entropy drawn
+online ([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)), so
+reading a node's base early buys nothing.
 
 Clearing a node offline opens its neighbours for selection before the server verifies the clear: the
 client widens its selectable set from the device's outbox
