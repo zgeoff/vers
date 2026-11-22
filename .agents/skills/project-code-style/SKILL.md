@@ -20,8 +20,8 @@ metadata:
 - Baseline a violation that predates a lint rule with a disable comment on the line above it, in
   place of the baseline file that the correct skill describes, as
   [Lint directives](#lint-directives) says. Lint fails on an unused directive, so each baseline
-  comment has to go when someone fixes its site. The comment takes no expiry date and no PR link,
-  and it names issue #236, as [project-docs-writing](../project-docs-writing/SKILL.md#departures)
+  comment has to go when someone fixes its site. Give the comment no expiry date and no PR link, and
+  name issue #236 in it, as [project-docs-writing](../project-docs-writing/SKILL.md#departures)
   allows.
 
 ## Names
@@ -50,10 +50,10 @@ metadata:
 
 - Put each type that two or more files in a directory use in that directory's `types.ts`, and create
   the file when it doesn't exist. Never write another module whose exports are all types.
-- Read the value of an untyped jsonb or text column through the `.parse` of its zod schema, which
-  the contract package of the service that owns the table exports, such as `EncounterNodeSchema`
-  from `@vers/contract-activity`, so a malformed row fails at the read. When your code wrote the
-  value and still holds its typed form, use that typed form instead.
+- Read the value of an untyped jsonb or text column through the `.parse` of its zod schema, so a
+  malformed row fails at the read. Import the schema from the contract package of the service that
+  owns the table, such as `EncounterNodeSchema` from `@vers/contract-activity`. When your code wrote
+  the value and still holds its typed form, use that typed form instead.
 - Pass a value that TypeScript can't prove fits a column's `Json` type through
   [`toJSON`](../../../libs/data/db/src/to-json.ts) from `@vers/db` before you write it.
 
@@ -91,11 +91,11 @@ metadata:
 
 ## Client state
 
-Zustand holds client state, and TanStack Query holds the server cache.
+Keep client state in Zustand, and the server cache in TanStack Query.
 
 - Build one store per package, in one call to Zustand's `create`. Spread into it the slice
   factories, one per file, each named `create-<concern>-slice.ts`, where `<concern>` names the
-  fields it holds. Each factory returns its fields' initial values and no functions.
+  fields it holds. Make each factory return only its fields' initial values, never functions.
 - Add a second store only for a separate domain, such as the satellite registry beside the scene
   state in `@vers/game-rendering`.
 - Keep functions out of the store. Write state through one setter per file (`set-*.ts`,
@@ -104,8 +104,7 @@ Zustand holds client state, and TanStack Query holds the server cache.
   event, never one per field.
 - Export selector hooks and setters from `index.ts`, never the store that `create` returns. When
   another package reads state outside React, export a `get*` function for that read.
-- Wrap a selector in `useShallow` only when it builds a new object or array. A selector that returns
-  a stored value needs no wrapper.
+- Wrap a selector in `useShallow` only when it builds a new object or array.
 - Apply middleware to the combined store, never to a slice. Middleware wraps the function you pass
   to `create`, and a slice factory only returns values.
 - Inside the React Three Fiber frame loop, read state with the store's `getState()`, or with an

@@ -21,8 +21,8 @@ metadata:
 ## Departures
 
 - Write each check as a step of the `checks` job in [`pr.yml`](../../../.github/workflows/pr.yml),
-  unless it needs a job of its own, as [Where a step goes](#where-a-step-goes) says. The
-  [Jobs](../ci-design/SKILL.md#jobs) section of ci-design calls `bun-checks.yml` instead. The vers
+  unless it needs a job of its own, as [Where a step goes](#where-a-step-goes) says. Skip the
+  `bun-checks.yml` call from the [Jobs](../ci-design/SKILL.md#jobs) section of ci-design. The vers
   tests need the Postgres test container, the Turbo cache, and the full git history for
   `turbo --affected` and `bun run content:check-digest`. `bun-checks.yml` takes no input for any of
   them.
