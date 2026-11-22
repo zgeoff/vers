@@ -12,11 +12,12 @@ journey in place of `RUN`. Before you start:
 
 - Open a map node with `bun verify action navigate-route`. The map is a canvas, which
   `browser click` can't reach.
-- Play the first run online. It loads the game's code into the page, which the offline run needs.
+- The journey plays its first run online, because that run loads the game's code into the page,
+  which the offline run needs.
 - `bun verify action set-network --network offline` cuts the network for the page and its worker,
   and `--network online` brings it back.
 - In the database, a run is a row of `activities`. A run ends by itself about 15 s after it starts.
-  When `END RUN` is gone, the run already ended: go on with the journey.
+  When `END RUN` is gone, the run already ended: skip that click, and go on with the journey.
 - Where a comment says to run a command every 2 s, loop it in the shell, and read the field the
   comment names, as in
   `for i in $(seq 15); do bun verify action read-game-state | tail -1 | jq -c .data.state.outbox; sleep 2; done`.

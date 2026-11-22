@@ -9,17 +9,19 @@ Run this journey last, after the [signup journey](./feature-signup.md) in the sa
 It signs the first device out. Put the account name you picked in the signup journey in place of
 `RUN`. Before you start:
 
-- The first device is the browser that `browser` commands drive. `navigate-route` and
-  `read-game-state` act on it unless you pass `--device second`.
+- The first device is the browser that `browser` commands and `set-network` drive. `navigate-route`
+  and `read-game-state` act on it unless you pass `--device second`.
 - `bun verify action second-device-sign-in` opens a second browser of its own, signs in, and clicks
   Confirm itself. Its `data.tookOver` says whether the sign-in asked to take over.
 - A run ends by itself about 15 s after it starts. Run `second-device-sign-in` as soon as the
   `db query` after the start prints a row. In the database, a run is a row of `activities`. To poll
   the query, loop it in the shell and read `data.rowCount`, as in
   `for i in $(seq 8); do bun verify db query "<the query>" | tail -1 | jq .data.rowCount; sleep 2; done`.
-- When the query prints no row within 15 s, or `read-game-state --device second` shows no `liveRun`,
-  the run ended before the sign-in. Start this journey again from `use --feature`, with the same
-  account.
+- When the query prints no row within 15 s, the run ended before it started. Start this journey
+  again from `use --feature`, with the same account.
+- When `read-game-state --device second` shows no `liveRun`, the run ended before the sign-in, and
+  the sign-in has already signed the first device out. Run `bun verify up --restart`,
+  `bun verify doctor`, public-smoke and signup, then this journey again.
 
 ## Journey
 
