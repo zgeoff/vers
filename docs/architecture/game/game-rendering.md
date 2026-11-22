@@ -56,8 +56,8 @@ is not readable inside the router's `types` callback, so that path runs `matchRo
 folds the matched branch through the same `resolveSceneState` that syncs the store. The canvas
 container carries a stable `view-transition-name`, so the live world keeps rendering through a
 transition instead of freezing into the page snapshot. Browsers without the API fall back to instant
-navigation. The router hands a scene only its focus target; the scene runs the camera flight to it
-itself.
+navigation. The router hands a scene only its focus target, and the scene runs the camera flight to
+that target.
 
 ## Renderer
 

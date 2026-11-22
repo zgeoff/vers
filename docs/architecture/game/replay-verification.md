@@ -111,8 +111,8 @@ version from an unknown one by the row. A version that is past its retention dea
 is `pruned`, is expired: admission refuses a start under it, and the client must resync onto the
 current version, while the verifier parks an activity already pinned to it. A sim version with no
 row at all is unknown (`SIM_VERSION_UNKNOWN`): the activity parks until an operator or a later
-deploy registers it. The sweep refuses to tombstone a version past its deadline that still has
-appended-but-unverified activities pinned to it, and fails its run, so that version's provider app
+deploy registers it. When a version past its deadline still has appended-but-unverified activities
+pinned to it, the sweep refuses to tombstone it and fails its run, so that version's provider app
 survives while that work is parked.
 
 Only after a row is tombstoned does the sweep destroy its provider app, so an `active` row never
