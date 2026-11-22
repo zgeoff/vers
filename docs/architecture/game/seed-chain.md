@@ -100,11 +100,12 @@ that appended nothing, or whose only checkpoint is the `Started` one, moves noth
 `Started` checkpoint draws nothing from the seed.
 
 The verified anchor moves only when a proved activity ends, or when a rejection ends one that was
-partly proved. A segment part way through an activity settles what it proved and advances that
-activity's own verified head, but leaves the chain's anchor where it stands. The anchor moves on the
-segment that both ends a forward-exited activity and reaches its last appended checkpoint. When the
-verifier claims an activity whose start index sits ahead of the anchor, it catches the anchor up
-from the forward-exited predecessor before it adjudicates.
+partly proved. A catch-up at claim time, below, counts as the first case: it moves the anchor to a
+predecessor that already ended proved. A segment part way through an activity settles what it proved
+and advances that activity's own verified head, but leaves the chain's anchor where it stands. The
+anchor moves on the segment that both ends a forward-exited activity and reaches its last appended
+checkpoint. When the verifier claims an activity whose start index sits ahead of the anchor, it
+catches the anchor up from the forward-exited predecessor before it adjudicates.
 
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
@@ -128,7 +129,8 @@ that repairs it.
 Every writer that takes both rows takes the chain row before the activity row, so no two writers
 deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
 shared lock that the verifier's claim admits, so an append never waits for a replay to finish. The
-verifier and the repair pass skip a chain row another transaction holds rather than wait on it.
+verifier and the repair pass skip a chain row another transaction holds exclusively rather than wait
+on it.
 
 ## Pulling the appended anchor back
 

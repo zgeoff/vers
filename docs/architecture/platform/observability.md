@@ -15,7 +15,7 @@ flowchart LR
     M1["process-global meter provider<br>behind a periodic exporter"] -->|metrics| O
   end
   subgraph web["the web app"]
-    W[its own exporters] -->|traces, logs, metrics| O
+    W["its own exporters, and the shared LogTape setup"] -->|traces, logs, metrics| O
   end
   O[("the OTLP endpoint")]
 ```
@@ -26,8 +26,8 @@ LogTape's OpenTelemetry sink, and metrics through a process-global meter provide
 exporter. The web app carries no Elysia plugin and boots its own exporters for traces and metrics.
 Both configure logging through the service runtime's one LogTape setup, which writes each entry to
 stdout and, with the endpoint set, hands it to a batching log exporter that shares the trace and
-metric resource. A process with the endpoint unset emits nothing, and every instrument stays the
-OpenTelemetry API's no-op.
+metric resource. A process with the endpoint unset exports nothing and writes its logs to stdout
+alone, and every instrument stays the OpenTelemetry API's no-op.
 
 The Sentry SDK registers no tracer provider, context manager or propagator, and opens no spans of
 its own. Only the OpenTelemetry setup above registers those three. Its server integration, the Bun
@@ -80,7 +80,8 @@ services it called. The line-level conventions:
 - Data rides in structured fields, never interpolated into the message. The message is a stable
   label for the event, and the fields are what Axiom queries filter and aggregate on.
 - Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
-  everything else at `info`.
+  everything else at `info`. The exceptions are the slow-request line and the static-asset line
+  below.
 - A failure always emits a line at the site that decides the outcome, carrying the reason in a
   field.
 - Each request logs one completion line with its method, path, status, and duration. The query
