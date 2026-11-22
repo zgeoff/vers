@@ -75,8 +75,7 @@ writer worker in the same browser profile, so the worker delivers the activities
 by one and fast-forwards any idle gap on top of them. A different device or browser profile reads a
 different store. It knows only the last position the server confirmed, so it fast-forwards idle
 attempts at that node instead, and the server never receives the nodes the player walked offline on
-the original device. While the original device is offline or closed, nothing can reach its outbox,
-so this loss follows from where the outbox lives.
+the original device. Nothing can reach the original device's outbox while it is offline or closed.
 
 An account holds one verified session, so verifying a session on a new device evicts every other
 session the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device's next
@@ -135,8 +134,8 @@ activity start for another account's avatar, and delivers it once that account s
 ## Cached anchors
 
 At node reveal the device caches each node's genesis seed and appended anchor, so it can mint an
-activity start offline. Three server events move a chain's anchors while the device runs no discard
-to reset that cache: an account reset, a replay rejection and a database restore.
+activity start offline. An account reset, a replay rejection and a database restore each move a
+chain's anchors on the server, with no discard on the device to reset that cache.
 
 An account reset deletes the avatar's chains on the server, and the next node reveal re-creates each
 chain from a new genesis seed. A node reveal whose genesis seed differs from the cached one replaces
