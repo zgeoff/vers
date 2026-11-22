@@ -35,9 +35,9 @@ The verifier never judges an operational failure as a cheat signal. Its outcomes
 - Quarantined. A divergence that fails to reproduce too many times sets the activity aside for an
   operator rather than retrying forever. While a chain scope holds a quarantined activity, no new
   activity can start there.
-- Rejected. The verifier treats only reproducible divergence under a matched sim version and
-  `Started` checkpoint as cheating. The server applies a rejection at a session boundary, never
-  mid-session.
+- Rejected. Of the replay outcomes, the verifier treats only reproducible divergence under a matched
+  sim version and `Started` checkpoint as cheating. The checks below reject an activity too. The
+  server applies a rejection at a session boundary, never mid-session.
 
 On an activity's first verified pass the verifier also runs a reachability check and a build check.
 Both read only settled state, because by then every predecessor has settled or been rejected
@@ -106,12 +106,13 @@ it disappears. The deploy manifest sets the retention window, and a scheduled wo
 sweep. Each retained version keeps its own provider app running.
 
 The sweep never deletes a registry row, because admission tells an expired version from an unknown
-one by the row. A version whose row is `pruned` is expired: the client must resync onto the current
-version. A sim version with no row at all is unknown (`SIM_VERSION_UNKNOWN`): the activity parks
-until an operator or a later deploy registers it. The sweep instead tombstones each `active` row
-past its retention deadline to `pruned`, and it never tombstones the current version. The sweep
-refuses to tombstone a version that still has appended-but-unverified activities pinned to it,
-because pruning that version would park honest work.
+one by the row. A version whose row is `pruned` is expired: admission refuses a start under it, and
+the client must resync onto the current version, while an activity already pinned to it parks. A sim
+version with no row at all is unknown (`SIM_VERSION_UNKNOWN`): the activity parks until an operator
+or a later deploy registers it. The sweep instead tombstones each `active` row past its retention
+deadline to `pruned`, and it never tombstones the current version. The sweep refuses to tombstone a
+version that still has appended-but-unverified activities pinned to it, because pruning that version
+would park honest work.
 
 Only after a row is tombstoned does the sweep destroy its provider app, so an `active` row never
 points at a destroyed app. The sweep finishes by unparking every activity whose stamped sim version
