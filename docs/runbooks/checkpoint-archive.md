@@ -13,14 +13,15 @@ The workflow stops before any read while one of the four `CHECKPOINT_ARCHIVE_*` 
 and logs a warning with each missing key. Report-only is the default: with every secret set, the
 sweep logs what it would archive and purge, and writes and deletes nothing, until the
 `CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. The repository owner reads a report-only
-run and approves the first writing run. Nobody sets the variable before that approval.
+run and approves the first writing run, because that run moves production rows out of the database.
+Nobody sets the variable before that approval.
 
-The archive has its own bucket and token, and never reuses the Bugsink R2 key. The bucket is
-`vers-checkpoint-archive`. Its R2 API token is scoped to that bucket only, with object read and
-write, and the `r2-checkpoint-archive` item in the `vers` 1Password vault holds it. The four
-`CHECKPOINT_ARCHIVE_*` secrets in the `production` environment of zgeoff/vers carry the endpoint
-(`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the bucket name and the token's key
-pair.
+The archive has its own bucket and token, and never reuses the Bugsink R2 key, so a leak of either
+key reaches only its own bucket. The bucket is `vers-checkpoint-archive`. Its R2 API token is scoped
+to that bucket only, with object read and write, and the `r2-checkpoint-archive` item in the `vers`
+1Password vault holds it. The four `CHECKPOINT_ARCHIVE_*` secrets in the `production` environment of
+zgeoff/vers carry the endpoint (`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the
+bucket name and the token's key pair.
 
 1. Run the workflow once in report mode:
 

@@ -1,8 +1,8 @@
 # Deployment
 
-The stack is a Fly.io fleet, and a push to `main` drives every rollout through the repo's deploy CLI
-and its manifest, `deploy.config.ts`. Every rollout decision keys off one marker: the commit stamped
-into each app's machine env, compared against HEAD ([staleness](#staleness)).
+The stack is a Fly.io fleet, and a push to `main` rolls each change out through the repo's deploy
+CLI and its manifest, `deploy.config.ts`. Whether an app needs a rollout keys off one marker: the
+commit stamped into each app's machine env, compared against HEAD ([staleness](#staleness)).
 [Provisioning](../../runbooks/provisioning.md) stands the fleet up from nothing.
 
 ## Topology
@@ -10,9 +10,10 @@ into each app's machine env, compared against HEAD ([staleness](#staleness)).
 The web app, the error tracker, and the analytics dashboard hold public addresses. Every domain
 service (every `services/*` app) is private, reachable only across the organization's private mesh.
 Browsers post error envelopes to the tracker directly, and analytics tracker traffic arrives through
-the web app's same-origin proxy ([analytics](../analytics.md)). All persistent state is the shared
-Neon database ([database](./database.md)): no app runs its own Postgres, and the keys service holds
-no database connection at all, only its root secrets.
+the web app's same-origin proxy ([analytics](../analytics.md)). All database state is the shared
+Neon database ([database](./database.md)), and the error tracker keeps uploaded files in object
+storage ([pinned upstream images](#pinned-upstream-images)). No app runs its own Postgres, and the
+keys service holds no database connection at all, only its root secrets.
 
 An idle app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on
 its first request, so a suspended process resumes with the sockets it held
@@ -152,9 +153,9 @@ status check, a JSON round-trip against an expected body, or a Lighthouse audit 
 against the manifest's performance budget. An app with no Dockerfile cuts over to the image named in
 its `fly.toml`. For a manual rollout, the CLI's `deploy` command runs both phases in one invocation.
 
-An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
-that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old
-machines. A broken boot fails the gate before cutover, and the old machines serve every request
+An app whose `fly.toml` sets the blue-green strategy, which is the web app and every service, rolls
+out that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the
+old machines. A broken boot fails the gate before cutover, and the old machines serve every request
 until it passes. The deploy CLI bounds flyctl's wait for each machine, so a green machine that never
 turns healthy fails the rollout and flyctl destroys the green machines itself. A flyctl call still
 running at a later deadline gets SIGINT, its ctrl-c, which aborts a rollout that is still waiting
@@ -214,8 +215,9 @@ outside it, then proceeds. A started machine outside the kept group is never a d
 leg fails instead and prints the fleet's machine table for an operator. A machine that flyctl
 reports no image for joins no group. When the fleet also has an image group, the leg destroys each
 such machine that is not started, and fails on one that is started. `deploy verify` never sweeps; it
-reports a mixed-image fleet, and a started machine with no image beside machines with one, as
-findings of their own.
+reports a mixed-image fleet as a finding of its own, unless a descendant's rollout explains the
+split ([staleness](#staleness)), and it reports a started machine with no image beside machines with
+one.
 
 ### Pinned upstream images
 

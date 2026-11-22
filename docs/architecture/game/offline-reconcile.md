@@ -30,19 +30,20 @@ stateDiagram-v2
   closed --> offline: reopen with no network reconstructs nothing until a reconnect
 ```
 
-| State       | App    | Simulation  | Network      |
-| ----------- | ------ | ----------- | ------------ |
-| **online**  | open   | running     | reachable    |
-| **offline** | open   | running     | unreachable  |
-| **closed**  | closed | not running | not relevant |
+| State       | App                     | Simulation  | Network      |
+| ----------- | ----------------------- | ----------- | ------------ |
+| **online**  | open                    | running     | reachable    |
+| **offline** | open                    | running     | unreachable  |
+| **closed**  | closed, or backgrounded | not running | not relevant |
 
-A backgrounded tab counts as closed even though the app is open. The browser can pause the writer
-worker while the app is open and the network is reachable, so the simulation stops and a gap opens.
+A backgrounded tab counts as closed. The browser can pause the writer worker while the app is open
+and the network is reachable, so the simulation stops and a gap opens.
 
 The network returning is a reconnect, and the app opening is a reopen. A reconnect starts the
 reconcile. A reopen with the network reachable reconciles too, as the diagram shows. A device that
-reopens while the network is unreachable enters the offline state directly, reconstructs no gap, and
-delivers nothing until it later reconnects.
+reopens while the network is unreachable enters the offline state directly, but resumes nothing: a
+fast-forward needs the server ([resuming](#resuming-fast-forward-first-then-play)), so the device
+reconstructs no gap and delivers nothing until it later reconnects.
 
 ## Resuming: fast-forward first, then play
 
@@ -106,11 +107,12 @@ that session ended.
 | The player signed out here   | deleted at once        | discarded, once the player confirms                     |
 | It ran past its expiry       | left in place          | kept, and delivered once the same account signs back in |
 
-A takeover discards the outbox without asking, because delivering it later would write progress the
-player made elsewhere, and the device taking the account over warns the player first. The displaced
-device halts its live activity before the discard, so the activity queues no checkpoint behind it.
-Its tabs then show the activity as halted and playing on another device. On a sign-out, the player
-decides through the sign-out control ([signing out](#signing-out)).
+A takeover discards the whole outbox, every account's avatars included, without asking, because
+delivering it later would write progress the player made elsewhere, and the device taking the
+account over warns the player first. The displaced device halts its live activity before the
+discard, so the activity queues no checkpoint behind it. Its tabs then show the activity as halted
+and playing on another device. On a sign-out, the player decides through the sign-out control
+([signing out](#signing-out)).
 
 A discard drops the cached node seeds of the avatars it covers: each node's cached genesis seed and
 appended anchor. Local play moved their appended anchors past what the server holds, and a node
@@ -153,7 +155,8 @@ An activity's rewards are provisional until the verifier confirms it
 total rises, its items mint, and the node's first clear opens its neighbours. An activity built on
 an earlier one's reward is provisional in the same way, so the server settles an avatar's activities
 one at a time, in the order the player played them, and checks each only after every earlier one is
-settled or rejected.
+settled or rejected. The one exception is an earlier activity with no proven checkpoint, which the
+verifier skips ([where the order comes from](#where-the-order-comes-from)).
 
 A player clears one node, then walks to its neighbour. The neighbour is built on the first twice:
 its build snapshot folds in the XP the first earned, and the neighbour is reachable only because the
