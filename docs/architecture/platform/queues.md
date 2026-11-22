@@ -11,15 +11,15 @@ The queue wrapper is the only module that imports pg-boss. A job definition pair
 schema with the job's retry, dead-letter, and expiry policy. Its name doubles as the queue name.
 Every queue start writes each definition's policy onto its queue, so a changed definition takes
 effect on a queue that an earlier deployment created, and a retry or expiry option the definition
-drops returns to the pg-boss default. One exception: a queue keeps its dead-letter queue after the
-definition drops it, because pg-boss offers no way to clear one. Every defined job needs a handler,
-which receives the schema-parsed payload and the job id. The queue handle carries the pg-boss
-lifecycle, one validating enqueue, and one drain. The enqueue validates the payload before it
-inserts and can route the insert through the caller's Kysely transaction, so job creation commits or
-rolls back with the domain write it belongs to. A drain fetches, handles, and completes in batches
-until its queue is empty, covers every defined queue when called with no name, and fails a stored
-payload that no longer parses without reaching the handler. pg-boss owns its own schema in the
-shared database and migrates it itself at start, so the schema migrations never touch it.
+drops returns to the pg-boss default. A queue keeps its dead-letter queue after the definition drops
+it, because pg-boss offers no way to clear one. Every defined job needs a handler, which receives
+the schema-parsed payload and the job id. The queue handle carries the pg-boss lifecycle, one
+validating enqueue, and one drain. The enqueue validates the payload before it inserts and can route
+the insert through the caller's Kysely transaction, so job creation commits or rolls back with the
+domain write it belongs to. A drain fetches, handles, and completes in batches until its queue is
+empty, covers every defined queue when called with no name, and fails a stored payload that no
+longer parses without reaching the handler. pg-boss owns its own schema in the shared database and
+migrates it itself at start, so the schema migrations never touch it.
 
 ## Delivery model: drains, not resident workers
 
@@ -33,20 +33,20 @@ flowchart LR
 ```
 
 Fleet services scale to zero when idle, and Neon suspends the database. A resident polling worker
-would hold both awake around the clock, so delivery rides three one-shot drains instead:
+would hold both awake around the clock, so delivery runs as one-shot drains instead:
 
-- Nudge: an enqueue procedure fires a drain fire-and-forget after the insert. The machine handling
-  the request is already awake, so delivery lands at once. A deadline-bearing job's enqueue keeps
-  re-draining its queue until that job reaches a terminal state or its deadline passes, and stops
-  after a bounded time even when the deadline lies far ahead. A stop of the email service's queue
-  starts no further nudge and waits for the nudges in flight, up to the queue's own stop timeout, so
-  pg-boss never closes under a drain that is still completing a job.
-- Boot drain: the email service's boot work drains the queue once the service serves, catching jobs
+- After the insert, an enqueue procedure fires a nudge: a fire-and-forget drain. The machine
+  handling the request is already awake, so delivery lands at once. A deadline-bearing job's enqueue
+  keeps re-draining its queue until that job reaches a terminal state or its deadline passes, and
+  stops after a bounded time even when the deadline lies far ahead. When the email service's queue
+  stops, it starts no further nudge and waits for the nudges in flight, up to the queue's own stop
+  timeout, so pg-boss never closes under a drain that is still completing a job.
+- Once the email service serves, its boot work drains the queue once, the boot drain, catching jobs
   enqueued while the process was down.
-- Scheduled sweep: a Fly scheduled machine runs the service's sweep entrypoint, which starts the
-  queue, drains to completion, and exits. It catches retries whose delay elapsed while no machine
-  was awake, and anything a crash orphaned. The deploy CLI declares and reconciles the machine
-  ([deployment](./deployment.md#scheduled-machines)).
+- As a scheduled sweep, a Fly scheduled machine runs the service's sweep entrypoint, which starts
+  the queue, drains to completion, and exits. It catches retries whose delay elapsed while no
+  machine was awake, and anything a crash orphaned. The deploy CLI declares and reconciles the
+  machine ([deployment](./deployment.md#scheduled-machines)).
 
 Durability lives in Postgres, so a job between drains is late, never lost. A late job still runs,
 except that a deadline-bearing job past its deadline completes unsent
@@ -58,10 +58,9 @@ sees. A stopped machine boots clean, so every wake re-runs the boot drain.
 
 A handler throw fails the job, and pg-boss keeps it invisible until its retry delay elapses,
 doubling that delay per attempt when the definition asks for backoff. A job that exhausts its retry
-limit on a dead-lettering definition moves to a dead queue named after its own. Handlers make
+limit on a dead-lettering definition moves to a dead queue named after its own. Make each handler's
 outbound effects idempotent with the job id, so at-least-once delivery never doubles an effect; the
 email service sends the job id as its provider's idempotency key. pg-boss pools its own connections,
-so a queue test takes database isolation rather than an injected transaction.
+so give a queue test database isolation rather than an injected transaction.
 
-The handler never sends a deadline-bearing job after its deadline has passed. It completes such a
-job unsent.
+The handler completes a deadline-bearing job unsent once its deadline has passed.
