@@ -8,9 +8,10 @@ to central machinery, which classifies, reports, and encodes it.
 
 ## Taxonomy
 
-Every failure is exactly one of three classes, and the class decides everything downstream: status
-range, retry policy, and whether it reaches the error backend. The one exception is a domain error
-that a web app server function lets escape ([reporting](#reporting)).
+Every failure is exactly one of three classes. The class decides its status range and whether it
+reaches the error backend, and whether it may retry: only an infrastructure fault retries, and only
+on a call that can be resent ([retry policy](#retry-policy)). The one exception to the Reported
+column is a domain error that a web app server function lets escape ([reporting](#reporting)).
 
 | Class                    | What it is                                                           | Mechanism                                | Status | Reported |
 | ------------------------ | -------------------------------------------------------------------- | ---------------------------------------- | ------ | -------- |
