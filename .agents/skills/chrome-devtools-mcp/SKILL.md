@@ -15,18 +15,19 @@ reach, so a Windows port proxy forwards port 9223 to Chrome's port 9222. Ask the
 PowerShell command, because it needs an administrator shell you can't open from WSL. You're
 connected when `list_pages` returns the debug browser's tabs. Your work with this skill ends when
 you close the debug browser and, in NAT mode, remove the proxy. Hand back whether `list_pages`
-connected, and that the browser is closed and the proxy removed.
+connected, that the browser is closed and, in NAT mode, that the proxy is removed.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
 browser starts with `--remote-allow-origins=*`. Run the debug browser on its own profile, which
 holds only what earlier debug runs left, never the user's daily one. When your task no longer needs
-the browser, close it and ask the user to remove the proxy.
+the browser, close it and, in NAT mode, ask the user to remove the proxy.
 
 ## Key rules
 
 - [Mistakes to avoid](#mistakes-to-avoid): check the networking mode first, scope the firewall rule
   to `172.16.0.0/12`, and never use the daily profile.
-- [Add the proxy](#add-the-proxy): once per machine, a port proxy and a firewall rule.
+- [Add the proxy](#add-the-proxy): in NAT mode, a port proxy and a firewall rule, added at the start
+  of each run.
 - [Launch the debug browser](#launch-the-debug-browser): a new Chrome on its own profile, then a
   check from WSL.
 - [Connect](#connect): in a running session, ask the user to run `/mcp`, then check `list_pages`.
@@ -48,7 +49,7 @@ the browser, close it and ask the user to remove the proxy.
 
 ## Add the proxy
 
-Do this once per machine, or again after you remove the proxy.
+In NAT mode, do this at the start of each run, because each run ends by removing the proxy.
 
 1. Ask the user to run this in PowerShell as administrator:
 
