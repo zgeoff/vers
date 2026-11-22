@@ -7,10 +7,10 @@ origin it runs. The server stores no part of the map. The client computes the sh
 the server computes what each place holds, and the wire carries only the nodes a player has
 revealed.
 
-One split governs everything else. The map's shape is public and any client can compute it, while a
-node's contents are sealed and only the server can compute them. The two derive from different
-inputs, so knowing the whole shape tells a player nothing about where the reward sits. A public
-shape over sealed contents is what makes a client-computed world of that size safe to ship.
+The map's shape is public and any client can compute it, while a node's contents are sealed and only
+the server can compute them. The two derive from different inputs, so knowing the whole shape tells
+a player nothing about where the reward sits. A public shape over sealed contents is what makes a
+client-computed world of that size safe to ship.
 
 The [economy modes note](../../game-design/economy-modes.md#perfect-foresight) owns the threat model
 those rules answer, and [game entropy](./game-entropy.md) owns the entropy model. The
@@ -38,8 +38,8 @@ too little to derive its unrevealed neighbours.
 ## Generating the shape
 
 The generator works one chunk at a time from a stateless hash, so a region around any coordinate
-computes without touching the rest. A chunk coordinate addresses a fixed square of hex cells and is
-the unit the generator works in. A cell coordinate addresses one hex cell and is a node's identity.
+computes without touching the rest. A chunk coordinate addresses a fixed square of hex cells. A cell
+coordinate addresses one hex cell and is a node's identity.
 
 - Cell seeding. A stateless integer hash over the avatar's seed and a cell's coordinate seeds every
   draw, so a cell's values compute straight from its coordinates without generating a neighbour
@@ -109,9 +109,9 @@ identical inputs, so they never disagree about which nodes connect.
 ### Playing past the frontier offline
 
 The server discloses every node in the revealed region, which reaches past what the avatar can
-travel to, and the client caches them. Offline, a player farms the nodes they can already see and
-pushes outward into ground the fog has already lifted from. Reward-magnitude variance lives in
-sealed entropy drawn online
+travel to, and the client caches them. Offline, a player farms the nodes they can see and pushes
+outward into ground the fog has already lifted from. Reward-magnitude variance lives in sealed
+entropy drawn online
 ([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)), so reading a
 node's base early buys nothing.
 
