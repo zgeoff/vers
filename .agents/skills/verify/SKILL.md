@@ -145,8 +145,8 @@ that command alone. A command with neither runs on the registry's first target, 
 
 `up` needs Docker. For both targets, install Chromium with `bun run verify:install-browser`. Each
 `up` starts an empty database and a signed-out browser. After each `up` or `up --restart`, run
-public-smoke first, while the browser is signed out, then signup, then the journey you are checking:
-later journeys use signup's account. Run device-takeover last: it signs out.
+public-smoke first, while the browser is signed out, then signup, then your journey: later journeys
+use signup's account. Run device-takeover last: it signs out.
 
 <!-- /repo -->
 

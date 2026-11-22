@@ -14,12 +14,13 @@ it ships to. Chrome listens for DevTools only on the Windows loopback, which WSL
 reach, so a Windows port proxy forwards port 9223 to Chrome's port 9222. Ask the user to run each
 PowerShell command, because it needs an administrator shell you can't open from WSL. You're
 connected when `list_pages` returns the debug browser's tabs. Your work with this skill ends when
-you remove the proxy.
+you close the debug browser and, in NAT mode, remove the proxy. Hand back whether `list_pages`
+connected, and that the browser is closed and the proxy removed.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
-browser starts with `--remote-allow-origins=*`. Run the debug browser on its own empty profile,
-never the user's daily one. When your task no longer needs the browser, close it and ask the user to
-remove the proxy.
+browser starts with `--remote-allow-origins=*`. Run the debug browser on its own profile, which
+holds only what earlier debug runs left, never the user's daily one. When your task no longer needs
+the browser, close it and ask the user to remove the proxy.
 
 ## Key rules
 

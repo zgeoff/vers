@@ -37,11 +37,11 @@ calls.
 
 ## Commands
 
-`bun run pg:test-container:start` starts Postgres on `localhost:32999`, with user `test` and
-password `test`. It also creates the migrated template database for the current branch and prints
-its name, `test_template_<branch>`. The script uses `TEST_DB_URI` in place of the default only while
-something listens on `localhost:32999`. Otherwise it starts a new container on host port 32999 and
-uses that.
+`bun run pg:test-container:start` gives you Postgres on `localhost:32999`, with user `test` and
+password `test`. While something already listens on `localhost:32999`, the script uses it, through
+`TEST_DB_URI` when that is set. Otherwise it starts a new container on host port 32999. Either way
+it creates the migrated template database for the current branch and prints its name,
+`test_template_<branch>`.
 
 | Step               | Command                                                                                                                                              | Needs                                                                                                                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
