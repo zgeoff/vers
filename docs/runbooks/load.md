@@ -11,12 +11,12 @@ never touched: every scenario runs against its own fresh stack on the local mach
 
 Each scenario boots a fresh stack, so one scenario's backlog never weighs on the next. The stack
 holds app-web, the activity, keys, session, and replay services, a second replay provider, and
-postgres, each container capped at the memory of its Fly machine and at the CPU that `--cpu-profile`
-sets (see resource use under the report). The second provider is the replay image built under
-another engine hash, with a registry row of its own, so the share of players that `--retained-every`
-sets stamps a retained sim version and the verifier replays that player's segments over the
-cross-version dispatch path. Both versions run the same engine code, so the retained share measures
-the dispatch path, not old code.
+postgres. Each container is capped at the memory of its Fly machine, postgres at 2 CPUs, and every
+other container at the CPU that `--cpu-profile` sets (see resource use under the report). The second
+provider is the replay image built under another engine hash, with a registry row of its own, so the
+share of players that `--retained-every` sets stamps a retained sim version and the verifier replays
+that player's segments over the cross-version dispatch path. Both versions run the same engine code,
+so the retained share measures the dispatch path, not old code.
 
 Players sign in through the session service and carry the sealed cookie app-web reads, so every call
 takes the production path: app-web resolves the session and forwards the call to the activity
