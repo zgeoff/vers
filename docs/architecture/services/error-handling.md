@@ -21,8 +21,10 @@ range, retry policy, and whether it reaches the error backend.
 One enforcement rule makes the taxonomy mechanical: a procedure handler throws only its typed
 `opts.errors.*` constructors or `invariant()`. Anything else that escapes is an invariant violation
 or an infrastructure fault by definition, classified centrally, and handlers contain no try/catch
-for logging or reporting. A condition real input can trigger is never an invariant: it is either a
-declared domain error or ordinary control flow.
+for logging or reporting. One exception: the central interceptor treats any 4xx as the caller's
+outcome and never reports it, whatever threw it ([service layer](#service-layer)). A condition real
+input can trigger is never an invariant: it is either a declared domain error or ordinary control
+flow.
 
 ## Error codes
 
