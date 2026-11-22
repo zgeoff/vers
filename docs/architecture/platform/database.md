@@ -1,8 +1,8 @@
 # Database
 
-Vers runs on one Neon project. Its `main` branch holds the shared database, `vers`, which every
-service that stores state points at, and every migration. One database carries every application
-table, plus the schema pg-boss migrates itself ([queues](./queues.md)); the
+Vers runs on one Neon project. Its `main` branch holds the shared database, `vers`. Every service
+that stores state points at it, and every migration runs against it. One database carries every
+application table, plus the schema pg-boss migrates itself ([queues](./queues.md)); the
 [overview](../overview.md#data) names the shapes of data it holds. The same branch holds the
 separate databases the error tracker and the analytics dashboard own. A second branch, `dev`, backs
 disposable per-worktree databases for agent MCP sessions
@@ -28,8 +28,8 @@ A restore discards every write from the restore point until the moment `main` ta
 state. That interval has two parts: the margin the operator leaves before the first bad write, and
 the incident itself, from the first bad write until the restore. Across the whole interval a player
 loses what the server took: settled XP, minted items, first clears, chains revealed, and accounts
-created. The restore also signs every device out, which discards the work still waiting in each
-device's outbox.
+created. The operator also revokes every session as part of the restore, which signs every device
+out and discards the work still waiting in each device's outbox.
 
 An incident restore keeps two targets:
 
@@ -47,10 +47,10 @@ disposable branch.
 ## Activity checkpoint store
 
 The activity service creates the activity checkpoint tables' rows: a head row per activity, an
-append-only checkpoint table, and a chain row per scope. The replay service updates the head rows
-and chain rows: it advances the verified cursors, records replay attempts and backoff, and parks or
-rejects an activity. Only the activity service appends checkpoints. The cursors those rows carry and
-the rules that advance them belong to
+append-only checkpoint table, and a chain row per scope. The replay service, which runs the
+verifier, updates the head rows and chain rows: it advances the verified cursors, records replay
+attempts and backoff, and parks or rejects an activity. Only the activity service appends
+checkpoints. The cursors those rows carry and the rules that advance them belong to
 [checkpoint streams](../game/game-simulation.md#checkpoint-streams). The storage facts this doc
 owns: the head row timestamps each cursor's last advance, a partial unique index permits one
 `active` row per avatar at a time, and the checkpoint table carries no inbound foreign keys.
@@ -58,8 +58,8 @@ owns: the head row timestamps each cursor's last advance, a partial unique index
 ## Checkpoint retention
 
 A daily retention sweep moves each settled activity's stream to object storage and later purges it,
-so the checkpoint table grows by one row per settled activity rather than by every checkpoint. Each
-tier serves its own readers:
+so the checkpoint table grows by one row per settled activity rather than by every checkpoint, apart
+from the rejected activities below. Each tier serves its own readers:
 
 - **Hot, in Postgres:** every checkpoint row of an activity inside the hot window. Replay,
   settlement, the latest-progress read and the unsettled-XP fold read these rows.
