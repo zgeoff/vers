@@ -48,10 +48,11 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
   was awake, and anything a crash orphaned. The deploy CLI declares and reconciles the machine
   ([deployment](./deployment.md#scheduled-machines)).
 
-Durability lives in Postgres, so a job between drains is late, never lost. A queue-hosting service
-stops rather than suspends when idle, because pg-boss's maintenance loop does not recover from the
-clock jump a resumed machine sees. A stopped machine boots clean, so every wake re-runs the boot
-drain.
+Durability lives in Postgres, so a job between drains is late, never lost. A late job still runs,
+except that a deadline-bearing job past its deadline completes unsent
+([retries and failure](#retries-and-failure)). A queue-hosting service stops rather than suspends
+when idle, because pg-boss's maintenance loop does not recover from the clock jump a resumed machine
+sees. A stopped machine boots clean, so every wake re-runs the boot drain.
 
 ## Retries and failure
 

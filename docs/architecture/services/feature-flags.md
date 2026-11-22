@@ -21,7 +21,8 @@ declares a `defaultValue` and a `description` of what it gates.
   (`disable-market`).
 
 Each flag's `defaultValue` is its safe state: off for a feature still rolling out, on only for a
-feature meant to ship enabled everywhere until explicitly turned off.
+feature that already ships enabled and keeps the flag as an off switch while its rollout lasts.
+Remove an on-by-default flag at the end of that rollout, like any other flag.
 
 ## Server-side evaluation
 
