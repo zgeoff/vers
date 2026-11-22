@@ -138,9 +138,9 @@ secret names and digests only, so no secret value enters the run.
 
 Between build and cutover, the `stack-e2e` job boots every deployable image except the two
 [pinned upstream images](#pinned-upstream-images) in a compose stack: every service image, the web
-app's production image, postgres, and a capture-only email stub. It migrates the stack's own
-database and drives the e2e suite's stack journeys against it. The gate is fleet-wide by design: a
-combined state that fails its journeys ships for no app.
+app's production image, postgres, a capture-only email stub, and an analytics stub behind the web
+app's proxy. It migrates the stack's own database and drives the e2e suite's stack journeys against
+it. The gate is fleet-wide by design: a combined state that fails its journeys ships for no app.
 
 ### Build and cutover
 
