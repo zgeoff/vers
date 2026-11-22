@@ -1,9 +1,10 @@
 # Game rendering
 
-The game world renders through one persistent three.js canvas. Every other UI element (panels,
-tooltips, the stash, the market, the avatar panels) is HTML from the design system. 3D is reserved
-for genuinely spatial content. List-and-filter UI, forms, and text stay in the DOM lane, where the
-design system, accessibility, and testing already work.
+The game world renders through one persistent three.js canvas. A small 3D widget, such as an avatar
+viewer, renders in a satellite canvas of its own ([the persistent canvas](#the-persistent-canvas)).
+Every other UI element (panels, tooltips, the stash, the market, the avatar panels) is HTML from the
+design system. 3D is reserved for genuinely spatial content. List-and-filter UI, forms, and text
+stay in the DOM lane, where the design system, accessibility, and testing already work.
 
 ## The persistent canvas
 

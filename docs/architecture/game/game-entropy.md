@@ -53,7 +53,8 @@ Every avatar rolls under trade custody: the avatar key never leaves the server, 
 settlement derives every reward under the trade key. Connected play settles a kill's rewards as its
 checkpoint batches verify. A return from offline settles every activity of the offline stretch at
 once. No connectivity state changes what a committed reward is worth. Mint derives under the trade
-population whatever economy mode the avatar records, so no caller derives a self-found key. The
+population whatever economy mode the avatar records, so no caller derives a self-found key, and no
+roll runs under device custody. The
 [economy modes note](../../game-design/economy-modes.md#the-mode-choice) owns the design of the
 self-found mode, its device custody, and why its earnings never reach the market.
 
@@ -82,10 +83,10 @@ a change of the stamped key version.
 ## Provenance
 
 Every checkpoint's hashed field set carries an `entropySource` tag naming which source rolled its
-outcomes. The tag names the custody the roll ran under, server or device. Replay recomputes each
-checkpoint hash with the server-custody tag, so a checkpoint tagged with device custody diverges
-whatever the avatar's mode. Settlement stamps an outcome's provenance from server records and the
-tag, never from a client claim.
+outcomes. The tag names the custody a client claims the roll ran under, server or device. Replay
+recomputes each checkpoint hash with the server-custody tag, so a checkpoint tagged with device
+custody diverges whatever the avatar's mode. Settlement stamps an outcome's provenance from server
+records and the tag, never from a client claim.
 
 Tradeability keys on one security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
