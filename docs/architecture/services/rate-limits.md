@@ -4,7 +4,7 @@ The web app's server answers a request over its rate limit with a 429 and a plai
 any handler runs, static assets and the analytics proxy included. The limiter picks one tier per
 request from its path and method, counts requests per key in a fixed window, and rejects the request
 that takes the count past the tier's budget. Every rejected request carries a `Retry-After` header
-naming the seconds left in its window. The domain services hold no limiter of their own: every
+set to the seconds left in its window. The domain services hold no limiter of their own: every
 client request enters through the web app, so its limiter is the only one a client meets. One
 multiple scales every tier's budget, and it is 1 in production; outside production it is large,
 because the e2e suite and local development drive these routes faster than a player does.
@@ -30,11 +30,11 @@ behind one client IP spend separate budgets, and a re-sealed cookie for the same
 spending the same one. A request whose cookie is missing, forged, expired, or signed out is keyed by
 client IP on the same tier, so a client cannot mint budgets by inventing cookie values.
 
-**Why:** the session key stops one player's sessions from sharing a budget with every other player
-behind the same address, and the checkpoint writer
+The session key stops one player's sessions from sharing a budget with every other player behind the
+same address, and the checkpoint writer
 ([game simulation](../game/game-simulation.md#checkpoint-streams)) spends a steady, small share of
 it.
 
 The limiter unseals the cookie itself with iron-session, the library the edge seals it with. It runs
 in the fetch middleware chain ahead of the framework handler, where no framework request context
-exists. The cookie's shape and lifetime are owned by [auth](./auth.md).
+exists. See [auth](./auth.md) for the cookie's shape and lifetime.
