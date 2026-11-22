@@ -114,7 +114,7 @@ app whose machines all carry that commit rather than roll it back. `deploy verif
 fleet split between HEAD's image and a descendant's, as long as every started machine on HEAD's
 image passes its health checks, and a machine on any other image fails the run. A deploy leg reads a
 split fleet as stale, because no single commit is stamped across its machines, and redeploys HEAD
-over every machine, the descendant's included.
+once the [stranded-machine sweep](#stranded-machine-sweep) has run.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
 packages turbo reports affected from that base. The CLI checks the app's manifest trigger against

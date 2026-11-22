@@ -41,9 +41,8 @@ and the network is reachable, so the simulation stops and a gap opens.
 
 The network returning is a reconnect, and the app opening is a reopen. A reconnect starts the
 reconcile. A reopen with the network reachable reconciles too, as the diagram shows. A device that
-reopens while the network is unreachable enters the offline state directly, but resumes nothing: a
-fast-forward needs the server ([resuming](#resuming-fast-forward-first-then-play)), so the device
-reconstructs no gap and delivers nothing until it later reconnects.
+reopens while the network is unreachable enters the offline state directly, reconstructs no gap, and
+delivers nothing until it later reconnects.
 
 ## Resuming: fast-forward first, then play
 
