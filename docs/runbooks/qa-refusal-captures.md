@@ -24,10 +24,12 @@ A `snapshot()` call first waits for the captures this page is still taking, incl
 refusal starts during the wait, so it returns each one that finishes in time complete, even when the
 hook registered again in between. The wait ends after twice the hook's worker wait, and a capture
 still in flight then comes back as `pending`, so a stream of refusals cannot hold `snapshot()`
-forever. A later call returns that capture complete once its worker answers. After the wait, the
-call returns every saved capture in `refusalCaptures`, oldest first, and removes the complete ones
-from storage. The call reads the saved captures before it asks the worker for the current state, so
-a hung worker still lets the call return them, with `workerError` in place of the worker state.
+forever. A later call returns that capture complete once its worker answers, unless storage evicted
+it first ([intended behaviours](#intended-behaviours)). After the wait, the call returns every saved
+capture in `refusalCaptures`, oldest first, and removes the complete ones from storage, along with
+any `pending` capture old enough to expire. The call reads the saved captures before it asks the
+worker for the current state, so a hung worker still lets the call return them, with `workerError`
+in place of the worker state.
 
 A storage access, read or write that fails, such as on a full quota or a blocked origin, goes to the
 error backend and appears in `captureFailures` on the next snapshot. The capture goes on with what
