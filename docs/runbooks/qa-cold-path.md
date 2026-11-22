@@ -1,9 +1,9 @@
 # QA cold path
 
-This runbook is for a tester who wants to test a cold start by hand, as part of the
-[QA runbook](qa.md#cold-path). `bun run qa:cold` readies the fleet for that pass. It suspends every
-service machine of every app in `deploy.config.ts`, or stops a machine where the app's `fly.toml`
-parks idle machines with `stop`, then prints each app's machine states.
+To test a cold start by hand, as part of the [QA runbook](qa.md#cold-path), ready the fleet with
+`bun run qa:cold`. It suspends every service machine of every app in `deploy.config.ts`, or stops a
+machine where the app's `fly.toml` parks idle machines with `stop`, then prints each app's machine
+states.
 
 Before it touches a machine, the script reads the last 10 minutes of the `vers-traces` dataset in
 Axiom. It refuses and exits 1, with the request count and the busiest routes, when any request
