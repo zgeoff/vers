@@ -141,9 +141,11 @@ calls in one helper. A helper hides the values the test acts on.
 
 ## Playwright timeouts
 
-- Run the suites in [`apps/web/e2e/`](../../../apps/web/e2e/) through that package's `e2e` scripts,
-  never `bun test`. The lint rule `zgeoff/max-test-timeout` checks only tests that import from
-  `bun:test`, so no lint checks a Playwright timeout.
+- Run the suites in [`apps/web/e2e/`](../../../apps/web/e2e/) with Playwright, never `bun test`:
+  `bun run e2e` from the repo root runs the main config. Each other `playwright*.config.ts` has its
+  own `e2e:*` script in `apps/web/package.json`.
+- Expect no lint to check a Playwright timeout. The lint rule `zgeoff/max-test-timeout` checks only
+  tests that import from `bun:test`.
 - Set the `timeout` in each `playwright*.config.ts` to twice the slowest test in the last 5 green CI
   runs, rounded up to a whole second. The `list` reporter prints each test's time in the CI log.
 - When one test runs far slower than the rest, remove each fixed wait in it, or wait on a condition.

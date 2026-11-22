@@ -17,6 +17,11 @@ metadata:
 - Keep the function name that a library or an oRPC contract sets, even when it starts with a verb
   that [Function names](../code-style/SKILL.md#function-names) in code-style bans. A library calls
   its interface's methods by name, and a contract's procedure names are the public API.
+- Baseline a violation that predates a lint rule with a disable comment on the line above it, in
+  place of the baseline file that the correct skill describes, as
+  [Lint directives](#lint-directives) says. The comment takes no expiry date and no PR link, though
+  docs-writing and the correct skill ask both of a disable comment. Lint fails on an unused
+  directive, so each baseline comment has to go when someone fixes its site.
 
 ## Names
 
@@ -30,8 +35,8 @@ metadata:
 
 - Baseline a violation that predates a rule with
   `// oxlint-disable-next-line <rule> -- baseline(#236)` on the line above it. Use `#236`, the issue
-  that turned the type-aware rules on, in each comment, and never turn the rule off in config. When
-  you fix a baselined site, delete its comment: lint fails on an unused directive.
+  that turned the type-aware rules on, in each comment. Never turn the rule off in config, because
+  that stops lint checking every new line too. When you fix a baselined site, delete its comment.
 - Never baseline a type assertion. Each one needs the repo owner's approval in a review of its own
   PR, as code-style says, and a baseline skips that review.
 - Never disable `zgeoff/no-jsdoc` or `zgeoff/max-consecutive-line-comments` in code you write,
