@@ -1,9 +1,9 @@
 # Feature flags
 
-Feature flags gate incomplete or gradually-rolled-out functionality behind a boolean. Every flag is
-a temporary code path: once a feature is fully rolled out, the flag and every call site that checks
-it are deleted. [OpenFeature](https://openfeature.dev) is the evaluation interface every flag check
-goes through. `@vers/flags` registers an in-house provider that serves values from environment
+Feature flags gate incomplete or gradually-rolled-out functionality behind a boolean. Treat every
+flag as a temporary code path: once a feature is fully rolled out, delete the flag and every call
+site that checks it. [OpenFeature](https://openfeature.dev) is the evaluation interface every flag
+check goes through. `@vers/flags` registers an in-house provider that serves values from environment
 variables, so swapping the evaluation backend stays behind that interface rather than a rewrite of
 every call site.
 
@@ -12,30 +12,28 @@ every call site.
 The `FLAGS` constant in `@vers/flags` is the single source of truth for every flag. Each entry
 declares a `defaultValue` and a `description` of what it gates.
 
-- A flag's key derives its environment variable name mechanically: `FEATURE_` plus the key
-  upper-cased with dashes replaced by underscores, so `market` becomes `FEATURE_MARKET`.
+- A flag's environment variable name is `FEATURE_` plus its key upper-cased, with dashes replaced by
+  underscores: `market` becomes `FEATURE_MARKET`.
 - Setting that variable to `"true"` or `"false"` overrides the default for the process that reads
   it. Any other value, or an unset variable, falls back to `defaultValue`.
 - Flags are boolean-only — no percentage rollouts, no variants, no targeting rules.
-- A flag is named for the state it turns on (`market`), never the state it turns off
-  (`disable-market`).
+- Name a flag for the state it turns on (`market`), never the state it turns off (`disable-market`).
 
-Each flag's `defaultValue` is its safe state: off for a feature still rolling out, on only for a
+Set each flag's `defaultValue` to its safe state: off for a feature still rolling out, on only for a
 feature that already ships enabled and keeps the flag as an off switch while its rollout lasts.
 Remove an on-by-default flag at the end of that rollout, like any other flag.
 
 ## Server-side evaluation
 
-Flags evaluate server-side only — inside server functions and oRPC handlers — never in a browser
+Evaluate flags only on the server, inside server functions and oRPC handlers, never in a browser
 bundle. `resolveFlags()` evaluates every registered flag and returns a plain
-`Record<FlagKey, boolean>`. A client that needs flag state receives that resolved payload rather
-than the evaluation machinery itself.
+`Record<FlagKey, boolean>`. Send a client that needs flag state only that resolved payload.
 
 The `/_game` layout route in `app-web` resolves flags on each navigation, in its `beforeLoad`,
 through a server function wrapping `resolveFlags()`. With the network down, the route keeps the
 flags it resolved last ([offline navigation](./error-handling.md#offline-navigation)).
 
-Every route and component nested under `/_game` reads the resolved booleans from router context:
+In each route and component nested under `/_game`, read the resolved booleans from router context:
 `useRouteContext({ from: '/_game' })` in a component, `context.flags` in a descendant route's own
 `beforeLoad`. Gating hides the feature rather than forbidding it:
 
@@ -44,22 +42,21 @@ Every route and component nested under `/_game` reads the resolved booleans from
 
 ## Gating an oRPC procedure
 
-A service procedure gates itself behind a flag with the `requireFlag` middleware from
-`@vers/flags/orpc`:
+Gate a service procedure behind a flag with the `requireFlag` middleware from `@vers/flags/orpc`:
 
 ```ts
 os.someProcedure.use(requireFlag('market')).handler(/* ... */);
 ```
 
-The middleware evaluates the flag server-side and throws `NOT_FOUND` when it's off, `next()` when
-it's on — the same absent-not-forbidden behavior as a gated route.
+The middleware evaluates the flag server-side and throws `NOT_FOUND` when it's off, or calls
+`next()` when it's on, so a gated procedure looks absent, like a gated route.
 
 ## Process boundaries
 
 Each process reads its own environment: `app-web` and each Fly service resolve flags from the
-environment variables set on that process, independently of every other process. Flipping a flag
-that gates behavior in more than one process means setting its environment variable on every process
-that checks it. A flag flipped in `app-web` alone has no effect on a service that also gates on it.
+environment variables set on that process, independently of every other process. To flip a flag that
+gates behavior in more than one process, set its environment variable on every process that checks
+it. A flag flipped in `app-web` alone has no effect on a service that also gates on it.
 
 ## Adding a flag
 
