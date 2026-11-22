@@ -17,9 +17,8 @@ world-map encounter's scope is its map node. Two avatars on the same node hold t
 [Game simulation](./game-simulation.md) owns the activity start the chain feeds and the checkpoint
 stream that records each draw. [Replay verification](./replay-verification.md) owns the verifier
 that proves a stream and settles it. [Offline reconcile](./offline-reconcile.md#settlement-in-order)
-owns the order the server settles an avatar's activities in.
-[Game entropy](./game-entropy.md#the-seed-chain) says why the chain is one flat sequence rather than
-a tree a player could search.
+owns the order the server settles an avatar's activities in. For why the chain is one flat sequence
+rather than a tree a player could search, see [Game entropy](./game-entropy.md#the-seed-chain).
 
 ```mermaid
 flowchart LR
@@ -85,11 +84,12 @@ reason:
   check. A second stale-anchor refusal drops the start and resets the node's cached anchor to the
   anchor it carries ([cached anchors](./offline-reconcile.md#cached-anchors)).
 
-A kept start resends on the worker's backoff
-([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
-checkpoints with it. The server appended nothing for a dropped start, so the device moves its node's
-cached anchor back to the anchor the start was minted from, and never forward. When the drop covers
-several starts on one node, the earliest start's anchor wins.
+The worker resends a kept start on its backoff
+([worker lifecycle](./offline-reconcile.md#worker-lifecycle)). When the device drops a start, it
+drops the start's queued checkpoints too. The server appended nothing for a dropped start, so the
+device moves its node's cached anchor back to the anchor the start was minted from, and never
+forward. When the device drops several starts on one node, it moves the anchor back to the earliest
+start's anchor.
 
 ## The anchors
 
@@ -118,13 +118,13 @@ verifier picks between avatars by the priority of the chain that holds each avat
 highest first and older chain on a tie, and it never reorders one avatar's own chains against each
 other.
 
-Three writers keep the flag. An append that writes a checkpoint sets it when its activity follows
-only settled activities. The verifier recomputes the flags on all of an avatar's chains before it
-commits a claim, which moves the flag to the next activity's chain once the earlier one settles.
-Each drain opens with a repair pass over every chain, which flags a chain that a writer missed and
-clears a flag that no activity justifies. An append that races a settlement, or one from a service
-older than the flag, can leave a chain unflagged, and the wake that append sends starts the drain
-that repairs it.
+An append, the verifier and the repair pass keep the flag. An append that writes a checkpoint sets
+it when its activity follows only settled activities. The verifier recomputes the flags on all of an
+avatar's chains before it commits a claim, which moves the flag to the next activity's chain once
+the earlier one settles. Each drain opens with a repair pass over every chain, which flags a chain
+that a writer missed and clears a flag that no activity justifies. An append that races a
+settlement, or one from a service older than the flag, can leave a chain unflagged, and the wake
+that append sends starts the drain that repairs it.
 
 Every writer that takes both rows takes the chain row before the activity row, so no two writers
 deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
