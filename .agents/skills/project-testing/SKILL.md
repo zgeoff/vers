@@ -13,10 +13,10 @@ metadata:
 
 ## Facts
 
-| Fact          | Where                                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Test commands | `bun run e2e` runs [`apps/web/e2e/`](../../../apps/web/e2e/), with each suite's timeout in the `timeout` of a `playwright*.config.ts` |
-| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                                |
+| Fact          | Where                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test commands | `bun run e2e` runs the main Playwright config in [`apps/web/e2e/`](../../../apps/web/e2e/), with each suite's timeout in the `timeout` of a `playwright*.config.ts` |
+| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                                                              |
 
 ## Departures
 

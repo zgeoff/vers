@@ -52,8 +52,8 @@ services/          domain services; each compiles to a Bun binary on alpine
 contracts/         one oRPC contract per service, plus contract-base
 libs/<domain>/     shared libraries, grouped by domain for browsing only: core, data, design,
                    game, service, testing
-infra/             the vers-infra Pulumi program (GitHub labels and settings, Neon, Axiom) and the
-                   Tinybird datasources
+infra/             the vers-infra Pulumi program (Cloudflare DNS, GitHub labels and settings, Neon,
+                   Axiom) and the Tinybird datasources
 scripts/           @vers/scripts: the operational CLIs behind bun run deploy, stack and pg:*
 patches/           bun patches for third-party packages
 docs/

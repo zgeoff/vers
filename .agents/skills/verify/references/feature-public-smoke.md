@@ -14,8 +14,9 @@ On `prod`, run only this journey:
 2. Run `bun verify doctor`. Expect every check to pass, and `served-build` to print the `served`
    commit.
 3. When `served-build` fails, main on GitHub holds web app changes that versidle.com does not serve
-   yet. Wait until the `Main` workflow run for that merge finishes. Then run `git fetch origin main`
-   and `bun verify doctor` again. When it still fails, stop and report the failure.
+   yet, and no fix in your worktree changes that. Wait until the `Main` workflow run for that merge
+   finishes. Then run `git fetch origin main` and `bun verify doctor` again. When it still fails,
+   stop and report the failure.
 4. Run the journey.
 
 ## Journey

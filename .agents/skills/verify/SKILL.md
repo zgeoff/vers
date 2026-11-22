@@ -174,8 +174,8 @@ for its commands.
 <!-- repo: registry -->
 
 The [registry](../../../apps/web/src/test-utils/verify/create-verify-registry.ts) declares the
-targets, actions, checks and features. To change `paths`, read
-[references/registry.md](references/registry.md).
+targets, actions, checks and features. It reads every glob below from `feature-paths.ts`: before you
+map a file, read [references/registry.md](references/registry.md).
 
 <!-- /repo -->
 
