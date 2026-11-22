@@ -9,7 +9,8 @@ to central machinery, which classifies, reports, and encodes it.
 ## Taxonomy
 
 Every failure is exactly one of three classes, and the class decides everything downstream: status
-range, retry policy, and whether it reaches the error backend.
+range, retry policy, and whether it reaches the error backend. The one exception is a domain error
+that a web app server function lets escape ([reporting](#reporting)).
 
 | Class                    | What it is                                                           | Mechanism                                | Status | Reported |
 | ------------------------ | -------------------------------------------------------------------- | ---------------------------------------- | ------ | -------- |
@@ -17,12 +18,13 @@ range, retry policy, and whether it reaches the error backend.
 | **Invariant violation**  | A state only a bug can produce                                       | `invariant(value, 'message')` or `throw` | 500    | always   |
 | **Infrastructure fault** | A dependency failing, such as a database down or an upstream timeout | escapes the handler uncaught             | 5xx    | always   |
 
-A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. Anything
-else that escapes is an invariant violation or an infrastructure fault by definition, classified
-centrally, and handlers contain no try/catch for logging or reporting. The central interceptor still
-treats any 4xx as the caller's outcome and never reports it, whatever threw it
-([service layer](#service-layer)). A condition real input can trigger is never an invariant: it is
-either a declared domain error or ordinary control flow.
+A procedure handler throws only its typed `opts.errors.*` constructors, `invariant()`, or a bare
+`throw` for a state only a bug can produce. Anything else that escapes, other than a 4xx, is an
+invariant violation or an infrastructure fault by definition, classified centrally, and handlers
+contain no try/catch for logging or reporting. The central interceptor treats any 4xx as the
+caller's outcome and never reports it, whatever threw it ([service layer](#service-layer)). A
+condition real input can trigger is never an invariant: it is either a declared domain error or
+ordinary control flow.
 
 ## Error codes
 
@@ -86,10 +88,12 @@ itself before its run. Each layer reports through its own hook:
 - Service: the error interceptor for a request, and a capture call at any point that swallows an
   exception outside a request, such as a worker iteration or a queue callback.
 - Web app server functions: the global function middleware reports every throw a server function
-  lets escape other than a redirect, a not-found, or a `Response`, then rethrows it.
+  lets escape other than a redirect, a not-found, or a `Response`, then rethrows it. That includes a
+  service's domain error that a server function lets escape.
 - Web app client: the query and mutation cache error hooks report failures that are not service
-  errors, because the service already reported its own. A redirect, a not-found, and a network
-  failure are outcomes, and the hooks leave them unreported.
+  errors, because a service error is either a domain error the caller owns or a fault the service
+  already reported. A redirect, a not-found, and a network failure are outcomes, and the hooks leave
+  them unreported.
 - Web app render: the root route's error component reports render and loader errors nothing below
   caught.
 - Idle worker: a capture call at each swallow point, tagged with the site that caught it, plus the
@@ -124,11 +128,11 @@ reaches a route ([rate limits](./rate-limits.md)).
 ### Retry policy
 
 Two owners retry outbound traffic between the browser and the services. The query client owns retry
-for every call the browser makes through it: 4xx and defined service errors never retry, since
-retrying cannot change the outcome, and network failures and 5xx retry a fixed number of times.
-Override it per query only for a behavioural reason the default policy cannot express. A game route
-gate is the exception: it never retries, because it falls back to its last-known value on a network
-failure ([offline navigation](#offline-navigation)).
+for every query the browser makes through it: 4xx and defined service errors never retry, since
+retrying cannot change the outcome, and network failures and 5xx retry a fixed number of times. A
+mutation never retries. Override it per query only for a behavioural reason the default policy
+cannot express. A game route gate is the exception: it never retries, because it falls back to its
+last-known value on a network failure ([offline navigation](#offline-navigation)).
 
 Every call the web app's server makes to a service runs one bounded-attempt policy: a server
 function's direct client call, the RPC proxy forwarding a browser call, and the session lookups both
@@ -139,7 +143,7 @@ that same window, because a mutation cannot be resent. Attempts run with no paus
 because Fly's proxy holds the connection open while the machine starts. A last attempt answered 5xx
 delivers that response to the caller. A last attempt that fails in transport or hits its bound
 raises `SERVICE_UNAVAILABLE`, which the proxy answers as a 503, and the browser's query client
-retries that 503 in turn. The whole budget stays under the slow-request alarm
+retries that 503 when it answers a query. The whole budget stays under the slow-request alarm
 ([observability](../platform/observability.md#alarms)).
 
 ### Offline navigation

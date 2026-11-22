@@ -11,14 +11,14 @@ rejection moves.
 
 ## Replay
 
-The verifier holds each stream at the checkpoint it last verified for the life of the process, and a
-later batch replays forward from that checkpoint. A stream the verifier does not hold replays from
-its `Started` checkpoint under the sim version the head row pins. When its cache is full, the
-verifier drops the least recently used stream, and it drops any stream whose iteration fails. The
-next batch for a dropped stream replays from `Started`. The verifier dispatches the replay to the
-provider app for that sim version, so an old segment replays under the code and content that
-produced it. A checkpoint never verifies before the one before it, because each checkpoint's
-position on the seed chain depends on the one before. A drain of the queue starts on:
+The verifier caches each stream at the checkpoint it last verified, and a later batch replays
+forward from that checkpoint. A stream the verifier does not hold replays from its `Started`
+checkpoint under the sim version the head row pins. When its cache is full, the verifier drops the
+least recently used stream, and it drops any stream whose iteration fails. The next batch for a
+dropped stream replays from `Started`. The verifier dispatches the replay to the provider app for
+that sim version, so an old segment replays under the code and content that produced it. A
+checkpoint never verifies before the one before it, because each checkpoint's position on the seed
+chain depends on the one before. A drain of the queue starts on:
 
 - a wake from the activity service after an append
 - a progression read that finds unsettled work
@@ -107,12 +107,13 @@ sweep. Each retained version keeps its own provider app running.
 
 The sweep tombstones each `active` row past its retention deadline to `pruned`, and it never
 tombstones the current version. It never deletes a registry row, because admission tells an expired
-version from an unknown one by the row. A version whose row is `pruned` is expired: admission
-refuses a start under it, and the client must resync onto the current version, while an activity
-already pinned to it parks. A sim version with no row at all is unknown (`SIM_VERSION_UNKNOWN`): the
-activity parks until an operator or a later deploy registers it. The sweep refuses to tombstone a
-version that still has appended-but-unverified activities pinned to it, because pruning that version
-would park honest work.
+version from an unknown one by the row. A version that is past its retention deadline, or whose row
+is `pruned`, is expired: admission refuses a start under it, and the client must resync onto the
+current version, while the verifier parks an activity already pinned to it. A sim version with no
+row at all is unknown (`SIM_VERSION_UNKNOWN`): the activity parks until an operator or a later
+deploy registers it. The sweep refuses to tombstone a version past its deadline that still has
+appended-but-unverified activities pinned to it, and fails its run, so that version's provider app
+survives while that work is parked.
 
 Only after a row is tombstoned does the sweep destroy its provider app, so an `active` row never
 points at a destroyed app. The sweep finishes by unparking every activity whose stamped sim version

@@ -1,10 +1,10 @@
 # Database
 
-Vers runs on one Neon project. Its `main` branch holds the shared database, `vers`. Every service
-that stores state points at it, and every migration runs against it. One database carries every
-application table, plus the schema pg-boss migrates itself ([queues](./queues.md)). For the shapes
-of data it holds, see the [overview](../overview.md#data). The same branch holds the separate
-databases the error tracker and the analytics dashboard own. A second branch, `dev`, backs
+Vers runs on one Neon project. Its `main` branch holds the shared database, `vers`. Every domain
+service that stores state points at it, and every schema migration runs against it. One database
+carries every application table, plus the schema pg-boss migrates itself ([queues](./queues.md)).
+For the shapes of data it holds, see the [overview](../overview.md#data). The same branch holds the
+separate databases the error tracker and the analytics dashboard own. A second branch, `dev`, backs
 disposable per-worktree databases for agent MCP sessions
 ([dev database](../../runbooks/dev-database.md)). The compute scales to zero when idle, so the first
 connection after a suspend pays a resume.
@@ -49,8 +49,9 @@ disposable branch.
 The activity service creates the activity checkpoint tables' rows: a head row per activity, an
 append-only checkpoint table, and a chain row per scope. The replay service, which runs the
 verifier, updates the head rows and chain rows: it advances the verified cursors, records replay
-attempts and backoff, and parks or rejects an activity. Only the activity service appends
-checkpoints. The cursors those rows carry and the rules that advance them belong to
+attempts and backoff, and parks or rejects an activity. Only the activity service appends new
+checkpoints; an operator's archive restore writes archived ones back. The cursors those rows carry
+and the rules that advance them belong to
 [checkpoint streams](../game/game-simulation.md#checkpoint-streams). This doc owns these storage
 facts: the head row timestamps each cursor's last advance, a partial unique index permits one
 `active` row per avatar at a time, and the checkpoint table carries no inbound foreign keys.
@@ -64,7 +65,8 @@ from the rejected activities below. Each tier serves its own readers:
 - **Hot, in Postgres:** every checkpoint row of an activity inside the hot window. Replay,
   settlement, the latest-progress read and the unsettled-XP fold read these rows.
 - **Cold, in Cloudflare R2:** one gzipped JSON-lines object per archived activity, until the archive
-  retention ends. Only an operator investigation reads it, through a restore.
+  retention ends. Apart from the sweep's own read-back, only an operator investigation reads it,
+  through a restore.
 - **Kept forever, in Postgres:** the head row, the activity's tail checkpoint, and the avatar's
   items and grants. They hold the activity summary, the seed the next activity starts from, and the
   anti-cheat record.

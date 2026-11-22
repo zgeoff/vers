@@ -1,11 +1,11 @@
 # The seed chain
 
 Every activity an avatar runs at a node draws its randomness from one place: that node's seed chain.
-The chain is a single sequence of chain positions running forward. An activity draws the position at
-the front, plays out from it, and leaves the next position for the activity that follows. A position
-is spent once and never drawn twice, so a failed activity costs a position exactly as a completed
-one does. Playing a node again never re-rolls the last result; it plays the next stretch of the
-chain.
+The chain is a single sequence of chain positions running forward. An activity draws positions from
+the front, one per checkpoint, and leaves the next unspent position for the activity that follows. A
+position is spent once and never drawn twice, so a failed activity spends its positions exactly as a
+completed one does. Playing a node again never re-rolls the last result; it plays the next stretch
+of the chain.
 
 The chain carries two anchors. The appended anchor marks how far the player claims to have played.
 The verified anchor marks how far the server has proved. Play runs ahead of proof, and payment waits
