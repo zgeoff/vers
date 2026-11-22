@@ -5,17 +5,17 @@ logged in elsewhere", and Confirm ends the first device's session. The second de
 run. The next time the first device calls the server, the server refuses the call, and the first
 device shows the "Playing on another device" dialog or goes to the login page.
 
-Run this journey last, after the [signup journey](./feature-signup.md) in the same `bun verify up`.
-It signs the first device out. Put the account name you picked in the signup journey in place of
-`RUN`. Before you start:
+Run this journey after the [signup journey](./feature-signup.md), in the same `bun verify up`, and
+run it last, because it signs the first device out. Put the account name you picked in the signup
+journey in place of `RUN`. Before you start:
 
 - The first device is the browser that `browser` commands and `set-network` drive. `navigate-route`
   and `read-game-state` act on it unless you pass `--device second`.
 - `bun verify action second-device-sign-in` opens a second browser of its own, signs in, and clicks
-  Confirm itself. Its `data.tookOver` says whether the sign-in asked to take over.
-- A run ends by itself about 15 s after it starts. Run `second-device-sign-in` as soon as the
-  `db query` after the start prints a row. In the database, a run is a row of `activities`. To poll
-  the query, loop it in the shell and read `data.rowCount`, as in
+  Confirm itself. Its `data.tookOver` is true when the sign-in asked to take over.
+- In the database, a run is a row of `activities`. A run ends by itself about 15 s after it starts,
+  so run `second-device-sign-in` as soon as the `db query` after the start prints a row. To poll the
+  query, loop it in the shell and read `data.rowCount`, as in
   `for i in $(seq 8); do bun verify db query "<the query>" | tail -1 | jq .data.rowCount; sleep 2; done`.
 - When the query prints no row within 15 s, the run ended before it started. Start this journey
   again from `use --feature`, with the same account.
@@ -46,6 +46,6 @@ bun verify db query "select count(*) as sessions from sessions s join users u on
 ## End state
 
 - The `snapshot` shows the `Playing on another device` dialog, or `data.url` is on `/login`. On
-  `/login`, the URL's `redirect` parameter names a game page, such as `/explore`. A `redirect` that
-  starts with `/_serverFn` is a bug.
+  `/login`, the URL's `redirect` parameter points to a game page, such as `/explore`. A `redirect`
+  that starts with `/_serverFn` is a bug.
 - The last `db query` prints `sessions` of 1.

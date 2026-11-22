@@ -12,8 +12,8 @@ journey in place of `RUN`. Before you start:
 
 - Open a map node with `bun verify action navigate-route`. The map is a canvas, which
   `browser click` can't reach.
-- The journey plays its first run online, because that run loads the game's code into the page,
-  which the offline run needs.
+- Play the first run online, because it loads the game's code into the page, which the offline run
+  needs.
 - `bun verify action set-network --network offline` cuts the network for the page and its worker,
   and `--network online` brings it back.
 - In the database, a run is a row of `activities`. A run ends by itself about 15 s after it starts.
