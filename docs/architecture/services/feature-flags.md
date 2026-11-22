@@ -63,9 +63,11 @@ it. A flag flipped in `app-web` alone has no effect on a service that also gates
 1. Add an entry to `FLAGS` in `@vers/flags`, naming it for the state it turns on and giving it a
    `defaultValue` and a `description`.
 2. Guard the call sites the feature needs: a route's `beforeLoad`, a nav entry's `flag` field, an
-   oRPC procedure's `requireFlag` middleware, or a direct `resolveFlags()`/client read.
-3. Set the derived `FEATURE_<KEY>` environment variable to `"true"` on every process that serves the
-   feature.
+   oRPC procedure's `requireFlag` middleware, or a read of the resolved flags from router context
+   under `/_game`.
+3. For an off-by-default flag, set the derived `FEATURE_<KEY>` environment variable to `"true"` on
+   every process that serves the feature. An on-by-default flag needs no variable until you turn it
+   off.
 
 ## Removing a flag
 

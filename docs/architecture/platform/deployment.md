@@ -112,9 +112,11 @@ commit that is HEAD or descends from it is current. That happens when a later pu
 while this run is still between its legs. `deploy verify` passes such an app, and a deploy leg skips
 an app whose machines all carry that commit rather than roll it back. `deploy verify` also passes a
 fleet split between HEAD's image and a descendant's, as long as every started machine on HEAD's
-image passes its health checks. A machine on any other image fails the run. A deploy leg reads a
-split fleet as stale, because no single commit is stamped across its machines, and redeploys HEAD
-once the [stranded-machine sweep](#stranded-machine-sweep) has run.
+image passes its health checks. A machine on any other image fails the run. A deploy leg has no such
+exception: it reads any split fleet as stale, because no single commit is stamped across its
+machines, and runs the [stranded-machine sweep](#stranded-machine-sweep) before it deploys HEAD.
+While machines on both images are started, the sweep fails the leg and HEAD never deploys. Once only
+the kept group has started machines, the sweep destroys the rest and the leg deploys HEAD.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
 packages turbo reports affected from that base. The CLI checks the app's manifest trigger against

@@ -20,9 +20,9 @@ flowchart LR
 ```
 
 The `deploy` job of `infra-deploy` runs on each push to `main` that changes a watched file. Its
-drift check previews the commit before the push with `--expect-no-changes`. A change there is drift,
-or an earlier push whose plan the guard held. The job then previews the pushed commit as JSON, and
-the guard holds that plan when:
+drift check previews the commit before the push with `--expect-no-changes`. A change there is drift:
+a console edit, or an earlier push whose plan the guard held. The job then previews the pushed
+commit as JSON, and on a push the guard holds that plan when:
 
 - a step does anything but create, update, read or refresh a resource, because a delete or a replace
   can destroy what the resource holds;

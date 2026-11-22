@@ -50,8 +50,9 @@ would hold both awake around the clock, so delivery runs as one-shot drains inst
 
 Durability lives in Postgres, so a job between drains is late, never lost. A late job still runs,
 except that a deadline-bearing job past its deadline completes unsent
-([retries and failure](#retries-and-failure)). A queue-hosting service stops rather than suspends
-when idle, because pg-boss's maintenance loop does not recover from the clock jump a resumed machine
+([retries and failure](#retries-and-failure)), and a job whose stored payload no longer parses fails
+without reaching its handler, late or not. A queue-hosting service stops rather than suspends when
+idle, because pg-boss's maintenance loop does not recover from the clock jump a resumed machine
 sees. A stopped machine boots clean, so every wake re-runs the boot drain.
 
 ## Retries and failure
