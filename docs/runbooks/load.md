@@ -43,8 +43,8 @@ scenario measures that path.
 
 You need Docker with Compose, the repo's pinned Bun, and free host ports 3400, 3401, and 5733. A run
 with the default volumes took 40 minutes on a 16-thread machine, image builds included. Its stack
-caps its containers at 8 CPUs and about 10 GB of memory, and their measured peak stayed under 1.5
-GB, so run nothing else heavy beside it.
+caps its containers at 8 CPUs and about 10 GB of memory, so run nothing else heavy beside it. Their
+measured peak stayed under 1.5 GB.
 
 1. Run every scenario from the repo root:
 
@@ -52,9 +52,9 @@ GB, so run nothing else heavy beside it.
    bun run --cwd libs/testing/load-harness load
    ```
 
-   Expect a log line per scenario stage, ending with `report: <path>`. The command exits 1, after it
-   writes the report, when any container exited during a scenario, and logs one `failed:` line per
-   exit.
+   Expect a log line per scenario stage, ending with `report: <path>`. When any container exited
+   during a scenario, the command logs one `failed:` line per exit, and exits 1 after it writes the
+   report.
 
 2. Run one scenario, or other volumes, with the options that `--help` lists:
 
