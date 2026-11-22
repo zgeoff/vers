@@ -1,9 +1,9 @@
 # Dev database
 
-How a local checkout and an agent session reach a database to develop against: the shared `main`
-branch for migrations and scripts, a Neon branch for an isolated experiment, and a per-worktree
-clone on the Neon `dev` branch for MCP sessions. [Database](../architecture/platform/database.md)
-owns the topology and the connection rules.
+From a local checkout or an agent session, develop against the shared `main` branch for migrations
+and scripts, a Neon branch for an isolated experiment, or, in an MCP session, a per-worktree clone
+on the Neon `dev` branch. For the topology and the connection rules, see
+[Database](../architecture/platform/database.md).
 
 ## Local dev
 
