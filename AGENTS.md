@@ -2,8 +2,10 @@
 
 ## Required reading
 
-The rules a task needs are not repeated here. Load the skill for the work before starting it, and
-read the architecture doc for the subsystem in full before reasoning from its code.
+This file holds the rules that apply to all work in vers. The rules for one kind of work live in its
+skill and its architecture doc, and this file doesn't repeat them. Load the skill for the work
+before you start it, and read the architecture doc for the subsystem in full before substantial work
+there.
 
 | Skill                | Load before                                                                                               |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -13,9 +15,7 @@ read the architecture doc for the subsystem in full before reasoning from its co
 | `testing`            | designing, writing, or reviewing tests — with `project-testing`                                           |
 | `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing` |
 | `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines       |
-| `skill-writing`      | writing or editing a skill                                                                                |
-| `cold-read`          | checking a skill you wrote or changed, before its PR                                                      |
-| `deslop`             | editing the prose of a skill you wrote or changed, before its PR                                          |
+| `skill-writing`      | writing or editing a skill — with `cold-read` and `deslop`, as the steps below say                        |
 
 When you write or edit a skill:
 
@@ -27,7 +27,7 @@ When you write or edit a skill:
 
 `docs/architecture/overview.md` is the entry point to the system's docs. A subsystem's doc is the
 authoritative account of its invariants: grep locates code, and it does not teach a subsystem's
-rules. Read the doc for the area in full before substantial work there:
+rules. These areas have their own docs:
 
 - Activities, the seed chain, verification, replay or reconcile:
   `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
@@ -211,7 +211,7 @@ rollout or a secret, and `docs/architecture/platform/container-builds.md` before
 container build.
 
 - Database migrations run once per green push that no newer push supersedes, in their own `migrate`
-  job that is never cancelled, never per service.
+  job that is never cancelled, never per service, because every service shares one database.
 - Deploy jobs target the `production` GitHub environment. Repo-level secrets hold only what PR
   checks need.
 

@@ -13,25 +13,25 @@ metadata:
 
 ## Departures
 
-- Keep each game-design note in [`docs/game-design/`](../../../docs/game-design/) after the code it
-  describes lands. In [The docs/ tree](../docs-writing/references/docs-tree.md), docs-writing has
-  you delete a design once its code is built. vers keeps the note, because it records what the
-  player experiences, and an architecture doc never covers that.
+- Treat each game-design note in [`docs/game-design/`](../../../docs/game-design/) as a design that
+  stays. In [The docs/ tree](../docs-writing/references/docs-tree.md), docs-writing has you delete a
+  design once its code is built. Keep the note after its code lands, and write each new game-design
+  decision into it before the code exists. The note records what the player experiences, and no
+  architecture doc covers that.
 - Write no decision record, though [The docs/ tree](../docs-writing/references/docs-tree.md) gives
-  decision records a folder of their own. Put the reason for a decision in the description of the PR
-  that makes it, beside the change it explains. vers squash-merges with a blank commit body, so a
-  reason in a branch commit's body is lost.
+  decision records a folder of their own. Put why you chose a design, and the alternatives you
+  rejected, in the description of the PR that makes the change, and in no doc. vers squash-merges
+  with a blank commit body, so a reason in a branch commit's body is lost.
+- Keep the reason a fact holds in the doc that owns the fact: what the system does because of it, or
+  what fails without it. docs-writing asks for that reason, and an architecture doc may give it in a
+  `**Why:**` paragraph. Only the history of a choice goes in the PR.
 
 ## Game-design notes
 
 - Write what the player experiences in a game-design note, and how the code delivers it in an
   architecture doc. Never describe the player's experience in an architecture doc.
-- Write a game-design decision in the game-design note it changes, before the code exists, and keep
-  it there after.
 - When a game-design decision shaped code that exists, link its note once, in one sentence, from the
   architecture doc that covers that code.
-- Leave the reason for a decision out of every architecture doc, and the alternatives it rejected
-  out of every doc. Both go in the PR description.
 
 ## The game glossary
 

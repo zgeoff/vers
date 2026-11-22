@@ -76,8 +76,18 @@ Procedures an operator or an agent runs by hand.
   and deploy
 - [Dev database](./runbooks/dev-database.md) — local migrations, Neon branches for experiments, and
   the per-worktree clones MCP sessions use
+- [Database restore](./runbooks/database-restore.md) — move `main` back in time after an incident,
+  bring players back onto the restored state, and rehearse the restore
+- [Checkpoint archive](./runbooks/checkpoint-archive.md) — the daily sweep that archives verified
+  checkpoint rows to R2, how to turn it on, and how to restore one activity's rows
+- [Load runs](./runbooks/load.md) — run the activity and replay pipeline under load on a local
+  stack, and read its report
 - [Manual QA](./runbooks/qa.md) — QA accounts, the inbox, the browser tools, the debug hook, and the
   cold-path script for a manual pass against production
+- [QA cold path](./runbooks/qa-cold-path.md) — send every service machine cold before a manual QA
+  pass of a cold start
+- [QA debug hook](./runbooks/qa-debug-hook.md) — read the writer worker's state and set a QA
+  avatar's simulation speed from a game page's console
 - [Cut the network](./runbooks/qa-network-cut.md) — run the debug Chromium in a network namespace,
   and cut and restore its network for every page and worker at once
 - [Refusal captures](./runbooks/qa-refusal-captures.md) — what the debug hook saves when a refused
