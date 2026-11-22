@@ -78,9 +78,9 @@ reward may carry tradeable value ([game entropy](./game/game-entropy.md)). One i
 roll from any source into item content ([item generation](./game/item-generation.md)). The
 [glossary](./game/glossary.md) defines the terms the game docs share.
 
-The world map (`@vers/worldmap-*`) gives every avatar a distinct, unbounded graph generated on
-demand: the client derives its geometry locally from a deterministic hex lattice while the server
-seals each node's content behind a per-avatar secret, so map shape reveals nothing about reward
+The world map (`@vers/worldmap-*`) gives every avatar a distinct graph generated on demand: the
+client derives its geometry locally from a deterministic hex lattice while the server seals each
+node's content behind a per-avatar secret, so map shape reveals nothing about reward
 ([world map](./game/worldmap.md)). The client renders that graph with three.js through
 react-three-fiber ([game rendering](./game/game-rendering.md)).
 

@@ -16,11 +16,11 @@ contract, neither on each other.
 
 ## The packages
 
-| Package                    | Folder                         | Depended on by                    |
-| -------------------------- | ------------------------------ | --------------------------------- |
-| `@vers/contract-<service>` | `contracts/<service>`          | that service and the web app      |
-| `@vers/contract-base`      | `contracts/base`               | contract packages and the web app |
-| `@vers/service-runtime`    | `libs/service/service-runtime` | services only                     |
+| Package                    | Folder                         | Depended on by                                                      |
+| -------------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| `@vers/contract-<service>` | `contracts/<service>`          | that service, its callers, and any contract that reuses its schemas |
+| `@vers/contract-base`      | `contracts/base`               | contract packages and the web app                                   |
+| `@vers/service-runtime`    | `libs/service/service-runtime` | services only                                                       |
 
 A `@vers/contract-<service>` package holds one service's API declaration. `@vers/contract-base`
 holds the standard error set and the base route builders every contract shares. The service runtime
@@ -68,8 +68,9 @@ getCurrentUser: authedRoute
 set pre-declared, so every authenticated procedure shares one error vocabulary without re-declaring
 it. Procedure-specific errors (`NOT_FOUND`, `CONFLICT`, …) are declared in the contract that owns
 them. Entity schemas live in the contract package that owns the entity, not in a shared types
-package, even at some duplication cost: sharing entity schemas across contracts would couple
-services through the back door.
+package, even at some duplication cost: a shared types package would couple services through the
+back door. A contract that needs another service's schema imports it from the owning contract, as a
+dependency in its `package.json`.
 
 Schemas are zod schemas, so every contract depends on `zod`. It is referenced through the workspace
 catalog (`catalog:`) like every external dependency, and the catalog resolves it to zod 4.
