@@ -4,8 +4,8 @@ Each cross-cutting concern in vers runs on one dedicated provider, whether a hos
 self-hosted app, or an in-house module, fronted by a vendor-neutral interface: OpenTelemetry for
 telemetry, OpenFeature for flags, the Sentry ingest protocol for errors. Swapping the backend behind
 an interface changes configuration, never call sites. Single-purpose providers beat a bundled
-platform: the app owns the pipe, and the provider owns one job. The catalog below names the provider
-behind each concern and the doc that owns its wiring.
+platform: the app owns the pipe, and the provider owns one job. Each entry below gives a concern's
+provider and links the doc that covers its wiring.
 
 ## Platform
 
@@ -37,7 +37,7 @@ behind each concern and the doc that owns its wiring.
 - **Tinybird** — product analytics. Behavioural events land in managed ClickHouse and are served as
   SQL query endpoints.
 
-[Analytics](../analytics.md) explains how web and product analytics divide.
+For how web and product analytics divide, see [Analytics](../analytics.md).
 
 ## Feature flags
 
