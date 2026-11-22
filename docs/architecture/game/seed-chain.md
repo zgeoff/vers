@@ -2,10 +2,10 @@
 
 Every activity an avatar runs at a node draws its randomness from one place: that node's seed chain.
 The chain is a single sequence of chain positions running forward. An activity draws positions from
-the front, one per checkpoint, and leaves the next unspent position for the activity that follows. A
-position is spent once and never drawn twice, so a failed activity spends its positions exactly as a
-completed one does. Playing a node again never re-rolls the last result; it plays the next stretch
-of the chain.
+the front, one per checkpoint after its `Started` one, and leaves the next unspent position for the
+activity that follows. A position is spent once and never drawn twice, so a failed activity spends
+its positions exactly as a completed one does. Playing a node again never re-rolls the last result;
+it plays the next stretch of the chain.
 
 The chain carries two anchors. The appended anchor marks how far the player claims to have played.
 The verified anchor marks how far the server has proved. Play runs ahead of proof, and payment waits
@@ -89,7 +89,8 @@ The worker resends a kept start on its backoff
 drops the start's queued checkpoints too. The server appended nothing for a dropped start, so the
 device moves its node's cached anchor back to the anchor the start was minted from, and never
 forward. When the device drops several starts on one node, it moves the anchor back to the earliest
-start's anchor.
+start's anchor. A stale-anchor drop then sets the node's cached anchor to the anchor the refusal
+carries, which can sit ahead of the start's, because that anchor is the server's.
 
 ## The anchors
 
@@ -110,13 +111,13 @@ catches the anchor up from the forward-exited predecessor before it adjudicates.
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
 
-The chain also carries a replay priority and a replay flag. The flag is set while the chain holds an
-activity the verifier could take next: one that is not rejected, holds checkpoints the verifier has
-not proved, and follows only settled activities. An avatar's later activities wait behind that one,
-so their chains stay unflagged, and a claim reads only flagged chains, in priority order. The
-verifier picks between avatars by the priority of the chain that holds each avatar's next activity,
-highest first and older chain on a tie, and it never reorders one avatar's own chains against each
-other.
+The chain also carries a replay priority and a replay flag. The flag belongs on a chain while it
+holds an activity the verifier could take next: one that is not rejected, holds checkpoints the
+verifier has not proved, and follows only settled activities. An avatar's later activities wait
+behind that one, so their chains stay unflagged, and a claim reads only flagged chains, in priority
+order. The verifier picks between avatars by the priority of the chain that holds each avatar's next
+activity, highest first and older chain on a tie, and it never reorders one avatar's own chains
+against each other.
 
 An append, the verifier and the repair pass keep the flag. An append that writes a checkpoint sets
 it when its activity follows only settled activities. The verifier recomputes the flags on all of an

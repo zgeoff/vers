@@ -21,7 +21,7 @@ flowchart LR
   Q --> V["verifier<br>replays the segment under its pinned sim version"]
   V -->|match| S["settlement<br>moves the verified head, pays XP and items"]
   V -->|reproducible divergence| R["rejection<br>rewinds the appended anchor"]
-  V -->|cannot replay yet| P["parked or quarantined<br>waits for an operator"]
+  V -->|cannot replay yet| P["parked or quarantined<br>waits for an operator or a later deploy"]
 ```
 
 ## Activities and encounters
@@ -56,13 +56,13 @@ renders the writer's sim snapshot.
 
 ## Authoring an activity start
 
-The client authors every activity input, and the server verifies it. To start an activity, the
-client builds the activity start from the materials it cached at node reveal and drops into the
-simulation with no server round trip. The same local build covers a tap on a node, a continuation
-(the next activity at the same scope after a terminal checkpoint), and an offline gap caught up on
-reconnect. The client persists the start to the device's outbox before it installs it, so a crash
-between building and installing loses nothing. The outbox also queues the activity's checkpoints,
-and a durable submitter lands them whenever the server is next reachable.
+Apart from QA seeding, the client authors every activity input, and the server verifies it. To start
+an activity, the client builds the activity start from the materials it cached at node reveal and
+drops into the simulation with no server round trip. The same local build covers a tap on a node, a
+continuation (the next activity at the same scope after a terminal checkpoint), and an offline gap
+caught up on reconnect. The client persists the start to the device's outbox before it installs it,
+so a crash between building and installing loses nothing. The outbox also queues the activity's
+checkpoints, and a durable submitter lands them whenever the server is next reachable.
 
 The server admits a client-authored start by re-deriving every authoritative input from its own
 truth. It trusts none of the payload:
@@ -95,11 +95,13 @@ counting it could stamp XP that never settles into this snapshot and every later
 quantity a snapshot draws ahead of proof, because an item mints only for a proved segment.
 
 The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
-XP, and the server folds the same rule from its own rows, leaving out a held activity. A worker with
-no record of the previous activity, on a fresh device or after the server closed it, mints from the
-snapshot the server returns beside the avatar's latest activity. When the server holds no activity
-for the avatar, as after an account reset, a refused start clears any record of a previous activity
-that the outbox does not hold, so the next start folds from no previous activity.
+XP, and the server folds the same rule from its own rows, leaving out a held activity. When the two
+differ, such as after a hold, the server refuses the start as a build-snapshot mismatch
+([handing an activity start to the server](./seed-chain.md#handing-an-activity-start-to-the-server)).
+A worker with no record of the previous activity, on a fresh device or after the server closed it,
+mints from the snapshot the server returns beside the avatar's latest activity. When the server
+holds no activity for the avatar, as after an account reset, a refused start clears any record of a
+previous activity that the outbox does not hold, so the next start folds from no previous activity.
 
 ## What replay pins
 
