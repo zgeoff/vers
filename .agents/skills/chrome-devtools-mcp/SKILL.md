@@ -12,8 +12,8 @@ Connect the `chrome-devtools` MCP server, which [`.mcp.json`](../../../.mcp.json
 debug Chrome on the Windows host, so you can script, screenshot and inspect the app in the browser
 it ships to. Chrome listens for DevTools only on the Windows loopback, which WSL in NAT mode can't
 reach, so a Windows port proxy forwards port 9223 to Chrome's port 9222. Ask the user to run each
-PowerShell command, because it needs an administrator shell you can't open from WSL. The connection
-is done when `list_pages` answers with the debug browser's tabs. Your work with this skill ends when
+PowerShell command, because it needs an administrator shell you can't open from WSL. You're
+connected when `list_pages` returns the debug browser's tabs. Your work with this skill ends when
 you remove the proxy.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
@@ -39,8 +39,8 @@ remove the proxy.
   `curl -s http://127.0.0.1:9222/json/version` in place of the proxy check.
 - **A firewall rule for one subnet stops working after a reboot.** WSL takes a new NAT subnet from
   `172.16.0.0/12` at each boot. Keep the rule's remote address as that whole range.
-- **Chrome ignores `--remote-debugging-port` when it joins a running instance.** A separate
-  `--user-data-dir` makes it start a new instance. Close any debug browser left from an earlier run
+- **Chrome ignores `--remote-debugging-port` when it joins a running instance.** Pass a separate
+  `--user-data-dir` so it starts a new instance. Close any debug browser left from an earlier run
   before you launch one.
 - **The server needs no change after a reboot.** The command in `.mcp.json` reads the Windows host's
   address from the WSL default gateway each time the server starts.
