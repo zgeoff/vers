@@ -2,24 +2,24 @@
 
 Every random outcome in the game comes from a named entropy source, and each source's security
 properties decide whether the rewards it rolls may carry tradeable value. The client is untrusted
-and holds the entire simulation, so look-ahead stays possible and unprofitable; the
-[economy modes note](../../game-design/economy-modes.md) owns that threat model and the
+and holds the entire simulation, so look-ahead stays possible, and the design keeps it unprofitable;
+the [economy modes note](../../game-design/economy-modes.md) owns that threat model and the
 reward-content rules it produces. The [seed chain](./seed-chain.md) owns the chain data model, and
 [item generation](./item-generation.md) turns a committed entropy source into concrete item content.
 
 ## The seed chain
 
-A node's outcomes ride its seed chain, and the chain is client-computable, so offline simulation can
-walk any reachable future before the player commits to one. Steering the chain toward a favourable
-seed spends real attempts, because a failed attempt spends its positions exactly as a completed one
-does ([seed chain](./seed-chain.md)).
+A node's outcomes come from its seed chain, and the chain is client-computable, so offline
+simulation can walk any reachable future before the player commits to one. Steering the chain toward
+a favourable seed spends real attempts, because a failed attempt spends its positions exactly as a
+completed one does ([seed chain](./seed-chain.md)).
 
 The chain seeds only the trajectory: enemies, timing, survival, experience, and which kills commit
 rolled rewards. Rolled content resolves separately, at a coordinate fixed by the kill that commits
 it, and each roll carries equal expected value regardless of position. In reward terms, one
 continuation is worth no more than another, so steering the chain for a better tradeable reward
-returns less than the attempts it costs. Where near-free abandoned attempts can still churn the
-chain forward, a scan of the chain's own record detects it
+returns less than the attempts it costs. Near-free abandoned attempts can still churn the chain
+forward, and a scan of the chain's own record detects that churn
 ([reroll scanning](../../game-design/economy-modes.md#reroll-scanning)).
 
 ## Rolled rewards
@@ -83,10 +83,10 @@ a change of the stamped key version.
 ## Provenance
 
 Every checkpoint's hashed field set carries an `entropySource` tag naming which source rolled its
-outcomes. The tag names the custody a client claims the roll ran under, server or device. Replay
-recomputes each checkpoint hash with the server-custody tag, so a checkpoint tagged with device
-custody diverges whatever the avatar's mode. Settlement stamps an outcome's provenance from server
-records and the tag, never from a client claim.
+outcomes. The tag holds the custody, server or device, that a client claims the roll ran under.
+Replay recomputes each checkpoint hash with the server-custody tag, so a checkpoint tagged with
+device custody diverges whatever the avatar's mode. Settlement stamps an outcome's provenance from
+server records and the tag, never from a client claim.
 
 Tradeability keys on one security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
