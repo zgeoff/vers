@@ -20,10 +20,11 @@ metadata:
 
 ## Departures
 
-- Run each package's `bun test` suites with plain `bun test --randomize`, in one process. The
-  run-mode rule in [testing](../testing/SKILL.md) passes `--parallel=<N> --no-isolate` instead.
-  Turbo runs four packages at once in CI, and plain mode uses the least memory. The comment above
-  the Unit Tests step in [`pr.yml`](../../../.github/workflows/pr.yml) gives the times.
+- Run each package's `bun test` suites with plain `bun test --randomize`, in one process. Use it in
+  place of the `--parallel=<N> --no-isolate` from the run-mode rule in
+  [testing](../testing/SKILL.md). Turbo runs four packages at once in CI, and plain mode uses the
+  least memory. Find the times in the comment above the Unit Tests step in
+  [`pr.yml`](../../../.github/workflows/pr.yml).
 
 ## The run mode
 
@@ -80,7 +81,7 @@ a test.
 - Add an anonymous test, built with
   [`createAnonymousViewer`](../../../libs/testing/service-test-utils/src/bun/composites/create-anonymous-viewer.ts),
   to a procedure that reads the acting user. It sits beside the allowed and refused tests that
-  testing asks for. A procedure that only another service calls needs no anonymous test.
+  testing asks for. Skip the anonymous test for a procedure that only another service calls.
 - In the replay service, test the order in which the verifier settles one avatar's activities
   through
   [`runSettlementSequence`](../../../services/replay/src/test-utils/settlement-model/run-settlement-sequence.ts).

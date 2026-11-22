@@ -61,7 +61,7 @@ Run `sign.ts` from `libs/testing/service-test-utils/`, so its imports resolve. I
 
 `<procedure>` is the procedure's key in the service's contract, such as `getAvatar` in
 [`avatar-contract.ts`](../../../contracts/avatar/src/avatar-contract.ts). `GET /health` needs no
-token. Each service lists the env it reads in its `src/env-shape.ts`. Add any key beyond
+token. Find the env a service reads in its `src/env-shape.ts`, and add each key beyond
 `DATABASE_URL` to the boot command.
 
 To check trace continuity, send a `traceparent` header and compare its trace ID, the second field,
@@ -83,9 +83,9 @@ gets a plain body, such as `{"error":"issuer-not-permitted"}`.
   `SERVICE_TOKEN_ISSUERS`, in
   [`token-claims.ts`](../../../libs/service/service-auth/src/token-claims.ts), so any issuer
   verifies.
-- **The service answers 403 for an issuer it doesn't allow.** Each service lists the issuers it
-  takes in the `allowedIssuers` of its `create-<name>-service.ts`, and `createServiceToken` defaults
-  to `app-web`. Pass `issuer` to match, such as `service-activity` for `services/replay`.
+- **The service answers 403 for an issuer it doesn't allow.** Find the issuers a service takes in
+  the `allowedIssuers` of its `create-<name>-service.ts`. `createServiceToken` defaults to
+  `app-web`, so pass `issuer` to match, such as `service-activity` for `services/replay`.
 
 **Reply:** each call with its status, the headers you checked and the body, and whether each check
 passed.
