@@ -24,7 +24,7 @@ The mistakes that cost the most time:
   such as `bun verify http request`. Until `doctor` passes after `bun verify up` or
   `bun verify attach`, any command that touches the app fails with exit code 3.
 - **Editing the app's code while `up` runs it.** The next command that touches the app fails with
-  `doctor-required`. Run the commands in `error.hint`, then the journey again.
+  `doctor-required`. Run `bun verify up --restart` and `bun verify doctor`, then the journey again.
 - **Running `done` before you check the end state.** `done` checks only that one command of the
   journey succeeded.
 
@@ -83,7 +83,7 @@ Read a feature's file before you run its journey.
      `bun verify lint`. Then run the journey again.
    - In any other case, such as a `read-only` failure or a bug your change did not cause, skip
      `done` for this feature. List it in your reply with the end state you expected and the `data`
-     you got, or the refused write.
+     you got.
 6. Finish each edit to a file that matches the feature's `paths` before you run `done`. An edit
    after `done` makes the feature's verdict `stale`. A commit alone leaves the verdict as it was.
    Run `bun verify done` to record a verdict for the feature that `use --feature` set. Expect:
@@ -134,8 +134,7 @@ change on a launch target.
 
 Run `bun verify use --target <target>` to point every later command at a target. `use` saves the
 choice in this worktree's `.wringer/`, for every shell and session. `--target` on one command points
-that command alone. A command with neither runs on the registry's first target, so run `use` before
-`up` or `attach`.
+that command alone. A command with neither runs on the registry's first target, so run `use` first.
 
 <!-- repo: targets -->
 

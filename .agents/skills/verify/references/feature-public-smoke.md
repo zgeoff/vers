@@ -46,5 +46,5 @@ field of its own, so the service's answer sits under `data.json.json`.
   `data.json.json.data.reason` `missing-session`.
 
 When every line matches, run `bun verify done`. When a line differs, follow step 5 of
-[Check a change](../SKILL.md#check-a-change). On `prod`, where your edits never reach the app, take
-its last case: skip `done` and report what you saw.
+[Check a change](../SKILL.md#check-a-change). On `prod`, where your edits never reach the app,
+follow that step's last case: skip `done` and report what you saw.

@@ -18,9 +18,9 @@ you close the debug browser and, in NAT mode, remove the proxy. Hand back whethe
 connected, that the browser is closed and, in NAT mode, that the proxy is removed.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
-browser starts with `--remote-allow-origins=*`. Run the debug browser on its own profile, which
-holds only what earlier debug runs left, never the user's daily one. When your task no longer needs
-the browser, close it and, in NAT mode, ask the user to remove the proxy.
+browser starts with `--remote-allow-origins=*`. Run the debug browser on its own profile, never the
+user's daily one. That profile holds only what earlier debug runs left. When your task no longer
+needs the browser, close it and, in NAT mode, ask the user to remove the proxy.
 
 ## Key rules
 
