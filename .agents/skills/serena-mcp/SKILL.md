@@ -13,7 +13,7 @@ tools working again when they fail. The daemon answers symbol lookups (a file's 
 definition, its references) on `http://127.0.0.1:9121/mcp`, and [`.mcp.json`](../../../.mcp.json)
 registers that URL, so no session starts its own copy, which would take about 740 MB of memory. The
 daemon runs as a systemd user unit. The work is done when `get_symbols_overview` answers for a
-TypeScript file.
+TypeScript file. A symbol that only a worktree has stays missing after that, and Grep finds it.
 
 Ask the user before you enable lingering, which starts their systemd user manager at boot, or the
 unit: both keep a process running on their machine across logout and reboot.
@@ -24,7 +24,8 @@ unit: both keep a process running on their machine across logout and reboot.
   built-in tools, and restart after a config change.
 - [Commands](#commands): check the unit, read its log, restart it, probe the endpoint.
 - [Set up the daemon](#set-up-the-daemon): once per machine, with the user's agreement.
-- [Connect](#connect): ask the user to run `/mcp`, then check `get_symbols_overview`.
+- [Connect](#connect): in a running session, ask the user to run `/mcp`, then check
+  `get_symbols_overview`.
 
 ## Mistakes to avoid
 

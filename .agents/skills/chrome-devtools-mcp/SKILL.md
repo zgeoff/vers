@@ -12,8 +12,9 @@ Connect the `chrome-devtools` MCP server, which [`.mcp.json`](../../../.mcp.json
 debug Chrome on the Windows host, so you can script, screenshot and inspect the app in the browser
 it ships to. Chrome listens for DevTools only on the Windows loopback, which WSL in NAT mode can't
 reach, so a Windows port proxy forwards port 9223 to Chrome's port 9222. Ask the user to run each
-PowerShell block, because it needs an administrator shell you can't open from WSL. The work is done
-when `list_pages` answers with the debug browser's tabs.
+PowerShell command, because it needs an administrator shell you can't open from WSL. The connection
+is done when `list_pages` answers with the debug browser's tabs. Your work with this skill ends when
+you remove the proxy.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
 browser starts with `--remote-allow-origins=*`. Run the debug browser on its own empty profile,
@@ -27,14 +28,15 @@ remove the proxy.
 - [Add the proxy](#add-the-proxy): once per machine, a port proxy and a firewall rule.
 - [Launch the debug browser](#launch-the-debug-browser): a new Chrome on its own profile, then a
   check from WSL.
-- [Connect](#connect): ask the user to run `/mcp`, then check `list_pages`.
+- [Connect](#connect): in a running session, ask the user to run `/mcp`, then check `list_pages`.
 - [Remove the proxy](#remove-the-proxy): when the task no longer needs the browser.
 
 ## Mistakes to avoid
 
 - **Mirrored networking needs no proxy.** Run `wslinfo --networking-mode` first. When it prints
-  `mirrored`, WSL shares the Windows loopback: skip the proxy, and ask the user before you change
-  `--browser-url` in `.mcp.json` to `http://127.0.0.1:9222`.
+  `mirrored`, WSL shares the Windows loopback: skip the proxy and its removal, and ask the user
+  before you change `--browser-url` in `.mcp.json` to `http://127.0.0.1:9222`. Check the launch with
+  `curl -s http://127.0.0.1:9222/json/version` in place of the proxy check.
 - **A firewall rule for one subnet stops working after a reboot.** WSL takes a new NAT subnet from
   `172.16.0.0/12` at each boot. Keep the rule's remote address as that whole range.
 - **Chrome ignores `--remote-debugging-port` when it joins a running instance.** A separate

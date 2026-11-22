@@ -10,11 +10,11 @@ description:
 # Verifying a domain service at its socket
 
 Boot one domain service as a process, sign throwaway service tokens, and call its endpoints over
-HTTP. Do this only for code the in-process test client never runs. The service suites already boot
-the real service against Postgres and call it through
+HTTP. Do this only for code the in-process test client never runs. The service suites already build
+the real service inside the test process, against Postgres, and call it through
 [`buildRPCTestClient`](../../../libs/testing/test-utils/src/build-rpc-test-client.ts), with real
-token checks. For a change to a procedure's logic, its auth or its declared errors, the test suite
-is the check, so skip this.
+token checks. They never run `src/serve.ts` or listen on a port. For a change to a procedure's
+logic, its auth or its declared errors, the test suite is the check, so skip this.
 
 Check these at the socket:
 
@@ -24,8 +24,9 @@ Check these at the socket:
 - that the service boots and answers `GET /health` once its database accepts connections.
 
 Hand back each call you made, with its status, the headers you checked and the body, and say for
-each check whether it passed. Watch for a database the service can't reach, which crashes it, and
-for a token that expires between calls.
+each check whether it passed. You're done when each check has a verdict and you have cleaned up.
+Watch for a database the service can't reach, which crashes it, and for a token that expires between
+calls.
 
 ## Key rules
 
