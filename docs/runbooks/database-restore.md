@@ -1,7 +1,7 @@
 # Database restore
 
-This runbook moves `main` back in time after an incident, brings players back onto the restored
-state, and rehearses the restore on a disposable branch. Two sources hold the past:
+Move `main` back in time after an incident, bring players back onto the restored state, and rehearse
+the restore on a disposable branch. You can restore from two sources:
 
 - A backup branch. Before the migrate job in the main workflow applies a migration, it creates a
   Neon branch off `main` that holds every database on `main` as it stood just before. The backup
@@ -10,9 +10,9 @@ state, and rehearses the restore on a disposable branch. Two sources hold the pa
 - The project's point-in-time history, which reaches back seven days. `main` restores to any instant
   inside it.
 
-[Deployment](../architecture/platform/deployment.md#pipeline) owns the migrate job, and
-[database](../architecture/platform/database.md#recovery-window) owns the Neon topology, the
-recovery window, and the data-loss and recovery-time targets.
+Read about the migrate job in [Deployment](../architecture/platform/deployment.md#pipeline), and
+about the Neon topology, the recovery window, and the data-loss and recovery-time targets in
+[database](../architecture/platform/database.md#recovery-window).
 
 You need:
 
@@ -95,7 +95,7 @@ the repo has to drop the migrations that must not come back before the next run.
    after the restore.
 
 3. List the migrations that the restore drops, through the `execute_sql_prod` MCP tool. Use the
-   first migration that the backup notice names as `<first_migration>`:
+   first migration in the backup notice as `<first_migration>`:
 
    ```sql
    SELECT name FROM kysely_migration WHERE name >= '<first_migration>' ORDER BY name;
@@ -233,10 +233,9 @@ the repo has to drop the migrations that must not come back before the next run.
 
 ## Prepare a restore branch
 
-A restore branch holds the state that `main` takes on. Its sessions are revoked and its drill checks
-pass before `main` moves to that state in one restore, so `main` never serves a session that the
-restore brought back. These steps apply only to an incident restore or its drill, never in normal
-operation.
+A restore branch holds the state that `main` takes on. Revoke its sessions and pass its drill checks
+before you restore `main` from it in one step, so `main` never serves a session that the restore
+brought back. Follow these steps only for an incident restore or its drill.
 
 1. Create the branch from `<parent>`, which is a restore point such as `2026-10-21T06:45:00Z` or the
    name of a backup branch, set to expire within a day:
@@ -347,8 +346,8 @@ operation.
    The engine hash identifies the engine the replay service runs in-process, which replays its own
    work whatever the registry holds. Expect the last report line to read
    `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
-   line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
-   from no branch that fails a check.
+   line holds a broken check, and the lines under it hold the rows that break it. Never restore
+   `main` from a branch that fails a check.
 
    A branch from before a migration lacks the tables and columns that migration adds. When the drill
    reads one of them, it stops with `❌ the restore drill could not read the restored branch` and
@@ -397,9 +396,8 @@ branch, so it changes nothing that players use.
 2. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-drill-<yyyymmdd>` as the branch name.
 
-3. Record the drill report and the time from the branch create to the end of the drill checks. That
-   span covers the restore branch's creation and the checks, and you compare it against the
-   recovery-time target.
+3. Record the drill report and the time from the branch create to the end of the drill checks, and
+   compare that time against the recovery-time target.
 
 4. Delete the branch:
 
