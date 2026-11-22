@@ -1,14 +1,16 @@
 # The world map
 
 The world map is the graph of places an avatar travels to reach content. Every avatar walks a
-different map, unbounded in every direction and harder the farther from its origin it runs. The
-server stores no part of the map. The client computes the shape on the device, the server computes
-what each place holds, and the wire carries only the nodes a player has revealed.
+different map, which runs in every direction as far as a cell can be addressed
+([a node's identity](#a-nodes-identity)) and grows harder, up to a maximum, the farther from its
+origin it runs. The server stores no part of the map. The client computes the shape on the device,
+the server computes what each place holds, and the wire carries only the nodes a player has
+revealed.
 
 One split governs everything else. The map's shape is public and any client can compute it, while a
 node's contents are sealed and only the server can compute them. The two derive from different
 inputs, so knowing the whole shape tells a player nothing about where the reward sits. A public
-shape over sealed contents is what makes an infinite client-computed world safe to ship.
+shape over sealed contents is what makes a client-computed world of that size safe to ship.
 
 The [economy modes note](../../game-design/economy-modes.md#perfect-foresight) owns the threat model
 those rules answer, and [game entropy](./game-entropy.md) owns the entropy model. The
@@ -25,8 +27,8 @@ Every derived value sits on one of two planes, split by who can compute it.
 
 `userSeed` is the avatar's own seed. It differs per avatar, so every map differs, and it is not a
 secret: shipping it leaks nothing, because the shape it produces is worth nothing on its own. The
-client derives the whole infinite map from it in a worker shared across the tabs, so panning never
-waits on a round trip.
+client derives the whole map from it in a worker shared across the tabs, so panning never waits on a
+round trip.
 
 The scope secret seals the content plane. It is per-avatar, held server-side, and never shipped.
 Content folds in the same `userSeed` geometry uses, but without the secret that shared input derives
@@ -100,8 +102,9 @@ boundary.
 
 The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
 has verified, bounds travel: replay rejects an activity at a node that borders no node on the
-frontier ([replay verification](./replay-verification.md#replay)). Client and server derive edges
-from identical inputs, so they never disagree about which nodes connect.
+frontier, except at the origin, which always counts as reachable
+([replay verification](./replay-verification.md#replay)). Client and server derive edges from
+identical inputs, so they never disagree about which nodes connect.
 
 ### Playing past the frontier offline
 

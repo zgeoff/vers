@@ -87,12 +87,12 @@ one round trip.
 ## Building against unsettled XP
 
 A new activity's build snapshot counts the unsettled XP of every activity this avatar has ended that
-still waits for its verifier, so a player who finishes one activity and starts another builds
-against what they just earned. Identity is avatar-wide while chains are per scope, so a snapshot
-draws from activities on other chains too. A held activity does not count: a parked or quarantined
-activity reaches verification only when an operator intervenes, so counting it would stamp XP that
-never settles into this snapshot and every later one. XP is the only quantity a snapshot draws ahead
-of proof, because an item mints only for a proved segment.
+still waits for its verifier, except a held one, so a player who finishes one activity and starts
+another builds against what they just earned. Identity is avatar-wide while chains are per scope, so
+a snapshot draws from activities on other chains too. A held activity does not count: a parked or
+quarantined activity reaches verification only after an operator or a later deploy releases it, so
+counting it could stamp XP that never settles into this snapshot and every later one. XP is the only
+quantity a snapshot draws ahead of proof, because an item mints only for a proved segment.
 
 The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
 XP, and the server folds the same rule from its own rows. A worker with no record of the previous
@@ -155,10 +155,10 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
 A per-avatar simulated-time meter bounds offline progress, and the append path enforces it. The
 meter refills at wall-clock rate since it was last banked, never past its cap. Every accepted
 checkpoint batch debits its simulated-time delta: the last checkpoint's cumulative time minus the
-head row's accounted time, never a sum of per-checkpoint times. Elapsed wall clock is the only
-credit source, so no path earns simulated time faster than real time. Live play self-funds, because
-each flush banks the wall clock it consumed. An initial grant absorbs tick-boundary and network
-jitter. One exception: a QA avatar's meter refills at a multiple of wall clock
+head row's accounted time, never a sum of per-checkpoint times. Apart from an initial grant that
+absorbs tick-boundary and network jitter, elapsed wall clock is the only credit source, so no path
+earns simulated time faster than real time. Live play self-funds, because each flush banks the wall
+clock it consumed. One exception: a QA avatar's meter refills at a multiple of wall clock
 ([QA debug hook](../../runbooks/qa-debug-hook.md#set-the-speed)).
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
