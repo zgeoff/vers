@@ -7,6 +7,10 @@ the browser and log its worker traffic, and suspend the fleet. From the console 
 read the state of the [writer worker](../architecture/game/glossary.md) and run a QA avatar faster
 than real time through the [debug hook](#debug-hook).
 
+A pass runs in this order: count and seed a QA account ([accounts](#accounts)), start the browser
+and drive the flow ([browser](#browser)), read any verification mail ([inbox](#inbox)), capture
+worker traffic or read the debug hook where the flow needs it, then reset or delete the account.
+
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
 

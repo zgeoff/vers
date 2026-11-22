@@ -41,10 +41,10 @@ rules. These areas have their own docs:
 
 ## Repo structure
 
-vers is one Bun workspace. Every package takes the name `@vers/` plus its leaf folder name. A
-library or contract is consumed as TypeScript source through an `exports` map that points at
-`src/index.ts`, with no build step. Two names differ: `services/<name>` is `@vers/service-<name>`,
-and `contracts/<name>` is `@vers/contract-<name>`.
+vers is one Bun workspace. Every package takes the name `@vers/` plus its leaf folder name, except
+in two folders: `services/<name>` is `@vers/service-<name>`, and `contracts/<name>` is
+`@vers/contract-<name>`. A library or contract is consumed as TypeScript source through an `exports`
+map that points at `src/index.ts`, with no build step.
 
 ```text
 apps/              deployables: web (with its Playwright suite), umami, bugsink

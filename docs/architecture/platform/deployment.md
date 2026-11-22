@@ -107,11 +107,12 @@ Each deploy stamps the commit it ships into the app's machine env as `GIT_SHA`, 
 `/health` serves it as `commit`, so a reader without Fly access can tell which commit is live. The
 CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A deployed
 commit that is HEAD or descends from it is current, which happens when a later push's deploy lands
-while this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips it
-rather than roll it back. `deploy verify` also passes a fleet split between HEAD's image and a
-descendant's, as long as every started machine on HEAD's image passes its health checks, and a
-machine on any other image fails the run. A deploy leg reads a split fleet as stale, because no
-single commit is stamped across its machines, and redeploys HEAD.
+while this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips an
+app whose machines all carry that commit rather than roll it back. `deploy verify` also passes a
+fleet split between HEAD's image and a descendant's, as long as every started machine on HEAD's
+image passes its health checks, and a machine on any other image fails the run. A deploy leg reads a
+split fleet as stale, because no single commit is stamped across its machines, and redeploys HEAD
+over every machine, the descendant's included.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
 packages turbo reports affected from that base. The app's manifest trigger reads that set: a
@@ -135,10 +136,11 @@ secret names and digests only, so no secret value enters the run.
 
 ### Full-stack gate
 
-Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack:
-every service image, the web app's production image, postgres, and a capture-only email stub. It
-migrates the stack's own database and drives the e2e suite's stack journeys against it. The gate is
-fleet-wide by design: a combined state that fails its journeys ships for no app.
+Between build and cutover, the `stack-e2e` job boots every deployable image except the two
+[pinned upstream images](#pinned-upstream-images) in a compose stack: every service image, the web
+app's production image, postgres, and a capture-only email stub. It migrates the stack's own
+database and drives the e2e suite's stack journeys against it. The gate is fleet-wide by design: a
+combined state that fails its journeys ships for no app.
 
 ### Build and cutover
 
