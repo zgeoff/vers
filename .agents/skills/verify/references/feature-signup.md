@@ -1,9 +1,9 @@
 # signup
 
-A player signs up on `/signup` with an email address, types the 6-character code from the welcome
-email, fills in the onboarding form, and creates a first avatar. The game then opens on `/explore`.
-The `local` target sends each email to a stub, and `bun verify action read-email` prints the code of
-the last one in `data.code`.
+Sign up on `/signup` with an email address, type the 6-character code from the welcome email, fill
+in the onboarding form, and create a first avatar. The game then opens on `/explore`. The `local`
+target sends each email to a stub, and `bun verify action read-email` prints the code of the last
+one in `data.code`.
 
 `bun verify up` starts an empty database. After each `up` or `up --restart`, run this journey right
 after public-smoke, which needs a signed-out browser, and before every other journey: the other
@@ -54,8 +54,8 @@ bun verify browser snapshot
 bun verify db query "select u.username, a.name from users u join avatars a on a.user_id = u.id where u.email = 'wv-RUN@qa.versidle.com'"
 ```
 
-A `click` returns before the page moves, so its `data.url` can still name the old page. Each
-`# expect data.url` comment is about the `snapshot` after it. When that snapshot is on another page,
+A `click` returns before the page moves, so its `data.url` can still name the old page. Check each
+`# expect data.url` comment against the `snapshot` after it. When that snapshot is on another page,
 fix what it shows, and click again.
 
 ## End state
