@@ -46,7 +46,6 @@ comes up, see [Provisioning](./provisioning.md).
 - `op` authenticated (service account: `OP_SERVICE_ACCOUNT_TOKEN` in the environment).
 - `versidle.com` added to Cloudflare, with the registrar's nameservers pointed at the pair
   Cloudflare assigns. DNS records attach to a zone, so this comes first.
-- An R2 bucket named `vers-pulumi-state` for Pulumi state.
 - An Axiom API token (the `iac-token` field on the `vers-ci` vault's `axiom` item) with org-level
   create/read/update/delete on monitors, notifiers, dashboards, datasets, and API tokens, plus query
   permission on all datasets — Axiom rejects monitor writes unless the token can query every dataset
