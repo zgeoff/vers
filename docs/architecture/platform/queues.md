@@ -59,9 +59,10 @@ sees. A stopped machine boots clean, so every wake re-runs the boot drain.
 
 A handler throw fails the job, and pg-boss keeps it invisible until its retry delay elapses,
 doubling that delay per attempt when the definition asks for backoff. A job that exhausts its retry
-limit on a dead-lettering definition moves to a dead queue named after its own. Make each handler's
-outbound effects idempotent with the job id, so at-least-once delivery never doubles an effect; the
-email service sends the job id as its provider's idempotency key. pg-boss pools its own connections,
-so give a queue test database isolation rather than an injected transaction.
+limit moves to a dead queue named after its own when its queue has one, which holds while the
+definition dead-letters and after the definition drops it. Make each handler's outbound effects
+idempotent with the job id, so at-least-once delivery never doubles an effect; the email service
+sends the job id as its provider's idempotency key. pg-boss pools its own connections, so give a
+queue test database isolation rather than an injected transaction.
 
 The handler completes a deadline-bearing job unsent once its deadline has passed.
