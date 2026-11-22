@@ -2,7 +2,8 @@
 
 Self-hosted [Bugsink](https://www.bugsink.com) error tracker, deployed on Fly as `vers-bugsink`.
 Browser and server exceptions ingest here over the Sentry protocol: each vers app has its own
-Bugsink project, and that project's DSN is the only wiring an app carries.
+Bugsink project, and that project's DSN is the only wiring an app carries. Read this file before you
+deploy, upgrade or change the `vers-bugsink` app.
 
 This directory holds Fly config plus a thin image (`Dockerfile`) over the pinned stock
 `bugsink/bugsink`, adding boto3 and the R2 storage backend below. A merge to `main` touching this
@@ -22,7 +23,7 @@ secret). No app runs a Postgres server of its own, and the machine keeps no volu
 uploaded files (sourcemap artifact bundles) in the database by default. Here they go to the
 Cloudflare R2 bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs
 and their read traffic off Neon. Existing files move across with
-`bugsink-manage migrate_to_current_objectstorage`.
+`bugsink-manage migrate_to_current_objectstorage`, run on the machine over `fly ssh console`.
 
 ## Secrets
 

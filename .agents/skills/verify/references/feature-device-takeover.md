@@ -15,8 +15,8 @@ journey in place of `RUN`. Before you start:
   Confirm itself. Its `data.tookOver` is true when the sign-in asked to take over.
 - In the database, a run is a row of `activities`. A run ends by itself about 15 s after it starts,
   so run `second-device-sign-in` as soon as the `db query` after the start prints a row. To poll the
-  query, loop it in the shell and read `data.rowCount`, as in
-  `for i in $(seq 8); do bun verify db query "<the query>" | tail -1 | jq .data.rowCount; sleep 2; done`.
+  query, loop it in the shell until `data.rowCount` is above 0, as in
+  `for i in $(seq 8); do bun verify db query "<the query>" | tail -1 | jq -e '.data.rowCount > 0' && break; sleep 2; done`.
 - When the query prints no row within 15 s, the run ended before it started. Start this journey
   again from `use --feature`, with the same account.
 - When `read-game-state --device second` shows no `liveRun`, the run ended before the sign-in, and
