@@ -83,7 +83,7 @@ Read a feature's file before you run its journey.
      `bun verify lint`. Then run the journey again.
    - In any other case, such as a `read-only` failure or a bug your change did not cause, skip
      `done` for this feature. List it in your reply with the end state you expected and the `data`
-     you got, or the write a `read-only` target refused.
+     you got, or the refused write.
 6. Finish each edit to a file that matches the feature's `paths` before you run `done`. An edit
    after `done` makes the feature's verdict `stale`. A commit alone leaves the verdict as it was.
    Run `bun verify done` to record a verdict for the feature that `use --feature` set. Expect:
