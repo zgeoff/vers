@@ -29,8 +29,8 @@ You need:
 
 A failed run usually needs no restore. Kysely applies the pending migrations of a run in one
 Postgres transaction, so a failure rolls back every migration of that run, including the ones that
-ran before the failing one. The step does not take that rollback on trust: after a failure, it reads
-the pending migrations again and logs the outcome it finds:
+ran before the failing one. After a failure, the migrate step reads the pending migrations again and
+logs one of these outcomes:
 
 - `none persisted and no restore is needed`: the rollback held. Fix the migration and push again.
   The next run takes a fresh backup.
@@ -218,10 +218,10 @@ the repo has to drop the migrations that must not come back before the next run.
    When step 3 listed no migration, or the revert PR drops every listed one, expect the migrate step
    to log `no pending migrations; no backup taken`. When some listed migrations stay, expect a new
    `Database backup` notice that names them, then `✅ applied <migration_names>`. Unless the revert
-   PR changed the replay service, expect its deploy leg to log
+   PR changed the replay service, expect the replay service's deploy leg to log
    `vers-service-replay is current at <sha> — skipping`. That leg registers the running sim version
-   again, because the restore dropped every registry row written after the restore point. Until it
-   does, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.
+   again, because the restore dropped every registry row written after the restore point. Until that
+   leg runs, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.
 
 8. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
 
@@ -389,9 +389,9 @@ position, so a position the restored chain draws again mints at most one item.
 
 ## Rehearse a point-in-time restore
 
-The drill prepares and checks a restore branch the way a point-in-time restore does, on a disposable
-branch. It skips stopping the workflow, the migration list and the restore of `main`, so it changes
-nothing that players use.
+Prepare and check a disposable restore branch the way a point-in-time restore does. Skip stopping
+the workflow, listing the migrations and restoring `main`, so the drill changes nothing that players
+use.
 
 1. Pick a restore point inside the last seven days.
 

@@ -108,11 +108,11 @@ which holds every app's cutover.
 Each deploy stamps the commit it ships into the app's machine env as `GIT_SHA`, and the web app's
 `/health` serves it as `commit`, so a reader without Fly access can tell which commit is live. The
 CLI compares the commit stamped on the app's machines with HEAD before it reads any diff. A deployed
-commit that is HEAD or descends from it is current, which happens when a later push's deploy lands
-while this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips an
-app whose machines all carry that commit rather than roll it back. `deploy verify` also passes a
+commit that is HEAD or descends from it is current. That happens when a later push's deploy lands
+while this run is still between its legs. `deploy verify` passes such an app, and a deploy leg skips
+an app whose machines all carry that commit rather than roll it back. `deploy verify` also passes a
 fleet split between HEAD's image and a descendant's, as long as every started machine on HEAD's
-image passes its health checks, and a machine on any other image fails the run. A deploy leg reads a
+image passes its health checks. A machine on any other image fails the run. A deploy leg reads a
 split fleet as stale, because no single commit is stamped across its machines, and redeploys HEAD
 once the [stranded-machine sweep](#stranded-machine-sweep) has run.
 
@@ -142,8 +142,7 @@ Between build and cutover, the `stack-e2e` job boots every deployable image exce
 [pinned upstream images](#pinned-upstream-images) in a compose stack: every service image, the web
 app's production image, postgres, a capture-only email stub, and an analytics stub behind the web
 app's proxy. It migrates the stack's own database and drives the e2e suite's stack journeys against
-it. The gate holds every app, the pinned upstream apps included: when the combined stack fails a
-journey, no app ships.
+it. When the combined stack fails a journey, no app ships, the pinned upstream apps included.
 
 ### Build and cutover
 
@@ -173,9 +172,10 @@ Deploy jobs queue rather than cancel. The checks, e2e, builds, full-stack gate a
 commit and never cancel, so every push to `main` is tested in full. A run whose checks pass after a
 newer push has landed skips its deploy stages, so an older run never migrates or deploys after a
 newer one, and the newest run ships every change. Only a [rollback](#release-record-and-rollback)
-puts an older commit back on an app. Migrate and each app's deploy have one fixed group that never
-cancels, so they run one job at a time, and every waiting job keeps its turn. A rollout can fail on
-a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
+puts an older commit back on an app. Migrate and each app's deploy each have one fixed group that
+never cancels, so each group runs one job at a time, and every waiting job keeps its turn. When a
+rollout fails on a transient host-capacity refusal, Fly rolls back cleanly, so re-run the failed
+job.
 
 ### Release record and rollback
 
@@ -191,8 +191,8 @@ with no recorded release yet is left serving the broken release, reported in the
 ### Fleet verification
 
 The `verify-fleet` job runs `deploy verify` on every green push that no newer run replaced, even
-when every deploy leg skipped, and asserts every manifest app is online and current, catching an app
-at zero machines or a fleet behind HEAD. A rolled-back app reads stale there by design. It also
+when every deploy leg skipped. It asserts every manifest app is online and current, so it catches an
+app at zero machines or a fleet behind HEAD. A rolled-back app reads stale there by design. It also
 checks each private entry's addresses ([networking](#networking)), each declared scheduled machine
 against the app's image, and each shared secret's digests across its declaring apps.
 

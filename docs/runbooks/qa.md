@@ -7,11 +7,11 @@ log its worker traffic, and suspend the fleet. From the console of a game page, 
 of the [writer worker](../architecture/game/glossary.md) and run a QA avatar faster than real time
 through the [debug hook](#debug-hook).
 
-Run a pass in this order: count and seed a QA account ([accounts](#accounts)), start the browser
-([browser](#browser)), start `qa:capture` when you need worker traffic, because it logs only what
-happens while it runs, then drive the flow. Read any verification mail ([inbox](#inbox)) and the
-debug hook where the flow needs them, then reset or delete the account. Seed or reset an account on
-production only when the repo owner asks for the pass.
+Run a pass in this order. Count and seed a QA account ([accounts](#accounts)), then start the
+browser ([browser](#browser)). When you need worker traffic, start `qa:capture` before you drive the
+flow, because it logs only what happens while it runs. Drive the flow, and read any verification
+mail ([inbox](#inbox)) and the debug hook where the flow needs them. Then reset or delete the
+account. Seed or reset an account on production only when the repo owner asks for the pass.
 
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
