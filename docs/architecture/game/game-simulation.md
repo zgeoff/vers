@@ -130,8 +130,8 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
   loses, or repurposes a member, and the set includes the previous checkpoint's hash. The chain
   position sits inside the hash, so replay reproduces every reward coordinate keyed on it, and the
   entropy-source tag makes a checkpoint's provenance derivable from the stream alone.
-- The hash proves nothing about rewards. The stream carries rewards outside the hashed set, and only
-  a replay validates a reward.
+- The hash links checkpoints and proves nothing about rewards. The stream carries rewards outside
+  the hashed set, so only a replay validates a reward.
 - An append is a guarded update of the head row. The append advances the appended head only if the
   head still holds its expected value. A stale head fails the append with a retryable conflict
   carrying the current head, and the client resends the tail. A resend deduplicates on the

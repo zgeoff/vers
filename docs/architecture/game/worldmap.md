@@ -38,8 +38,8 @@ too little to derive its unrevealed neighbours.
 ## Generating the shape
 
 The generator works one chunk at a time from a stateless hash, so a region around any coordinate
-computes without touching the rest. A chunk coordinate addresses a fixed square of hex cells. A cell
-coordinate addresses one hex cell and is a node's identity.
+computes without touching the rest. A chunk coordinate addresses a fixed square of hex cells and is
+the unit the generator works in. A cell coordinate addresses one hex cell and is a node's identity.
 
 - Cell seeding. A stateless integer hash over the avatar's seed and a cell's coordinate seeds every
   draw, so a cell's values compute straight from its coordinates without generating a neighbour
