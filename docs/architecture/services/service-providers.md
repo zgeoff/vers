@@ -14,7 +14,8 @@ behind each concern and the doc that owns its wiring.
   [deployment](../platform/deployment.md).
 - **Neon** — Postgres. The shared Neon database scales to zero and holds every service's tables, the
   identity data and the activity checkpoint tables alike ([database](../platform/database.md)).
-- **Cloudflare** — DNS, plus the R2 bucket backing the Pulumi state.
+- **Cloudflare** — DNS, plus the R2 bucket backing the Pulumi state
+  ([infra](../../runbooks/infra.md)).
 
 ## Communication
 
