@@ -91,8 +91,8 @@ const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
 ```
 
 Every handler is typechecked against its declaration: inputs, outputs, and error payloads. The oRPC
-router mounts on Elysia at `/rpc` and serves no other path. That path speaks the oRPC RPC protocol
-every typed client uses.
+router mounts on Elysia at `/rpc` and serves no other path. Every typed client calls that path over
+the oRPC RPC protocol.
 
 The service runtime wraps the handlers. One `createService(...)` call composes its Elysia plugins:
 env validation, service-to-service (s2s) token verification ahead of the handler, health checks,
@@ -109,7 +109,7 @@ stop.
 
 ## The client side
 
-Clients are typed by a single annotation against the contract:
+Type each client with a single annotation against the contract:
 
 ```ts
 export const userClient: ContractRouterClient<typeof userContract, ServiceLinkContext> =
@@ -119,9 +119,9 @@ export const userClient: ContractRouterClient<typeof userContract, ServiceLinkCo
 In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a short-lived s2s
 token for the target service and attaches it ([auth](./auth.md#service-to-service-tokens)). Every
 attempt the server link makes is bounded, and a GET or HEAD procedure is resent under the
-[retry policy](./error-handling.md#retry-policy). In the browser it routes through the app's
-same-origin `/api/rpc/$service` proxy, so the session cookie rides along, since services are not
-reachable outside the private mesh ([overview](../overview.md)).
+[retry policy](./error-handling.md#retry-policy). Services are not reachable outside the private
+mesh ([overview](../overview.md)), so in the browser the link routes through the app's same-origin
+`/api/rpc/$service` proxy, and the session cookie rides along.
 
 The proxy mints its token for whichever browser calls it, and a service trusts that token for every
 procedure it exposes. The proxy therefore forwards only the services that browser code calls, and
@@ -136,9 +136,9 @@ mints.
 
 Authentication fails in two classes, kept deliberately separate, and only one is a contract error.
 
-- **A bad session is a contract error.** The session is missing or expired. That is the caller's own
-  problem, which the caller can act on by signing in again. It is `UNAUTHORIZED` with a typed
-  `data.reason` of `missing-session` or `expired-session`, declared once in `@vers/contract-base`.
+- **A bad session is a contract error.** The session is missing or expired, and the caller can fix
+  that by signing in again. It is `UNAUTHORIZED` with a typed `data.reason` of `missing-session` or
+  `expired-session`, declared once in `@vers/contract-base`.
 - **A bad s2s token is not.** Services accept only a short-lived token from a registered issuer,
   naming the acting user when the call has one ([auth](./auth.md#service-to-service-tokens)). A
   token that fails verification means something is misconfigured or someone is probing, never
@@ -165,11 +165,10 @@ interface ServiceContext {
 service that minted the token. `logger` and `traceID` are the runtime's per-request infrastructure
 ([error handling](./error-handling.md#trace-context)).
 
-When a session expires, the edge itself replies with the contract-shaped
-`UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all. Services themselves
-only ever throw `missing-session`, as defense in depth when a caller reaches an authed procedure
-without an acting user. The shared enum is caller-facing vocabulary, not an inventory of who throws
-what.
+When a session expires, the edge replies with the contract-shaped
+`UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all. Services throw only
+`missing-session`, as defense in depth when a caller reaches an authed procedure without an acting
+user. The shared enum is caller-facing vocabulary, not an inventory of who throws what.
 
 `FORBIDDEN` is declared with an empty `data` payload: no permission model exists, and any fields a
 permission model needs arrive additively.

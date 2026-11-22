@@ -4,24 +4,26 @@ The checkpoint retention workflow runs the archive sweep once a day against the 
 The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to the
 `vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it. The
 same purge removes a 90-day-old archive whose activity row is gone, such as one of a deleted avatar.
-[Database](../architecture/platform/database.md#checkpoint-retention) owns the tiers and the rules
-that move rows between them. This runbook turns the sweep on and restores one activity's rows.
+For the tiers and the rules that move rows between them, read
+[Database](../architecture/platform/database.md#checkpoint-retention). Turn on the sweep and restore
+one activity's rows with the steps below.
 
 ## Enable the sweep
 
 The workflow stops before any read while one of the four `CHECKPOINT_ARCHIVE_*` secrets is unset,
 and logs a warning with each missing key. Report-only is the default: with every secret set, the
 sweep logs what it would archive and purge, and writes and deletes nothing, until the
-`CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. The repository owner reads a report-only
-run and approves the first writing run, because that run moves production rows out of the database.
-Nobody sets the variable before that approval.
+`CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. Have the repository owner read a
+report-only run and approve the first writing run, because that run moves production rows out of the
+database. Don't set the variable before that approval.
 
 The archive has its own bucket and token, and never reuses the Bugsink R2 key, so a leak of either
 key reaches only its own bucket. The bucket is `vers-checkpoint-archive`. Its R2 API token is scoped
-to that bucket only, with object read and write, and the `r2-checkpoint-archive` item in the `vers`
-1Password vault holds it. The four `CHECKPOINT_ARCHIVE_*` secrets in the `production` environment of
-zgeoff/vers carry the endpoint (`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the
-bucket name and the token's key pair.
+to that bucket only, with object read and write, and is stored in the `r2-checkpoint-archive` item
+in the `vers` 1Password vault. The four `CHECKPOINT_ARCHIVE_*` secrets in the `production`
+environment of zgeoff/vers carry the endpoint
+(`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the bucket name and the token's key
+pair.
 
 1. Run the workflow once in report mode:
 
