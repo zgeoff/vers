@@ -26,8 +26,10 @@ commit as JSON, and on a push the guard holds that plan when:
 
 - a step does anything but create, update, read or refresh a resource, because a delete or a replace
   can destroy what the resource holds;
-- the drift check found a change;
-- the run is a dispatch whose commit is no longer main's tip when the guard reads the plan.
+- the drift check found a change.
+
+On a dispatch, the guard holds the plan only when the run's commit is no longer main's tip when the
+guard reads the plan.
 
 When the guard passes the plan, the job runs `pulumi up --refresh`. A last preview with
 `--expect-no-changes` fails the job when the stack still differs from the commit.
