@@ -112,10 +112,11 @@ the run's summary lists each reason under `Apply plan (prod)`.
    gh workflow run infra-deploy.yml --ref main
    ```
 
-   The dispatched run applies the plan of main's tip whatever the guard finds. That plan reverts
-   each console change that the program lacks. When `main` moves while the run waits, the run holds
-   with `this run's commit <commit> is not main's tip <tip>`; dispatch the workflow again. Expect:
-   the run's `Apply plan (prod)` holds `the job applies it because a person dispatched the run`, and
+   The dispatched run applies the plan of main's tip whatever the guard finds about deletes,
+   replaces and drift. That plan reverts each console change that the program lacks. When `main`
+   moves while the run waits, the run holds with
+   `this run's commit <commit> is not main's tip <tip>`; dispatch the workflow again. Expect: the
+   run's `Apply plan (prod)` holds `the job applies it because a person dispatched the run`, and
    `Drift after the apply (prod)` ends with every resource unchanged.
 
 To drop a held change instead, merge a pull request that reverts it, then do step 3. The revert's

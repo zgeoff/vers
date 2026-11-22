@@ -1,7 +1,7 @@
 # Provisioning
 
-The steps that stand the platform up from nothing and tear it down: the Neon project, the Fly fleet
-and its secrets, and the roles agent sessions query through.
+An operator who stands the platform up from nothing, or tears it down, follows these steps in order:
+the Neon project, the Fly fleet and its secrets, and the roles agent sessions query through.
 [Deployment](../architecture/platform/deployment.md) owns what a rollout does once the fleet exists;
 [database](../architecture/platform/database.md) owns the Neon topology and connection rules.
 

@@ -186,7 +186,7 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect no rows when no migration ran since the restore point. The restore drops each listed
    migration, and the main workflow applies it again when step 7 re-runs it. For each listed
    migration that must not come back, open a revert PR as step 4 of [Restore main](#restore-main)
-   describes, and merge it in place of the re-run.
+   describes. Step 7 then merges it in place of the re-run.
 
 4. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-<yyyymmdd>` as the branch name.
@@ -205,7 +205,8 @@ the repo has to drop the migrations that must not come back before the next run.
 
 6. Send the [player notice](#tell-players-what-survived).
 
-7. Enable the main workflow, then re-run its latest run on `main`:
+7. Enable the main workflow. With a revert PR from step 3, merge it, and its push to `main` starts
+   the run. With none, re-run the workflow's latest run on `main`:
 
    ```bash
    gh workflow enable main.yml -R zgeoff/vers
@@ -397,8 +398,8 @@ branch, so it changes nothing that players use.
    and `restore-drill-<yyyymmdd>` as the branch name.
 
 3. Record the drill report and the time from the branch create to the end of the drill checks. That
-   span covers the branch restore and the checks, and you compare it against the recovery-time
-   target.
+   span covers the restore branch's creation and the checks, and you compare it against the
+   recovery-time target.
 
 4. Delete the branch:
 
