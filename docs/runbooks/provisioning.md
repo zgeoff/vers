@@ -21,15 +21,16 @@ After provisioning, write the string into `libs/data/db/.env.local`. Then run `d
 `db:seed` with `--env-file=.env.local` to bring the schema and dev seed data up from zero. Update
 the `database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program
 pushes it to the `DATABASE_URL` Actions secret) to the new string. On a build from nothing, the Fly
-fleet steps below set each app's secret from it. When you replace the string on a running fleet,
-also update each Fly app's secret.
+fleet steps below set it as `DATABASE_URL` on each app that reads the `vers` database. When you
+replace the string on a running fleet, also update the secret on each of those apps.
 
 ## Fly fleet
 
 Before you start, authenticate `flyctl` to the `vers` org, and set the Neon `DATABASE_URL` (the
 direct host — [database](../architecture/platform/database.md)) and the domain in `$DOMAIN`. Export
 `EMAIL_FROM`, `RESEND_API_KEY`, `TINYBIRD_URL`, and `TINYBIRD_INGEST_TOKEN` from the `vers` vault
-before step 4: an unset variable sets an empty secret, which `flyctl` accepts.
+before step 4. Its script stops at the first unset variable, because `flyctl` would accept an empty
+secret.
 
 1. Create the apps:
 
