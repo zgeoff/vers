@@ -2,9 +2,9 @@
 
 Vers runs on one Neon project. Its `main` branch holds the shared database, `vers`. Every service
 that stores state points at it, and every migration runs against it. One database carries every
-application table, plus the schema pg-boss migrates itself ([queues](./queues.md)); the
-[overview](../overview.md#data) names the shapes of data it holds. The same branch holds the
-separate databases the error tracker and the analytics dashboard own. A second branch, `dev`, backs
+application table, plus the schema pg-boss migrates itself ([queues](./queues.md)). For the shapes
+of data it holds, see the [overview](../overview.md#data). The same branch holds the separate
+databases the error tracker and the analytics dashboard own. A second branch, `dev`, backs
 disposable per-worktree databases for agent MCP sessions
 ([dev database](../../runbooks/dev-database.md)). The compute scales to zero when idle, so the first
 connection after a suspend pays a resume.
@@ -31,7 +31,7 @@ loses what the server took: settled XP, minted items, first clears, chains revea
 created. The operator also revokes every session as part of the restore, which signs every device
 out and discards the work still waiting in each device's outbox.
 
-An incident restore keeps two targets:
+An incident restore has these targets:
 
 - At most fifteen minutes of margin. Neon restores to any instant in the window, so the operator
   sets the restore point no more than fifteen minutes before the first bad write.
@@ -51,8 +51,8 @@ append-only checkpoint table, and a chain row per scope. The replay service, whi
 verifier, updates the head rows and chain rows: it advances the verified cursors, records replay
 attempts and backoff, and parks or rejects an activity. Only the activity service appends
 checkpoints. The cursors those rows carry and the rules that advance them belong to
-[checkpoint streams](../game/game-simulation.md#checkpoint-streams). The storage facts this doc
-owns: the head row timestamps each cursor's last advance, a partial unique index permits one
+[checkpoint streams](../game/game-simulation.md#checkpoint-streams). This doc owns these storage
+facts: the head row timestamps each cursor's last advance, a partial unique index permits one
 `active` row per avatar at a time, and the checkpoint table carries no inbound foreign keys.
 
 ## Checkpoint retention
@@ -79,9 +79,9 @@ activity's seed from it. A stamped head row drops out of the sweep's candidates,
 the activity. The sweep takes the oldest candidates first and caps each run, so a backlog drains
 over several days.
 
-The checkpoint table keeps growing in two ways. The tail row of every settled activity stays for
-good, beside its head row. A rejected activity never leaves the hot tier, so its whole stream stays,
-and that part grows at the rate the verifier rejects activities.
+The checkpoint table still grows. The tail row of every settled activity stays for good, beside its
+head row. A rejected activity never leaves the hot tier, so its whole stream stays, and that part
+grows at the rate the verifier rejects activities.
 
 The sweep purges an object ninety days after it wrote it, when the activity's head row carries an
 archive stamp at least as old. An avatar's deletion removes its head rows, so the sweep also purges
@@ -97,10 +97,10 @@ the stamp, so the next sweep archives the activity again.
 
 Each Neon endpoint has a direct host and a pooled host (PgBouncer in transaction mode). Every
 postgres.js consumer uses the direct host, because the pooled host breaks prepared statements unless
-the driver disables them. One exception: the error tracker and the analytics dashboard run on the
-pooled host. Every connection string pins `sslmode=verify-full`, and Neon's certificates chain to
-public CAs, so no extra CA bundle is needed. Drop the `channel_binding` parameter neonctl appends,
-which postgres.js does not understand.
+the driver disables them. Only the error tracker and the analytics dashboard run on the pooled host.
+Every connection string pins `sslmode=verify-full`, and Neon's certificates chain to public CAs, so
+no extra CA bundle is needed. Drop the `channel_binding` parameter neonctl appends, which
+postgres.js does not understand.
 
 Every consumer has its own store for the connection string, and the string never lives in the repo:
 
@@ -120,21 +120,21 @@ bounds how a connection can fail while the process runs. Connection acquisition 
 Neon endpoint that stalls on wake fails fast. Statements and idle-in-transaction sessions time out
 server-side, so a lock an orphaned transaction holds dies even after a serverless process kill. An
 idle pooled connection closes before Neon's suspend closes it from the server side, so the pool
-never hands out a socket the endpoint already closed. One exception: the replay service lengthens
-its idle-in-transaction timeout, because a replay iteration holds its claim transaction open across
-keys and provider calls ([replay](../game/replay-verification.md#replay)).
+never hands out a socket the endpoint already closed. The replay service lengthens its
+idle-in-transaction timeout, because a replay iteration holds its claim transaction open across keys
+and provider calls ([replay](../game/replay-verification.md#replay)).
 
 None of those settings runs while the process is paused. Fly suspends an idle machine with its
 memory snapshot, and timers do not run during the pause, so the pool resumes holding the sockets it
 had, and Neon may have closed them in the meantime. A query written to such a socket fails, and a
 query in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives up.
-The database factory therefore detects a resume, as a wall-clock gap between reads it takes on an
-interval timer and before every acquire, and swaps in a fresh pool for new queries while destroying
-the old one, which rejects every query still pending on it. The gap threshold stays above any
-synchronous stretch of work that blocks the event loop, so a long replay verification never trips a
-reset that would destroy its own live queries. A query whose reply never arrives is bounded by a
-client-side deadline, and an expired deadline drops the pool the same way a detected resume does;
-the caller's retry policy decides a resend
+The database factory therefore detects a resume as a wall-clock gap between reads, which it takes on
+an interval timer and before every acquire. On a resume it swaps in a fresh pool for new queries and
+destroys the old one, which rejects every query still pending on it. The gap threshold stays above
+any synchronous stretch of work that blocks the event loop, so a long replay verification never
+trips a reset that would destroy its own live queries. A client-side deadline bounds a query whose
+reply never arrives, and an expired deadline drops the pool the same way a detected resume does. The
+caller's retry policy decides whether to resend it
 ([retry policy](../services/error-handling.md#retry-policy)).
 
 ## Agent access (MCP)
