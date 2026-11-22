@@ -5,7 +5,7 @@ any handler runs, static assets and the analytics proxy included. The limiter pi
 request from its path and method, counts requests per key in a fixed window, and rejects the request
 that takes the count past the tier's budget. Every rejected request carries a `Retry-After` header
 naming the seconds left in its window. The domain services hold no limiter of their own: every
-client request enters through the web app, so its limiter is the one budget a client spends. One
+client request enters through the web app, so its limiter is the only one a client meets. One
 multiple scales every tier's budget, and it is 1 in production; outside production it is large,
 because the e2e suite and local development drive these routes faster than a player does.
 
