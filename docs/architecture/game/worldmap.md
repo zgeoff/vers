@@ -96,10 +96,10 @@ it counts every refusal.
 ## Where a player may travel
 
 Travel selection is narrow, and it uses a different rule from reveal. A node is selectable when it
-is the origin, or when an edge joins it to a node the avatar has cleared, which covers any cleared
-node with an edge to another cleared node. Reveal measures hex distance; selection follows edges. A
-revealed node two hops away with no edge to a cleared node is visible and unreachable, and that is
-the intended shape of the boundary.
+is the origin, or when an edge joins it to a node the avatar has cleared. A cleared node is
+selectable by the same rule, when an edge joins it to another cleared node. Reveal measures hex
+distance; selection follows edges. A revealed node two hops away with no edge to a cleared node is
+visible and unreachable, and that is the intended shape of the boundary.
 
 The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
 has verified, bounds travel: replay rejects an activity at a node with no edge to a node on the

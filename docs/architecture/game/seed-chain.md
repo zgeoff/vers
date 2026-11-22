@@ -89,8 +89,8 @@ The worker resends a kept start on its backoff
 drops the start's queued checkpoints too. The server appended nothing for a dropped start, so the
 device moves its node's cached anchor back to the anchor the start was minted from, and never
 forward. When the device drops several starts on one node, it moves the anchor back to the earliest
-start's anchor. A stale-anchor drop then sets the node's cached anchor to the anchor the refusal
-carries, which can sit ahead of the start's, because that anchor is the server's.
+start's anchor. After a stale-anchor drop, the device sets the node's cached anchor to the server's
+anchor, which the refusal carries, even when it sits ahead of the start's anchor.
 
 ## The anchors
 

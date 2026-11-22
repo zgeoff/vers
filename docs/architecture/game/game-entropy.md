@@ -91,8 +91,8 @@ tag claims device custody.
 
 Tradeability keys on one security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
-the property. Device-custody rolls, which the self-found design describes and no avatar runs today,
-do not. An outcome with a heavy upper tail, such as an affix roll, is the one an automated reroll
-scan selects for, so its entropy stays sealed on the server until the player commits; the
+the property. Device-custody rolls do not. The self-found design describes them, and no avatar runs
+them today. An outcome with a heavy upper tail, such as an affix roll, is the one an automated
+reroll scan selects for, so its entropy stays sealed on the server until the player commits; the
 [crafting entropy note](../../game-design/crafting-entropy.md#sealed-pre-commit-salt) owns that
 mechanism.
