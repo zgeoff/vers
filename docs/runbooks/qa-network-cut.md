@@ -1,10 +1,10 @@
 # Cut the network
 
-Use this runbook to test how the game behaves when a player's device loses the network, as in
-airplane mode. The game runs code in three places: the page, a shared worker that the page starts,
-and any service worker the origin registers. Airplane mode cuts all three at once. The DevTools
-Offline switch and the `offline` command of [`qa:cdp`](qa.md#driving-a-target) each cut one page or
-worker, so a page can go offline while its shared worker keeps the network.
+Test how the game behaves when a player's device loses the network, as in airplane mode. The game
+runs code in three places: the page, a shared worker that the page starts, and any service worker
+the origin registers. Airplane mode cuts all three at once. The DevTools Offline switch and the
+`offline` command of [`qa:cdp`](qa.md#driving-a-target) each cut one page or worker, so a page can
+go offline while its shared worker keeps the network.
 
 `pasta` is a tool that gives a process its own network namespace without root.
 `bun run qa:chrome start --netns` uses it to run a headless Chromium in a namespace of its own.
@@ -47,9 +47,9 @@ step 1 does.
 
    Expect: a line of JSON. Keep its `targetId` for the next steps.
 
-3. Bring the game to the screen under test with `qa:cdp`. A screen behind sign-in needs a
-   [QA account](qa.md#accounts). The tab from step 2 is in a fresh browser context, which loses its
-   cookies when the browser stops, so sign in again after each start.
+3. Bring the game to the screen under test with `qa:cdp`. To reach a screen behind sign-in, sign in
+   with a [QA account](qa.md#accounts). The tab from step 2 is in a fresh browser context, which
+   loses its cookies when the browser stops, so sign in again after each start.
 
 4. Cut the network:
 
@@ -98,8 +98,8 @@ step 1 does.
 | `qa:net status`                             | prints the browser, its namespace, and whether the network is up or cut                                     |
 
 `qa:net` and `qa:chrome stop` take no `--port`, because they act on the one browser that `start`
-launched. A `start` without `--netns` runs the same browser on the host network, for a pass that
-never cuts the network.
+launched. For a pass that never cuts the network, run `start` without `--netns`, and it runs the
+same browser on the host network.
 
 ## How the namespace works
 
