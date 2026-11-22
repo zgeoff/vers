@@ -10,7 +10,7 @@ to central machinery, which classifies, reports, and encodes it.
 
 Every failure is exactly one of three classes. The class decides its status range, whether it
 reaches the error backend, and whether it may retry. A domain error never retries. An invariant
-violation or an infrastructure fault answers 5xx, and a 5xx retries only on a call that can be
+violation or an infrastructure fault gets a 5xx status, and a 5xx retries only on a call that can be
 resent ([retry policy](#retry-policy)). The one exception to the Reported column is a domain error
 that a web app server function lets escape ([reporting](#reporting)).
 
