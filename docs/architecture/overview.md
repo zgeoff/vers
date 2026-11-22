@@ -30,7 +30,7 @@ session on the account, and an evicted device is signed out on its next request
 ## Topology
 
 Each domain service is its own Fly deployment, reachable only on the private mesh. An idle service
-scales to zero. Two exceptions: the session and activity services each keep one machine warm
+scales to zero, except the session and activity services, which each keep one machine warm
 ([deployment](./platform/deployment.md#topology)). The replay service runs off the request path: it
 carries no player traffic, and the activity service wakes it with a service call each time an append
 leaves unverified work. Older engine builds stay replayable through per-version replay provider
@@ -47,8 +47,8 @@ on merge ([infra deploys](./platform/infra-deploys.md)).
 
 The shared Neon database holds three shapes of game data, and it scales to zero when nobody is
 playing ([database](./platform/database.md)). Every application table is accessed through Kysely and
-migrated by kysely-ctl in `@vers/db`. One exception: pg-boss owns the `pgboss` schema and migrates
-it itself ([queues](./platform/queues.md)).
+migrated by kysely-ctl in `@vers/db`, except the `pgboss` schema, which pg-boss owns and migrates
+itself ([queues](./platform/queues.md)).
 
 - **Relational identity data** — users, sessions, verifications, and avatars.
 - **The activity checkpoint tables** — an append-only checkpoint log plus a per-activity head row
@@ -94,9 +94,8 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
   ([service contracts](./services/service-contracts.md)).
 - **Single-SHA release** — contracts are unversioned workspace source packages, and each release
   deploys every app from one SHA, apart from the older replay provider apps
-  ([deployment](./platform/deployment.md)).
-  [Service contracts](./services/service-contracts.md#change-discipline) owns the change discipline
-  that keeps consumers and services in step.
+  ([deployment](./platform/deployment.md)). For the change discipline that keeps consumers and
+  services in step, see [service contracts](./services/service-contracts.md#change-discipline).
 - **Observability** — OpenTelemetry sends traces, logs, and metrics to Axiom; the Sentry SDK sends
   errors to Bugsink. The service runtime wires both into every service, and one trace id follows a
   request from edge to service ([observability](./platform/observability.md)).
@@ -120,8 +119,8 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
 
 ## Projects
 
-AGENTS.md's monorepo layout owns the workspace globs and the naming rule that derive the project
-list. Members whose behavior differs from their set: `libs/game/worldmap-content`,
+The workspace globs and the naming rule that derive the project list are in AGENTS.md's monorepo
+layout. These members behave differently from the rest of their set: `libs/game/worldmap-content`,
 `libs/testing/qa-account` and `libs/testing/load-harness` are `server-only`, the second because it
 imports the first and the third because it signs service tokens and writes the database directly;
 `libs/design/styled-system` is generated output; and `libs/game/content-version` is shared by the
