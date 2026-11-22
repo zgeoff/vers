@@ -28,7 +28,7 @@ commit as JSON, and on a push the guard holds that plan when:
   can destroy what the resource holds;
 - the drift check found a change.
 
-On a dispatch, the guard holds the plan only when the run's commit is no longer main's tip when the
+On a dispatch, the guard holds the plan only if the run's commit is no longer main's tip when the
 guard reads the plan.
 
 When the guard passes the plan, the job runs `pulumi up --refresh`. A last preview with

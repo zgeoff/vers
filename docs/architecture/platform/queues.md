@@ -50,7 +50,7 @@ would hold both awake around the clock, so delivery runs as one-shot drains inst
 
 Durability lives in Postgres, so a job between drains is late, never lost. A late job still runs,
 except that a deadline-bearing job past its deadline completes unsent
-([retries and failure](#retries-and-failure)), and a job whose stored payload no longer parses fails
+([retries and failure](#retries-and-failure)). A job whose stored payload no longer parses fails
 without reaching its handler, late or not. A queue-hosting service stops rather than suspends when
 idle, because pg-boss's maintenance loop does not recover from the clock jump a resumed machine
 sees. A stopped machine boots clean, so every wake re-runs the boot drain.
@@ -59,10 +59,10 @@ sees. A stopped machine boots clean, so every wake re-runs the boot drain.
 
 A handler throw fails the job, and pg-boss keeps it invisible until its retry delay elapses,
 doubling that delay per attempt when the definition asks for backoff. A job that exhausts its retry
-limit moves to a dead queue named after its own when its queue has one, which holds while the
-definition dead-letters and after the definition drops it. Make each handler's outbound effects
-idempotent with the job id, so at-least-once delivery never doubles an effect; the email service
-sends the job id as its provider's idempotency key. pg-boss pools its own connections, so give a
-queue test database isolation rather than an injected transaction.
+limit moves to a dead queue named after its own, when its queue has one. A queue has one while its
+definition dead-letters, and keeps it after the definition stops dead-lettering. Make each handler's
+outbound effects idempotent with the job id, so at-least-once delivery never doubles an effect; the
+email service sends the job id as its provider's idempotency key. pg-boss pools its own connections,
+so give a queue test database isolation rather than an injected transaction.
 
 The handler completes a deadline-bearing job unsent once its deadline has passed.
