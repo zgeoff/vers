@@ -4,7 +4,8 @@ The game world renders through one persistent three.js canvas. A small 3D widget
 viewer, renders in a satellite canvas of its own ([the persistent canvas](#the-persistent-canvas)).
 Every other UI element (panels, tooltips, the stash, the market, the avatar panels) is HTML from the
 design system. Reserve 3D for spatial content. List-and-filter UI, forms, and text stay in the DOM,
-where the design system, accessibility, and testing already work.
+where the design system, accessibility, and testing already work. For the world map's ground and how
+the client draws biome on it, read [the world map](./worldmap.md).
 
 ## The persistent canvas
 
