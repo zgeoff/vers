@@ -217,8 +217,8 @@ the repo has to drop the migrations that must not come back before the next run.
 
    When step 3 listed no migration, or the revert PR drops every listed one, expect the migrate step
    to log `no pending migrations; no backup taken`. When some listed migrations stay, expect a new
-   `Database backup` notice that names them, then `✅ applied <migration_names>`. In both cases
-   expect the replay service's deploy leg to log
+   `Database backup` notice that names them, then `✅ applied <migration_names>`. Unless the revert
+   PR changed the replay service, expect its deploy leg to log
    `vers-service-replay is current at <sha> — skipping`. That leg registers the running sim version
    again, because the restore dropped every registry row written after the restore point. Until it
    does, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.

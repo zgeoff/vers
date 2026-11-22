@@ -78,7 +78,7 @@ flowchart LR
   E --> X
   P --> B["build<br>one leg per stale app"]
   X --> B
-  B --> G["full-stack gate<br>every image in one compose stack"]
+  B --> G["full-stack gate<br>every built image in one compose stack"]
   M --> D
   P --> D
   X --> D
@@ -142,7 +142,8 @@ Between build and cutover, the `stack-e2e` job boots every deployable image exce
 [pinned upstream images](#pinned-upstream-images) in a compose stack: every service image, the web
 app's production image, postgres, a capture-only email stub, and an analytics stub behind the web
 app's proxy. It migrates the stack's own database and drives the e2e suite's stack journeys against
-it. The gate covers the whole fleet: when the combined stack fails a journey, no app ships.
+it. The gate holds every app, the pinned upstream apps included: when the combined stack fails a
+journey, no app ships.
 
 ### Build and cutover
 
@@ -170,10 +171,11 @@ started. The two pinned upstream apps set no strategy and roll over in place.
 
 Deploy jobs queue rather than cancel. The checks, e2e, builds, full-stack gate and verifies group by
 commit and never cancel, so every push to `main` is tested in full. A run whose checks pass after a
-newer push has landed skips its deploy stages, so an older commit never migrates or deploys after a
-newer one, and the newest run ships every change. Migrate and each app's deploy have one fixed group
-that never cancels, so they run one job at a time, and every waiting job keeps its turn. A rollout
-can fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
+newer push has landed skips its deploy stages, so an older run never migrates or deploys after a
+newer one, and the newest run ships every change. Only a [rollback](#release-record-and-rollback)
+puts an older commit back on an app. Migrate and each app's deploy have one fixed group that never
+cancels, so they run one job at a time, and every waiting job keeps its turn. A rollout can fail on
+a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
 
 ### Release record and rollback
 
@@ -188,11 +190,11 @@ with no recorded release yet is left serving the broken release, reported in the
 
 ### Fleet verification
 
-`verify-fleet` runs on every green push that no newer run replaced, even when every deploy leg
-skipped, and asserts every manifest app is online and current, catching an app at zero machines or a
-fleet behind HEAD. A rolled-back app reads stale there by design. It also checks each private
-entry's addresses ([networking](#networking)), each declared scheduled machine against the app's
-image, and each shared secret's digests across its declaring apps.
+The `verify-fleet` job runs `deploy verify` on every green push that no newer run replaced, even
+when every deploy leg skipped, and asserts every manifest app is online and current, catching an app
+at zero machines or a fleet behind HEAD. A rolled-back app reads stale there by design. It also
+checks each private entry's addresses ([networking](#networking)), each declared scheduled machine
+against the app's image, and each shared secret's digests across its declaring apps.
 
 ### Scheduled machines
 
