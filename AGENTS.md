@@ -2,10 +2,9 @@
 
 ## Required reading
 
-This file holds the rules that apply to all work in vers. The rules for one kind of work live in its
-skill and its architecture doc, and this file doesn't repeat them. Load the skill for the work
-before you start it, and read the architecture doc for the subsystem in full before substantial work
-there.
+Follow these rules in all work in vers. Find the rules for one kind of work in its skill and its
+architecture doc, which this file doesn't repeat. Load the skill for the work before you start it,
+and read the architecture doc for the subsystem in full before substantial work there.
 
 | Skill                | Load before                                                                                               |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -23,11 +22,10 @@ When you write or edit a skill:
    delivers them there at the `zgeoff/skills` commit that `zgeoff/tools` pins, so install none of
    them yourself.
 2. Do every step in the "Check it" section of `.agents/skills/skill-writing/SKILL.md`. In its last
-   step, you fill in the `## Checks` section of the PR template.
+   step, fill in the `## Checks` section of the PR template.
 
-`docs/architecture/overview.md` is the entry point to the system's docs. A subsystem's doc is the
-authoritative account of its invariants: grep locates code, and it does not teach a subsystem's
-rules. These areas have their own docs:
+Start at `docs/architecture/overview.md`, the entry point to the system's docs. Learn a subsystem's
+invariants from its doc: grep finds the code but not the rules. These areas have their own docs:
 
 - Activities, the seed chain, verification, replay or reconcile:
   `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
@@ -43,8 +41,8 @@ rules. These areas have their own docs:
 
 vers is one Bun workspace. Every package takes the name `@vers/` plus its leaf folder name, except
 in two folders: `services/<name>` is `@vers/service-<name>`, and `contracts/<name>` is
-`@vers/contract-<name>`. A library or contract is consumed as TypeScript source through an `exports`
-map that points at `src/index.ts`, with no build step.
+`@vers/contract-<name>`. Point a library's or contract's `exports` map at `src/index.ts`: consumers
+import its TypeScript source, with no build step.
 
 ```text
 apps/              deployables: web (with its Playwright suite), umami, bugsink
@@ -67,8 +65,8 @@ deploy.config.ts   the manifest every Fly rollout reads
 
 Dependencies:
 
-- Every external version lives once, in the root `workspaces.catalog`. A package writes `"catalog:"`
-  for an external dependency and `"workspace:*"` for an internal one.
+- Every external version lives once, in the root `workspaces.catalog`. In a package, write
+  `"catalog:"` for an external dependency and `"workspace:*"` for an internal one.
 - Pin exact versions, with no `^` or `~` ranges. `bun add` saves exact versions, so the rule covers
   hand-written edits.
 - When you add, change or remove a release-age exclude in `bunfig.toml`, or an override or an audit
@@ -88,20 +86,21 @@ Boundaries:
 - `bun run boundaries` checks each import against the tags in each project's `turbo.json` and the
   rules in the root `turbo.json`. It also flags an import of a package missing from the importer's
   `package.json`.
-- A `lib` imports no `service` or `app`, and a `service` imports no `app`, transitively.
-- A project tagged `server-only` is importable only by a `service` or another `server-only` project,
-  and the check follows dependents transitively. So no package that the root manifest or an app
-  depends on may import one.
+- Never import a `service` or an `app` from a `lib`, or an `app` from a `service`, even
+  transitively.
+- Import a project tagged `server-only` only from a `service` or another `server-only` project. The
+  check follows dependents transitively, so no package that the root manifest or an app depends on
+  may import one.
 - `bun run boundaries` reads the filesystem and ignores `.gitignore`, so run it on a clean tree:
   stale `dist/` or `styled-system/` output reads as source.
 
 Repo scripts:
 
-- `scripts/src/bin/` holds the entrypoints: thin shells that sequence I/O and exit codes. Root
+- Put the entrypoints in `scripts/src/bin/`, as thin shells that sequence I/O and exit codes. Root
   `package.json` scripts run them with plain `bun`.
-- `scripts/src/<domain>/` holds the logic, and `scripts/src/utils/` takes only domain-free pieces.
-  Decision logic is pure, data in and findings out, with tests beside it.
-- A tool that imports a `server-only` package lives in its own `server-only` package with its own
+- Put the logic in `scripts/src/<domain>/`, and only domain-free pieces in `scripts/src/utils/`.
+  Keep decision logic pure, data in and findings out, with tests beside it.
+- Put a tool that imports a `server-only` package in its own `server-only` package with its own
   `src/bin/`, such as `libs/testing/qa-account`. The root manifest and `apps/web` depend on
   `@vers/scripts`, and the boundaries check follows that edge.
 
@@ -121,66 +120,68 @@ Repo scripts:
   hundreds of false violations.
 - Run `bun run format` from the repo root. The codemod reads its exclusions from the working
   directory.
-- `bun run deadcode` runs knip, which also needs the codegen output. A dependency knip cannot see
-  gets a `knip.json` ignore in the PR that adds it.
+- `bun run deadcode` runs knip, which also needs the codegen output. When knip can't see a
+  dependency, add a `knip.json` ignore for it in the PR that adds the dependency.
 - lefthook runs the light checks before a commit and a push, and CI runs the rest.
 - `apps/bugsink` is Python. Its `test:adapter` script runs `pytest` under `uv`, outside the Bun
   graph.
 - The `bun run qa:*` scripts drive manual QA: a QA account, the verification inbox, a debug Chrome,
-  and a cold fleet. `docs/runbooks/qa.md` covers them.
+  and a cold fleet. Read `docs/runbooks/qa.md` before you use them.
 
 ## Error handling
 
-Read `docs/architecture/services/error-handling.md` before you add or change a failure path. It owns
-the taxonomy, the status rules, trace context and the reporting split.
+Before you add or change a failure path, read `docs/architecture/services/error-handling.md` for the
+taxonomy, the status rules, trace context and the reporting split.
 
-- A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. A handler
-  has no try/catch for logging or reporting, because the central `onError` interceptor in
-  `createService` owns that.
-- Every contract `.errors({…})` map is built with `defineErrors` from `@vers/contract-base`. A code
-  outside oRPC's canonical set declares an explicit `status`, and its `defineErrors` entry is its
-  registry. Name such a code `NOUN_PROBLEM`.
-- A client narrows on `code` through `isDefinedError` or `safe` and acts on `data` fields, never on
-  `message` strings.
+- In a procedure handler, throw only its typed `opts.errors.*` constructors or `invariant()`. Add no
+  try/catch for logging or reporting to a handler, because the central `onError` interceptor in
+  `createService` does that.
+- Build every contract `.errors({…})` map with `defineErrors` from `@vers/contract-base`. Give a
+  code outside oRPC's canonical set an explicit `status`; its `defineErrors` entry is its registry.
+  Name such a code `NOUN_PROBLEM`.
+- In a client, narrow on `code` through `isDefinedError` or `safe` and act on `data` fields, never
+  on `message` strings.
 - The Sentry SDK is the only path to the error backend, and LogTape is a log sink only. Never wire a
   log transport to the error backend. Never call `captureException` in code that the central hooks
   already cover: the service interceptor, the query caches and the root error boundary.
-- In app-web, form validation returns `submission.reply()`, navigation and access control throw
-  `redirect()` or a `Response`, and a fault throws and lands on a route `errorComponent`. Retry
-  policy is central in `buildQueryClient`. A per-query `retry` override needs a reason the default
-  policy cannot express.
+- In app-web, return `submission.reply()` from form validation, and throw `redirect()` or a
+  `Response` for navigation and access control. Let a fault throw and land on a route
+  `errorComponent`.
+- Retry policy is central in `buildQueryClient`. Override `retry` on one query only for a reason the
+  default policy cannot express.
 
 ## Metrics
 
-Work that adds a pipeline, queue, worker or failure path lands with the OpenTelemetry metrics that
-make it observable. Read `docs/architecture/platform/observability.md` before you add an instrument.
+When your work adds a pipeline, queue, worker or failure path, land it with the OpenTelemetry
+metrics that make it observable. Read `docs/architecture/platform/observability.md` before you add
+an instrument.
 
 - Define an instrument in its owning package through the global metrics API (`metrics.getMeter` from
-  `@opentelemetry/api`). Domain code never constructs, receives or stops a meter provider, because
+  `@opentelemetry/api`). Never construct, receive or stop a meter provider in domain code, because
   the service scaffold owns that lifecycle.
-- Name a metric `vers.<domain>.<measure>`. Attributes are snake_case with closed value sets, never
-  unbounded values such as per-entity IDs.
+- Name a metric `vers.<domain>.<measure>`. Write attributes in snake_case with closed value sets,
+  never unbounded values such as per-entity IDs.
 - Record a rare, meaningful event as a counter at the site that decides it, in a `record-*.ts`
-  module. State that lives in the database reports through observable gauges: one batch callback per
-  package and one snapshot query per collection, with failures caught and logged, never thrown.
-- An instrument's `description` and `unit` in its definition are its registry, so a new instrument
-  needs no doc row.
+  module. Report state that lives in the database through observable gauges: one batch callback per
+  package and one snapshot query per collection. Catch and log their failures, and never throw them.
+- An instrument's `description` and `unit` in its definition are its registry, so add no doc row for
+  a new instrument.
 
 ## Analytics
 
-Read `docs/architecture/analytics.md` before you add or reshape an analytics event. It owns both
+Before you add or reshape an analytics event, read `docs/architecture/analytics.md` for both
 streams, the event registry and the privacy stance.
 
-- **Umami web analytics:** a player-facing flow whose completion is an acquisition-funnel step fires
-  a curated event through `sendAnalyticsEvent`. These events carry no personal data and no user or
-  avatar keys.
-- **Tinybird product events:** a game flow whose outcome feeds funnels, retention or progression
-  analysis fires a curated event through `emitProductEvent`.
-- Name a product event in snake_case `noun_pastparticiple`, such as `activity_started`. Its
-  properties are the IDs of the entities it is about. The server stamps identity from the caller's
-  session, so a client payload never carries user or session keys.
-- A new product event lands in one PR with its entry in the `@vers/product-analytics` registry
-  types, its arm in app-web's ingest schema, any new column in
+- When a player-facing flow's completion is an acquisition-funnel step, fire a curated Umami web
+  analytics event through `sendAnalyticsEvent`. Put no personal data and no user or avatar keys in
+  it.
+- When a game flow's outcome feeds funnels, retention or progression analysis, fire a curated
+  Tinybird product event through `emitProductEvent`.
+- Name a product event in snake_case `noun_pastparticiple`, such as `activity_started`. Make its
+  properties the IDs of the entities it is about. The server stamps identity from the caller's
+  session, so never put user or session keys in a client payload.
+- Land a new product event in one PR with its entry in the `@vers/product-analytics` registry types,
+  its arm in app-web's ingest schema, any new column in
   `infra/tinybird/datasources/product_events.datasource`, and its row in the registry table in
   `docs/architecture/analytics.md`.
 - Never await `emitProductEvent`, and never gate a flow on it. Fire it only for something that has
@@ -192,16 +193,16 @@ streams, the event registry and the privacy stance.
 A service's env contract is the `envShape` it passes to `createService`, merged with the shared
 `baseEnvSchema` and validated against `process.env` at boot.
 
-- A project that needs a local `.env` commits a `.env.example` with its keys. `bun run env:pull`
+- When a project needs a local `.env`, commit a `.env.example` with its keys. `bun run env:pull`
   pulls the real values from 1Password. Never commit a `.env` file.
-- Each service commits its key lists as `env-contract.generated.json`. Regenerate it with
-  `bun run env:contract`, because CI fails on a stale one, and on a required key missing from the
-  service's dev env files, the compose stacks, or the app's Fly env and secrets.
-- `secrets-manifest.json` lists by name each 1Password vault, item and field that `.mcp.json`, the
-  workflows and `infra/` read, and never a value. `bun run secrets:check` runs in CI and fails on an
-  `op://` reference the manifest lacks, and on a listed field that nothing reads. It also fails on
-  any `op://` that is not exactly `op://<vault>/<item>/<field>`, each segment of letters, digits,
-  `_`, `.` and `-`, so a name with a space and a field under a section both fail.
+- Commit each service's key lists as `env-contract.generated.json`, and regenerate it with
+  `bun run env:contract`, because CI fails on a stale one. CI also fails on a required key missing
+  from the service's dev env files, the compose stacks, or the app's Fly env and secrets.
+- List in `secrets-manifest.json`, by name, each 1Password vault, item and field that `.mcp.json`,
+  the workflows and `infra/` read. Never list a value. `bun run secrets:check` runs in CI and fails
+  on an `op://` reference the manifest lacks, and on a listed field that nothing reads. It also
+  fails on any `op://` that is not exactly `op://<vault>/<item>/<field>`, each segment of letters,
+  digits, `_`, `.` and `-`, so a name with a space and a field under a section both fail.
 
 ## Deploys
 
@@ -210,8 +211,9 @@ the fleet is online and current. Read `docs/architecture/platform/deployment.md`
 rollout or a secret, and `docs/architecture/platform/container-builds.md` before you change a
 container build.
 
-- Database migrations run once per green push that no newer push supersedes, in their own `migrate`
-  job that is never cancelled, never per service, because every service shares one database.
+- Database migrations run in their own `migrate` job, once per green push that no newer push
+  supersedes, and that job is never cancelled. They never run per service, because every service
+  shares one database.
 - Deploy jobs target the `production` GitHub environment. Repo-level secrets hold only what PR
   checks need.
 
@@ -224,6 +226,6 @@ The `postgres` MCP server exposes a production source and a dev source. Read
   both refuse writes.
 - `execute_sql_dev` and `search_objects_dev` reach a throwaway database cloned for the current
   worktree on first use: migrated, seeded, and open to reads and writes.
-- Tests never point at the dev database. Postgres-backed suites own the local test container.
+- Never point a test at the dev database. Postgres-backed suites use the local test container.
 - After you remove a worktree, `bun run pg:dev:sweep` drops its database.
   `bun run pg:dev:refresh-base` rebuilds the clone template when the seed data changes.

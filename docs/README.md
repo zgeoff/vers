@@ -98,7 +98,7 @@ Procedures an operator or an agent runs by hand.
 The game's design language and systems.
 
 - [Core themes and world fiction](./game-design/core-themes-world-fiction.md) — the world's pillars,
-  tone, factions, and the vocabulary every other note inherits
+  tone, factions, and the vocabulary the other game-design docs use
 - [Attributes and damage model](./game-design/attributes-damage-model.md) — damage types, the
   Azimuth attribute system, and the defensive-layer structure
 - [Defensive archetypes](./game-design/defensive-archetypes.md) — the emergent defensive layers and

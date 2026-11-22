@@ -26,7 +26,7 @@ and their read traffic off Neon. Existing files move across with
 
 ## Secrets
 
-[Secrets](./secrets.md) lists the Fly secrets the app reads and where the R2 credentials live.
+See [Secrets](./secrets.md) for the Fly secrets the app reads and where the R2 credentials live.
 
 ## Alerts
 
@@ -37,7 +37,7 @@ webhook added in its settings. No outgoing email is configured, so alerting is w
 Per-project alert toggles live in each Bugsink project's settings.
 
 Bugsink's Discord messaging service renders a fixed body the app doesn't template, so these alerts
-keep their own shape rather than the structured embed the CI path posts to the same channel (see
+look different from the structured embed the CI path posts to the same channel (see
 [Alarms](../../docs/architecture/platform/observability.md#alarms)).
 
 ## Housekeeping
@@ -54,8 +54,8 @@ which can start machines.
 
 ## API tokens
 
-Tokens are minted in the Bugsink UI or with `bugsink-manage create_auth_token` over
-`fly ssh console`. Two exist: the MCP server's token, stored as `mcp-token` on the `bugsink` item in
-the `vers` 1Password vault (read by `.mcp.json` at connect time), and CI's source-map upload token,
-stored as `sentry-auth-token` on the `github-actions` item in the `vers-ci` vault, which the
-vers-infra Pulumi program pushes to the `SENTRY_AUTH_TOKEN` GitHub secret.
+Mint tokens in the Bugsink UI or with `bugsink-manage create_auth_token` over `fly ssh console`. Two
+exist: the MCP server's token, stored as `mcp-token` on the `bugsink` item in the `vers` 1Password
+vault (read by `.mcp.json` at connect time), and CI's source-map upload token, stored as
+`sentry-auth-token` on the `github-actions` item in the `vers-ci` vault, which the vers-infra Pulumi
+program pushes to the `SENTRY_AUTH_TOKEN` GitHub secret.
