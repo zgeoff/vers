@@ -58,7 +58,8 @@ comes up, see [Provisioning](./provisioning.md).
 
 ## One-time setup
 
-Run these from `infra/`. Create the state bucket:
+Run these from `infra/`. Create the state bucket, `vers-pulumi-state`, which `R2_STATE_BUCKET`
+names:
 
 ```sh
 op run --env-file=.env -- sh -c 'curl -fsS -X POST \

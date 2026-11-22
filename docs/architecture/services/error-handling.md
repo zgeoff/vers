@@ -9,9 +9,10 @@ to central machinery, which classifies, reports, and encodes it.
 ## Taxonomy
 
 Every failure is exactly one of three classes. The class decides its status range, whether it
-reaches the error backend, and whether it may retry. Only an infrastructure fault retries, and only
-on a call that can be resent ([retry policy](#retry-policy)). The one exception to the Reported
-column is a domain error that a web app server function lets escape ([reporting](#reporting)).
+reaches the error backend, and whether it may retry. A domain error never retries. An invariant
+violation or an infrastructure fault answers 5xx, and a 5xx retries only on a call that can be
+resent ([retry policy](#retry-policy)). The one exception to the Reported column is a domain error
+that a web app server function lets escape ([reporting](#reporting)).
 
 | Class                    | What it is                                                           | Mechanism                                | Status | Reported |
 | ------------------------ | -------------------------------------------------------------------- | ---------------------------------------- | ------ | -------- |
