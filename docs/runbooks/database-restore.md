@@ -29,12 +29,13 @@ You need:
 
 A failed run usually needs no restore. Kysely applies the pending migrations of a run in one
 Postgres transaction, so a failure rolls back every migration of that run, including the ones that
-ran before the failing one. After a failure, the step reads the pending migrations again and logs
-the outcome it finds:
+ran before the failing one. The step does not take that rollback on trust: after a failure, it reads
+the pending migrations again and logs the outcome it finds:
 
-- `none persisted and no restore is needed`: fix the migration and push again. The next run takes a
-  fresh backup.
-- `<migration_names> persisted`: those migrations stayed applied. Judge them by the rule below.
+- `none persisted and no restore is needed`: the rollback held. Fix the migration and push again.
+  The next run takes a fresh backup.
+- `<migration_names> persisted`: those migrations stayed applied despite the rollback. Judge them by
+  the rule below.
 
 Restore only when a migration that stayed applied damaged data or the schema, and a new migration
 cannot repair it. A restore discards every write after the backup, so a migration that fixes forward
@@ -388,8 +389,9 @@ position, so a position the restored chain draws again mints at most one item.
 
 ## Rehearse a point-in-time restore
 
-The drill runs every step of a point-in-time restore up to the restore of `main`, on a disposable
-branch, so it changes nothing that players use.
+The drill prepares and checks a restore branch the way a point-in-time restore does, on a disposable
+branch. It skips stopping the workflow, the migration list and the restore of `main`, so it changes
+nothing that players use.
 
 1. Pick a restore point inside the last seven days.
 
