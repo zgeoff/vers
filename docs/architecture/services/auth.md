@@ -5,8 +5,9 @@ edge runs the credential and code flows, holds the session cookie, and signs the
 token for its own outbound calls. Durable state lives in the services: sessions, step-up
 transactions and step-up grants in the session service, password credentials and reset tokens in the
 user service, TOTP verifications in the verification service. Services never see cookies. The edge
-validates the session and passes each service a short-lived token naming the acting user, so a
-service trusts the token's claims and nothing else ([service contracts](./service-contracts.md)).
+validates the session and passes each service a short-lived token naming the acting user when the
+call has one, so a service trusts the token's claims and nothing else
+([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
