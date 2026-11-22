@@ -2,8 +2,8 @@
 
 How a local checkout and an agent session reach a database to develop against: the shared `main`
 branch for migrations and scripts, a Neon branch for an isolated experiment, and a per-worktree
-clone for MCP sessions. [Database](../architecture/platform/database.md) owns the topology and the
-connection rules.
+clone on the Neon `dev` branch for MCP sessions. [Database](../architecture/platform/database.md)
+owns the topology and the connection rules.
 
 ## Local dev
 
@@ -26,8 +26,8 @@ neonctl branches create --project-id patient-dust-07220142 --name <name>
 neonctl connection-string <name> --project-id patient-dust-07220142 --database-name vers
 ```
 
-A branch is a full copy-on-write postgres. Run migrations against it, introspect it with
-`db:codegen`, and delete it when done (`neonctl branches delete`).
+A branch is a full copy-on-write postgres. Run migrations against it, introspect it with the
+isolated kysely-codegen install, and delete it when done (`neonctl branches delete`).
 
 ## Per-worktree dev databases
 
@@ -45,7 +45,7 @@ up with migrations that landed after the template was last refreshed.
 - `bun run pg:dev:sweep` drops this machine's databases whose branch no longer exists locally. The
   machine prefix scopes the sweep, so one machine's sweep can never drop another's databases, and
   `dev_base` never matches the prefix.
-- Provisioning and sweeping connect to `vers` on the dev branch, never to `dev_base`: postgres
+- Provisioning and sweeping connect to `vers` on the `dev` branch, never to `dev_base`: postgres
   refuses to clone a template that has open connections.
 - `dev_base` refuses connections outright (`ALLOW_CONNECTIONS false`, like template0) except during
   a rebuild. Neon parks invisible backends on recently connected databases for minutes, and any

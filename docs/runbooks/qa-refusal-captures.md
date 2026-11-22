@@ -5,6 +5,8 @@ A device in airplane mode has no console to reach, so a game page with the
 refused outcome. The capture waits in the page's local storage until a `snapshot()` call reads it
 after the device reconnects. The call returns the captures in `refusalCaptures`, beside the current
 worker state, so one call after reconnect shows both the state at the refusal and the state now.
+This runbook is for a tester reading a refused offline run: after the device reconnects, call
+`snapshot()` as [QA debug hook](qa-debug-hook.md) shows, and read `refusalCaptures`.
 
 ## What a capture holds
 
@@ -36,7 +38,8 @@ Three behaviours follow from the design, and each is intended:
 
 - A snapshot in one tab can return another tab's capture as `pending`. A tab waits only for its own
   captures, because it cannot reach another tab's worker request. The capture stays in storage, and
-  the next call returns it complete.
+  a call after its tab finishes it returns it complete. A capture whose tab closed first stays
+  `pending` until the 10-minute removal below.
 - Storage keeps the 10 newest captures, so an 11th capture removes the oldest one even while that
   one is still `pending`, and its worker answer then has nothing to join. The limit keeps a phone's
   storage quota from filling while refusals repeat offline.
