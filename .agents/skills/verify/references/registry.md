@@ -13,11 +13,9 @@ The file holds three lists:
   every feature changed when a changed file matches one.
 - `ignoredPaths`: the registry's `.ignore` list, for files that change nothing a journey sees, such
   as docs, tests and CI wiring. `report` marks no feature for a file that matches one, even when it
-  matches the other lists too. This list wins over step 1 of Check a change in
-  [SKILL.md](../SKILL.md#check-a-change), which counts only the `paths` match.
+  matches the other lists too.
 
-`bun verify gate` fails a PR in CI on a changed file that matches none of the three lists. Add a
-glob for that file to the list it belongs to.
+`bun verify gate` fails a PR in CI on a changed file that matches none of the three lists.
 
 1. Edit the glob in the list it belongs to.
 2. For each glob you add to `featurePaths` or `sharedPaths`, add an entry to
@@ -27,5 +25,4 @@ glob for that file to the list it belongs to.
    remove, delete its entry.
 3. Run `bun test apps/web/src/test-utils/verify/feature-paths.test.ts`. Expect: the test passes. It
    fails on each glob in `featurePaths` or `sharedPaths` that no `verify` entry matches. It misses
-   an entry left behind after you remove a glob, so search `skill-gate.json` for the old glob, and
-   expect no match.
+   an entry left behind after you remove a glob.

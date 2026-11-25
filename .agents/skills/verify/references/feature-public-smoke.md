@@ -13,12 +13,9 @@ On `prod`, run only this journey:
    versidle.com and needs no credential.
 2. Run `bun verify doctor`. Expect every check to pass, and `served-build` to print the `served`
    commit.
-3. When `served-build` fails, either your clone lacks the commit versidle.com serves, or your
-   `origin/main` holds web app changes that versidle.com does not serve yet. No change to your
-   worktree's code fixes either. Run `git fetch origin main`, which fixes the first, and
-   `bun verify doctor` again. When it still fails, wait until the `Main` workflow run for the newest
-   commit on main finishes, then run `bun verify doctor` again. When it fails after that, stop and
-   report the failure.
+3. When `served-build` fails, main on GitHub holds web app changes that versidle.com does not serve
+   yet. Wait until the `Main` workflow run for that merge finishes. Then run `git fetch origin main`
+   and `bun verify doctor` again. When it still fails, stop and report the failure.
 4. Run the journey.
 
 ## Journey
@@ -45,6 +42,5 @@ field of its own, so the service's answer sits under `data.json.json`.
 - The RPC request prints `data.status` 401, with `data.json.json.code` `UNAUTHORIZED` and
   `data.json.json.data.reason` `missing-session`.
 
-When every line matches, run `bun verify done`. When a line differs, follow step 5 of
-[Check a change](../SKILL.md#check-a-change). On `prod`, where your edits never reach the app,
-follow that step's last case: skip `done` and report what you saw.
+When every line matches, run `bun verify done`. When a line differs, skip `done` and report what you
+saw.

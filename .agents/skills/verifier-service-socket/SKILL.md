@@ -24,9 +24,8 @@ Check these at the socket:
 - that the service boots and answers `GET /health` once its database accepts connections.
 
 Hand back each call you made, with its status, the headers you checked and the body, and say for
-each check whether it passed. You're done when each check has a verdict and you have cleaned up.
-Watch for a database the service can't reach, which crashes it, and for a token that expires between
-calls.
+each check whether it passed. Watch for a database the service can't reach, which crashes it, and
+for a token that expires between calls.
 
 ## Key rules
 

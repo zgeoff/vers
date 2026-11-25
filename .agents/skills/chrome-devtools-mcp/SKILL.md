@@ -12,33 +12,29 @@ Connect the `chrome-devtools` MCP server, which [`.mcp.json`](../../../.mcp.json
 debug Chrome on the Windows host, so you can script, screenshot and inspect the app in the browser
 it ships to. Chrome listens for DevTools only on the Windows loopback, which WSL in NAT mode can't
 reach, so a Windows port proxy forwards port 9223 to Chrome's port 9222. Ask the user to run each
-PowerShell command, because it needs an administrator shell you can't open from WSL. You're
-connected when `list_pages` returns the debug browser's tabs. Your work with this skill ends when
-you close the debug browser and, in NAT mode, remove the proxy. Hand back whether `list_pages`
-connected, that the browser is closed and, in NAT mode, that the proxy is removed.
+PowerShell command, because it needs an administrator shell you can't open from WSL. The work is
+done when `list_pages` answers with the debug browser's tabs.
 
 The proxy gives full control of the debug browser to anything that can reach port 9223, because the
-browser starts with `--remote-allow-origins=*`. Run the debug browser on its own profile, never the
-user's daily one. That profile holds only what earlier debug runs left. When your task no longer
-needs the browser, close it and, in NAT mode, ask the user to remove the proxy.
+browser starts with `--remote-allow-origins=*`. Run the debug browser on its own empty profile,
+never the user's daily one. When your task no longer needs the browser, close it and ask the user to
+remove the proxy.
 
 ## Key rules
 
 - [Mistakes to avoid](#mistakes-to-avoid): check the networking mode first, scope the firewall rule
   to `172.16.0.0/12`, and never use the daily profile.
-- [Add the proxy](#add-the-proxy): in NAT mode, a port proxy and a firewall rule, added at the start
-  of each run.
+- [Add the proxy](#add-the-proxy): once per machine, a port proxy and a firewall rule.
 - [Launch the debug browser](#launch-the-debug-browser): a new Chrome on its own profile, then a
   check from WSL.
-- [Connect](#connect): in a running session, ask the user to run `/mcp`, then check `list_pages`.
+- [Connect](#connect): ask the user to run `/mcp`, then check `list_pages`.
 - [Remove the proxy](#remove-the-proxy): when the task no longer needs the browser.
 
 ## Mistakes to avoid
 
 - **Mirrored networking needs no proxy.** Run `wslinfo --networking-mode` first. When it prints
-  `mirrored`, WSL shares the Windows loopback: skip the proxy and its removal, and ask the user
-  before you change `--browser-url` in `.mcp.json` to `http://127.0.0.1:9222`. Check the launch with
-  `curl -s http://127.0.0.1:9222/json/version` in place of the proxy check.
+  `mirrored`, WSL shares the Windows loopback: skip the proxy, and ask the user before you change
+  `--browser-url` in `.mcp.json` to `http://127.0.0.1:9222`.
 - **A firewall rule for one subnet stops working after a reboot.** WSL takes a new NAT subnet from
   `172.16.0.0/12` at each boot. Keep the rule's remote address as that whole range.
 - **Chrome ignores `--remote-debugging-port` when it joins a running instance.** Pass a separate
@@ -49,7 +45,7 @@ needs the browser, close it and, in NAT mode, ask the user to remove the proxy.
 
 ## Add the proxy
 
-In NAT mode, do this at the start of each run, because each run ends by removing the proxy.
+Do this once per machine, or again after you remove the proxy.
 
 1. Ask the user to run this in PowerShell as administrator:
 

@@ -17,12 +17,6 @@ metadata:
 - Keep the function name that a library or an oRPC contract sets, even when it starts with a verb
   that [Function names](../code-style/SKILL.md#function-names) in code-style bans. A library calls
   its interface's methods by name, and a contract's procedure names are the public API.
-- Baseline a violation that predates a lint rule with a disable comment on the line above it, in
-  place of the baseline file that the correct skill describes, as
-  [Lint directives](#lint-directives) says. Lint fails on an unused directive, so each baseline
-  comment has to go when someone fixes its site. Give the comment no expiry date and no PR link, and
-  name issue #236 in it, as [project-docs-writing](../project-docs-writing/SKILL.md#departures)
-  allows.
 
 ## Names
 

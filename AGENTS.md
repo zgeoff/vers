@@ -4,7 +4,7 @@
 
 Follow these rules in all work in vers. Find the rules for one kind of work in its skill and its
 architecture doc, which this file doesn't repeat. Load the skill for the work before you start it,
-and read the architecture doc for the subsystem in full before substantial work there.
+and read the architecture doc for the subsystem in full before reasoning from its code.
 
 | Skill                | Load before                                                                                               |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -14,7 +14,9 @@ and read the architecture doc for the subsystem in full before substantial work 
 | `testing`            | designing, writing, or reviewing tests — with `project-testing`                                           |
 | `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing` |
 | `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines       |
-| `skill-writing`      | writing or editing a skill — with `cold-read` and `deslop`, as the steps below say                        |
+| `skill-writing`      | writing or editing a skill                                                                                |
+| `cold-read`          | checking a skill you wrote or changed, before its PR                                                      |
+| `deslop`             | editing the prose of a skill you wrote or changed, before its PR                                          |
 
 When you write or edit a skill:
 
@@ -126,7 +128,7 @@ Repo scripts:
 - `apps/bugsink` is Python. Its `test:adapter` script runs `pytest` under `uv`, outside the Bun
   graph.
 - The `bun run qa:*` scripts drive manual QA: a QA account, the verification inbox, a debug Chrome,
-  and a cold fleet. Read `docs/runbooks/qa.md` before you use them.
+  and a cold fleet. `docs/runbooks/qa.md` covers them.
 
 ## Error handling
 
@@ -226,6 +228,6 @@ The `postgres` MCP server exposes a production source and a dev source. Read
   both refuse writes.
 - `execute_sql_dev` and `search_objects_dev` reach a throwaway database cloned for the current
   worktree on first use: migrated, seeded, and open to reads and writes.
-- Never point a test at the dev database. Postgres-backed suites use the local test container.
+- Never point a test at the dev database. Postgres-backed suites own the local test container.
 - After you remove a worktree, `bun run pg:dev:sweep` drops its database.
   `bun run pg:dev:refresh-base` rebuilds the clone template when the seed data changes.

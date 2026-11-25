@@ -5,9 +5,8 @@ in the onboarding form, and create a first avatar. The game then opens on `/expl
 target sends each email to a stub, and `bun verify action read-email` prints the code of the last
 one in `data.code`.
 
-`bun verify up` starts an empty database. After each `up` or `up --restart`, run this journey right
-after public-smoke, which needs a signed-out browser, and before every other journey: the other
-journeys play as the account it makes.
+`bun verify up` starts an empty database. Run this journey first after each `up` or `up --restart`:
+the other journeys play as the account it makes.
 
 Before you start:
 
