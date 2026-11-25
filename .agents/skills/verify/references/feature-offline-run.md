@@ -8,11 +8,12 @@ in the database.
 
 Run this journey after the [signup journey](./feature-signup.md), in the same `bun verify up`, and
 before device-takeover, which signs this browser out. Put the account name you picked in the signup
-journey in place of `RUN`. Before you start:
+journey in place of `RUN`. Before you start, know these facts about the journey's commands:
 
-- Open a map node with `bun verify action navigate-route`. The map is a canvas, which
-  `browser click` can't reach.
-- Play the first run online. It loads the game's code into the page, which the offline run needs.
+- The journey opens a map node with `bun verify action navigate-route`, because the map is a canvas,
+  which `browser click` can't reach.
+- The journey's first run is online, because that run loads the game's code into the page, which the
+  offline run needs.
 - `bun verify action set-network --network offline` cuts the network for the page and its worker,
   and `--network online` brings it back.
 - In the database, a run is a row of `activities`. A run ends by itself about 15 s after it starts.

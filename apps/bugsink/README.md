@@ -2,7 +2,8 @@
 
 Self-hosted [Bugsink](https://www.bugsink.com) error tracker, deployed on Fly as `vers-bugsink`.
 Browser and server exceptions ingest here over the Sentry protocol: each vers app has its own
-Bugsink project, and that project's DSN is the only wiring an app carries.
+Bugsink project, and that project's DSN is the only wiring an app carries. Read this file before you
+deploy, upgrade or change the `vers-bugsink` app.
 
 This directory holds Fly config plus a thin image (`Dockerfile`) over the pinned stock
 `bugsink/bugsink`, adding boto3 and the R2 storage backend below. A merge to `main` touching this
@@ -18,14 +19,15 @@ workflow runs it on changes to this directory.
 ## Storage
 
 Event data lives in a dedicated `bugsink` database in the shared Neon project (`DATABASE_URL`
-secret). No app runs its own database, and the machine keeps no volume. Bugsink stores uploaded
-files (sourcemap artifact bundles) in the database by default. Here they go to the Cloudflare R2
-bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs and their read
-traffic off Neon. Existing files move across with `bugsink-manage migrate_to_current_objectstorage`.
+secret). No app runs a Postgres server of its own, and the machine keeps no volume. Bugsink stores
+uploaded files (sourcemap artifact bundles) in the database by default. Here they go to the
+Cloudflare R2 bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs
+and their read traffic off Neon. Existing files move across with
+`bugsink-manage migrate_to_current_objectstorage`, run on the machine over `fly ssh console`.
 
 ## Secrets
 
-[Secrets](./secrets.md) lists the Fly secrets the app reads and where the R2 credentials live.
+See [Secrets](./secrets.md) for the Fly secrets the app reads and where the R2 credentials live.
 
 ## Alerts
 
@@ -36,7 +38,7 @@ webhook added in its settings. No outgoing email is configured, so alerting is w
 Per-project alert toggles live in each Bugsink project's settings.
 
 Bugsink's Discord messaging service renders a fixed body the app doesn't template, so these alerts
-keep their own shape rather than the structured embed the CI path posts to the same channel (see
+look different from the structured embed the CI path posts to the same channel (see
 [Alarms](../../docs/architecture/platform/observability.md#alarms)).
 
 ## Housekeeping
@@ -53,8 +55,8 @@ which can start machines.
 
 ## API tokens
 
-Tokens are minted in the Bugsink UI or with `bugsink-manage create_auth_token` over
-`fly ssh console`. Two exist: the MCP server's token, stored as `mcp-token` on the `bugsink` item in
-the `vers` 1Password vault (read by `.mcp.json` at connect time), and CI's source-map upload token,
-stored as `sentry-auth-token` on the `github-actions` item in the `vers-ci` vault, which the
-vers-infra Pulumi program pushes to the `SENTRY_AUTH_TOKEN` GitHub secret.
+Mint tokens in the Bugsink UI or with `bugsink-manage create_auth_token` over `fly ssh console`. Two
+exist: the MCP server's token, stored as `mcp-token` on the `bugsink` item in the `vers` 1Password
+vault (read by `.mcp.json` at connect time), and CI's source-map upload token, stored as
+`sentry-auth-token` on the `github-actions` item in the `vers-ci` vault, which the vers-infra Pulumi
+program pushes to the `SENTRY_AUTH_TOKEN` GitHub secret.

@@ -143,9 +143,9 @@ that command alone. A command with neither runs on the registry's first target, 
 | `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app and starts Postgres in Docker, the services, the web server and email stub. |
 | `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com, for public-smoke only.                                      |
 
-`up` needs Docker. Both targets need the Chromium from `bun run verify:install-browser`. Each `up`
-starts an empty database and a signed-out browser. Later journeys use signup's account: run signup
-first after each `up` or `up --restart`. Run device-takeover last: it signs out.
+`up` needs Docker. For both targets, install Chromium with `bun run verify:install-browser`. Each
+`up` starts an empty database and a signed-out browser. Later journeys use signup's account: run
+signup first after each `up` or `up --restart`. Run device-takeover last: it signs out.
 
 <!-- /repo -->
 
@@ -174,8 +174,8 @@ for its commands.
 <!-- repo: registry -->
 
 The [registry](../../../apps/web/src/test-utils/verify/create-verify-registry.ts) declares the
-targets, actions, checks and features. To change `paths`, read
-[references/registry.md](references/registry.md).
+targets, actions, checks and features. It reads every glob below from `feature-paths.ts`: before you
+map a file, read [references/registry.md](references/registry.md).
 
 <!-- /repo -->
 

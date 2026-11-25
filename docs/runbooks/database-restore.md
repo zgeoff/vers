@@ -1,7 +1,7 @@
 # Database restore
 
-This runbook moves `main` back in time after an incident, brings players back onto the restored
-state, and rehearses the restore on a disposable branch. Two sources hold the past:
+Move `main` back in time after an incident, bring players back onto the restored state, and rehearse
+the restore on a disposable branch. You can restore from two sources:
 
 - A backup branch. Before the migrate job in the main workflow applies a migration, it creates a
   Neon branch off `main` that holds every database on `main` as it stood just before. The backup
@@ -10,9 +10,9 @@ state, and rehearses the restore on a disposable branch. Two sources hold the pa
 - The project's point-in-time history, which reaches back seven days. `main` restores to any instant
   inside it.
 
-[Deployment](../architecture/platform/deployment.md#pipeline) owns the migrate job, and
-[database](../architecture/platform/database.md#recovery-window) owns the Neon topology, the
-recovery window, and the data-loss and recovery-time targets.
+Read about the migrate job in [Deployment](../architecture/platform/deployment.md#pipeline), and
+about the Neon topology, the recovery window, and the data-loss and recovery-time targets in
+[database](../architecture/platform/database.md#recovery-window).
 
 You need:
 
@@ -29,12 +29,13 @@ You need:
 
 A failed run usually needs no restore. Kysely applies the pending migrations of a run in one
 Postgres transaction, so a failure rolls back every migration of that run, including the ones that
-ran before the failing one. After a failure, the step reads the pending migrations again and logs
-the outcome it finds:
+ran before the failing one. After a failure, the migrate step reads the pending migrations again and
+logs one of these outcomes:
 
-- `none persisted and no restore is needed`: fix the migration and push again. The next run takes a
-  fresh backup.
-- `<migration_names> persisted`: those migrations stayed applied. Judge them by the rule below.
+- `none persisted and no restore is needed`: the rollback held. Fix the migration and push again.
+  The next run takes a fresh backup.
+- `<migration_names> persisted`: those migrations stayed applied despite the rollback. Judge them by
+  the rule below.
 
 Restore only when a migration that stayed applied damaged data or the schema, and a new migration
 cannot repair it. A restore discards every write after the backup, so a migration that fixes forward
@@ -95,7 +96,7 @@ the repo has to drop the migrations that must not come back before the next run.
    after the restore.
 
 3. List the migrations that the restore drops, through the `execute_sql_prod` MCP tool. Use the
-   first migration that the backup notice names as `<first_migration>`:
+   first migration in the backup notice as `<first_migration>`:
 
    ```sql
    SELECT name FROM kysely_migration WHERE name >= '<first_migration>' ORDER BY name;
@@ -186,7 +187,7 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect no rows when no migration ran since the restore point. The restore drops each listed
    migration, and the main workflow applies it again when step 7 re-runs it. For each listed
    migration that must not come back, open a revert PR as step 4 of [Restore main](#restore-main)
-   describes, and merge it in place of the re-run.
+   describes. Step 7 then merges it in place of the re-run.
 
 4. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-<yyyymmdd>` as the branch name.
@@ -205,7 +206,8 @@ the repo has to drop the migrations that must not come back before the next run.
 
 6. Send the [player notice](#tell-players-what-survived).
 
-7. Enable the main workflow, then re-run its latest run on `main`:
+7. Enable the main workflow. With a revert PR from step 3, merge it, and its push to `main` starts
+   the run. With none, re-run the workflow's latest run on `main`:
 
    ```bash
    gh workflow enable main.yml -R zgeoff/vers
@@ -215,11 +217,11 @@ the repo has to drop the migrations that must not come back before the next run.
 
    When step 3 listed no migration, or the revert PR drops every listed one, expect the migrate step
    to log `no pending migrations; no backup taken`. When some listed migrations stay, expect a new
-   `Database backup` notice that names them, then `✅ applied <migration_names>`. In both cases
-   expect the replay service's deploy leg to log
+   `Database backup` notice that names them, then `✅ applied <migration_names>`. Unless the revert
+   PR changed the replay service, expect the replay service's deploy leg to log
    `vers-service-replay is current at <sha> — skipping`. That leg registers the running sim version
-   again, because the restore dropped every registry row written after the restore point. Until it
-   does, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.
+   again, because the restore dropped every registry row written after the restore point. Until that
+   leg runs, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.
 
 8. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
 
@@ -232,10 +234,9 @@ the repo has to drop the migrations that must not come back before the next run.
 
 ## Prepare a restore branch
 
-A restore branch holds the state that `main` takes on. Its sessions are revoked and its drill checks
-pass before `main` moves to that state in one restore, so `main` never serves a session that the
-restore brought back. These steps apply only to an incident restore or its drill, never in normal
-operation.
+A restore branch holds the state that `main` takes on. Revoke its sessions and pass its drill checks
+before you restore `main` from it in one step, so `main` never serves a session that the restore
+brought back. Follow these steps only for an incident restore or its drill.
 
 1. Create the branch from `<parent>`, which is a restore point such as `2026-10-21T06:45:00Z` or the
    name of a backup branch, set to expire within a day:
@@ -346,8 +347,8 @@ operation.
    The engine hash identifies the engine the replay service runs in-process, which replays its own
    work whatever the registry holds. Expect the last report line to read
    `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
-   line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
-   from no branch that fails a check.
+   line holds a broken check, and the lines under it hold the rows that break it. Never restore
+   `main` from a branch that fails a check.
 
    A branch from before a migration lacks the tables and columns that migration adds. When the drill
    reads one of them, it stops with `❌ the restore drill could not read the restored branch` and
@@ -388,17 +389,17 @@ position, so a position the restored chain draws again mints at most one item.
 
 ## Rehearse a point-in-time restore
 
-The drill runs every step of a point-in-time restore up to the restore of `main`, on a disposable
-branch, so it changes nothing that players use.
+Prepare and check a disposable restore branch the way a point-in-time restore does. Skip stopping
+the workflow, listing the migrations and restoring `main`, so the drill changes nothing that players
+use.
 
 1. Pick a restore point inside the last seven days.
 
 2. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-drill-<yyyymmdd>` as the branch name.
 
-3. Record the drill report and the time from the branch create to the end of the drill checks. That
-   span covers the branch restore and the checks, and you compare it against the recovery-time
-   target.
+3. Record the drill report and the time from the branch create to the end of the drill checks, and
+   compare that time against the recovery-time target.
 
 4. Delete the branch:
 

@@ -10,8 +10,8 @@ A roll stream is a deterministic sequence of typed draws: a bounded range, a wei
 key-expansion function stretches one digest into the stream, so a single digest yields as many draws
 as the interpreter asks for, and the same digest yields the same draw sequence. The stream is the
 only randomness an interpreter ever sees. Each entropy source has its own stream builder, the code
-that turns that source into a roll stream, and an interpreter cannot tell which builder fed it. A
-new entropy source is a new stream builder, never an interpreter change.
+that turns that source into a roll stream, and an interpreter cannot tell which builder fed it. To
+add an entropy source, write a new stream builder, and never change the interpreter.
 
 A keyed position stream starts from a keyed digest over a position's canonical byte encoding, hashed
 under the avatar key. Only a key holder can compute it. The keyed position stream builder serves
@@ -34,7 +34,7 @@ and does no I/O. The server calls it at settlement, the one call site that rolls
 Context is client-computable, so the rule on heavy upper tails covers it
 ([perfect foresight](../../game-design/economy-modes.md#perfect-foresight)).
 
-## Draw order is the contract
+## Draw order and content versions
 
 A content version pins table data and interpreter behaviour together. Inserting, removing, or
 reordering one draw shifts every draw after it in the sequence, so any change to the draw sequence
@@ -50,8 +50,9 @@ build runs the mint. Tables whose content version has no entry fail the roll rat
 to another draw order.
 
 Each content version records a digest of the sources of `@vers/item-gen`, `@vers/roll-crypto` and
-`@vers/worldmap-content`, tests and mocks excluded. The roll stream and its weighted pick live in
-`@vers/roll-crypto`, so they decide draws as much as the interpreter does. CI recomputes the digest
-and fails when it differs from the one recorded for the bundled content version, so a change to any
-of the three packages lands only with a new content version. A recorded digest never changes: CI
-also fails when a branch rewrites or removes a digest that its base revision records.
+`@vers/worldmap-content`, tests and mocks excluded. The digest covers `@vers/roll-crypto` because
+the roll stream and its weighted pick live there, and they decide draws as much as the interpreter
+does. CI recomputes the digest and fails when it differs from the one recorded for the bundled
+content version, so a change to any of the three packages lands only with a new content version. A
+recorded digest never changes: CI also fails when a branch rewrites or removes a digest that its
+base revision records.

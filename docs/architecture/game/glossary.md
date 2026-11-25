@@ -1,11 +1,12 @@
 # Game glossary
 
 The terms the game architecture docs share. Each term has one owner, the doc that states its rules.
-Every other doc uses the term with the meaning its owner gives it.
+Every other doc uses the term with the meaning its owner gives it, so a term never means two things
+in two docs.
 
 | Term                              | Meaning                                                                                                                                              | Owner                                                                 |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| activity                          | One attempt at one piece of content, recorded as a single append-only checkpoint stream and verified as a unit.                                      | [game simulation](./game-simulation.md)                               |
+| activity                          | One attempt at one piece of content, recorded as a single append-only checkpoint stream and verified segment by segment.                             | [game simulation](./game-simulation.md)                               |
 | activity start                    | An activity's first record, naming the node, the seed, and the version stamps; the client builds it and the server admits it.                        | [game simulation](./game-simulation.md)                               |
 | activity type                     | What the avatar does in an activity; it supplies the code that advances the simulation.                                                              | [game simulation](./game-simulation.md)                               |
 | appended anchor                   | How far the player claims to have played one chain, and where a new activity begins.                                                                 | [seed chain](./seed-chain.md)                                         |

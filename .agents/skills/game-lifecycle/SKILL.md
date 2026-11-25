@@ -17,7 +17,7 @@ describe the model correctly.
 
 Keep [`glossary.md`](../../../docs/architecture/game/glossary.md) open beside this skill. It defines
 each game term used here, such as admit, settle, head row, appended anchor and verified anchor. This
-skill hands nothing back. It tells you what to drop and where to read.
+skill has no hand-back.
 
 ## Key rules
 
@@ -75,8 +75,8 @@ skill hands nothing back. It tells you what to drop and where to read.
 
 ## Reading order
 
-Read all five docs in full before you open a file, even for a fix to one function. The code puts one
-export in each file, so no single file shows a flow.
+Read all five docs in full before you open a file, even for a fix to one function. Each file holds
+one export, so no single file shows a flow.
 
 1. [`glossary.md`](../../../docs/architecture/game/glossary.md): the terms the other four docs use
    without defining them.

@@ -1,11 +1,11 @@
 # The seed chain
 
 Every activity an avatar runs at a node draws its randomness from one place: that node's seed chain.
-The chain is a single sequence of chain positions running forward. An activity draws the position at
-the front, plays out from it, and leaves the next position for the activity that follows. A position
-is spent once and never drawn twice, so a failed activity costs a position exactly as a completed
-one does. Playing a node again never re-rolls the last result; it plays the next stretch of the
-chain.
+The chain is a single sequence of chain positions running forward. An activity draws positions from
+the front, one per checkpoint after its `Started` one, and leaves the next unspent position for the
+activity that follows. A position is spent once and never drawn twice, so a failed activity spends
+its positions exactly as a completed one does. Playing a node again never re-rolls the last result;
+it plays the next stretch of the chain.
 
 The chain carries two anchors. The appended anchor marks how far the player claims to have played.
 The verified anchor marks how far the server has proved. Play runs ahead of proof, and payment waits
@@ -17,9 +17,8 @@ world-map encounter's scope is its map node. Two avatars on the same node hold t
 [Game simulation](./game-simulation.md) owns the activity start the chain feeds and the checkpoint
 stream that records each draw. [Replay verification](./replay-verification.md) owns the verifier
 that proves a stream and settles it. [Offline reconcile](./offline-reconcile.md#settlement-in-order)
-owns the order the server settles an avatar's activities in.
-[Game entropy](./game-entropy.md#the-seed-chain) says why the chain is one flat sequence rather than
-a tree a player could search.
+owns the order the server settles an avatar's activities in. For why the chain is one flat sequence
+rather than a tree a player could search, see [Game entropy](./game-entropy.md#the-seed-chain).
 
 ```mermaid
 flowchart LR
@@ -85,11 +84,13 @@ reason:
   check. A second stale-anchor refusal drops the start and resets the node's cached anchor to the
   anchor it carries ([cached anchors](./offline-reconcile.md#cached-anchors)).
 
-A kept start resends on the worker's backoff
-([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
-checkpoints with it. The server appended nothing for a dropped start, so the device moves its node's
-cached anchor back to the anchor the start was minted from, and never forward. When the drop covers
-several starts on one node, the earliest start's anchor wins.
+The worker resends a kept start on its backoff
+([worker lifecycle](./offline-reconcile.md#worker-lifecycle)). When the device drops a start, it
+drops the start's queued checkpoints too. The server appended nothing for a dropped start, so the
+device moves its node's cached anchor back to the anchor the start was minted from, and never
+forward. When the device drops several starts on one node, it moves the anchor back to the earliest
+start's anchor. After a stale-anchor drop, the device sets the node's cached anchor to the server's
+anchor, which the refusal carries, even when it sits ahead of the start's anchor.
 
 ## The anchors
 
@@ -100,35 +101,37 @@ that appended nothing, or whose only checkpoint is the `Started` one, moves noth
 `Started` checkpoint draws nothing from the seed.
 
 The verified anchor moves only when a proved activity ends, or when a rejection ends one that was
-partly proved. A segment part way through an activity settles what it proved and advances that
-activity's own verified head, but leaves the chain's anchor where it stands. The anchor moves on the
-segment that both ends a forward-exited activity and reaches its last appended checkpoint. When the
-verifier claims an activity whose start index sits ahead of the anchor, it catches the anchor up
-from the forward-exited predecessor before it adjudicates.
+partly proved. A catch-up at claim time, below, counts as the first case: it moves the anchor to a
+predecessor that already ended proved. A segment part way through an activity settles what it proved
+and advances that activity's own verified head, but leaves the chain's anchor where it stands. The
+anchor moves on the segment that both ends a forward-exited activity and reaches its last appended
+checkpoint. When the verifier claims an activity whose start index sits ahead of the anchor, it
+catches the anchor up from the forward-exited predecessor before it adjudicates.
 
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
 
-The chain also carries a replay priority and a replay flag. The flag is set while the chain holds an
-activity the verifier could take next: one that is not rejected, holds checkpoints the verifier has
-not proved, and follows only settled activities. An avatar's later activities wait behind that one,
-so their chains stay unflagged, and a claim reads only flagged chains, in priority order. The
-verifier picks between avatars by the priority of the chain that holds each avatar's next activity,
-highest first and older chain on a tie, and it never reorders one avatar's own chains against each
-other.
+The chain also carries a replay priority and a replay flag. The flag belongs on a chain while it
+holds an activity the verifier could take next: one that is not rejected, holds checkpoints the
+verifier has not proved, and follows only settled activities. An avatar's later activities wait
+behind that one, so their chains stay unflagged, and a claim reads only flagged chains, in priority
+order. The verifier picks between avatars by the priority of the chain that holds each avatar's next
+activity, highest first and older chain on a tie, and it never reorders one avatar's own chains
+against each other.
 
-Three writers keep the flag. An append that writes a checkpoint sets it when its activity follows
-only settled activities. The verifier recomputes the flags on all of an avatar's chains before it
-commits a claim, which moves the flag to the next activity's chain once the earlier one settles.
-Each drain opens with a repair pass over every chain, which flags a chain that a writer missed and
-clears a flag that no activity justifies. An append that races a settlement, or one from a service
-older than the flag, can leave a chain unflagged, and the wake that append sends starts the drain
-that repairs it.
+An append, the verifier and the repair pass keep the flag. An append that writes a checkpoint sets
+it when its activity follows only settled activities. The verifier recomputes the flags on all of an
+avatar's chains before it commits a claim, which moves the flag to the next activity's chain once
+the earlier one settles. Each drain opens with a repair pass over every chain, which flags a chain
+that a writer missed and clears a flag that no activity justifies. An append that races a
+settlement, or one from a service older than the flag, can leave a chain unflagged, and the wake
+that append sends starts the drain that repairs it.
 
 Every writer that takes both rows takes the chain row before the activity row, so no two writers
 deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
 shared lock that the verifier's claim admits, so an append never waits for a replay to finish. The
-verifier and the repair pass skip a chain row another transaction holds rather than wait on it.
+verifier and the repair pass skip a chain row another transaction holds exclusively rather than wait
+on it.
 
 ## Pulling the appended anchor back
 

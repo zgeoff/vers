@@ -1,11 +1,13 @@
 # QA debug hook
 
-From the console of a game page, `window.__versQA` reads the state of the
+When a run on a game page behaves wrong, or a QA avatar's run needs to go faster, open the console
+of a game page and use `window.__versQA`. It reads the state of the
 [writer worker](../architecture/game/glossary.md) and sets the simulation speed of a
-[QA avatar](qa.md#accounts). [Manual QA](qa.md#debug-hook) lists the pages that carry the object.
-[Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
-worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns its
-lifecycle, with the phases and flushes that its events record.
+[QA avatar](qa.md#accounts). For the pages that carry the object, see [Manual QA](qa.md#debug-hook).
+For the writer worker, read
+[Game simulation](../architecture/game/game-simulation.md#checkpoint-streams). For its lifecycle,
+with the phases and flushes that its events record, read
+[offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle).
 
 ## Read the worker's state
 
@@ -51,8 +53,8 @@ refusal to each tab as a run outcome.
 
 A phone in airplane mode gives you no console while the refusal happens. The page therefore saves a
 capture of each refusal outcome that reaches the tab, and the first `snapshot()` call after the
-device reconnects returns it in `refusalCaptures`. [Refusal captures](qa-refusal-captures.md) lists
-what a capture holds and where the page stores it.
+device reconnects returns it in `refusalCaptures`. For what a capture holds and where the page
+stores it, see [Refusal captures](qa-refusal-captures.md).
 
 ### Events and connectivity
 

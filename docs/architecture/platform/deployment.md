@@ -1,8 +1,8 @@
 # Deployment
 
-The stack is a Fly.io fleet, and a push to `main` drives every rollout through the repo's deploy CLI
-and its manifest, `deploy.config.ts`. Every rollout decision keys off one marker: the commit stamped
-into each app's machine env, compared against HEAD ([staleness](#staleness)).
+The stack is a Fly.io fleet, and a push to `main` rolls each change out through the repo's deploy
+CLI and its manifest, `deploy.config.ts`. Whether an app needs a rollout keys off one marker: the
+commit stamped into each app's machine env, compared against HEAD ([staleness](#staleness)).
 [Provisioning](../../runbooks/provisioning.md) stands the fleet up from nothing.
 
 ## Topology
@@ -10,18 +10,20 @@ into each app's machine env, compared against HEAD ([staleness](#staleness)).
 The web app, the error tracker, and the analytics dashboard hold public addresses. Every domain
 service (every `services/*` app) is private, reachable only across the organization's private mesh.
 Browsers post error envelopes to the tracker directly, and analytics tracker traffic arrives through
-the web app's same-origin proxy ([analytics](../analytics.md)). All persistent state is the shared
-Neon database ([database](./database.md)): no app runs its own Postgres, and the keys service holds
-no database connection at all, only its root secrets.
+the web app's same-origin proxy ([analytics](../analytics.md)). All database state is the shared
+Neon database ([database](./database.md)), and the error tracker keeps uploaded files in object
+storage ([pinned upstream images](#pinned-upstream-images)). No app runs its own Postgres, and the
+keys service holds no database connection at all, only its root secrets.
 
 An idle app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on
 its first request, so a suspended process resumes with the sockets it held
-([connection pool](./database.md#connection-pool)). Three deviations:
+([connection pool](./database.md#connection-pool)). These apps deviate from that:
 
 - The web app, the session service, and the activity service each keep one machine warm, because
   every request passes through the first two and a session's first tap reaches the third.
   `deploy verify` enforces the minimum through the manifest.
-- The email service stops rather than suspends, the queue-hosting policy ([queues](./queues.md)).
+- The email service stops rather than suspends, as the queue-hosting policy requires
+  ([queues](./queues.md)).
 - The replay service carries no inbound player traffic; a drain holds its machine up until its queue
   is empty ([replay](../game/replay-verification.md#replay)).
 
@@ -45,14 +47,15 @@ Dockerfile. Secrets are set with `fly secrets set` and never committed, and each
 declares the keys it needs ([env preflight](#env-preflight)). Service-to-service auth runs on one
 keypair per minting service: each minter holds its private half in its own app's secrets, and every
 domain service verifies inbound calls with the key set holding each minter's public half
-([auth](../services/auth.md#service-to-service-tokens)). The meaning of every other secret belongs
-to the doc of the feature that reads it.
+([auth](../services/auth.md#service-to-service-tokens)). For any other secret, see the doc of the
+feature that reads it.
 
-The browser-side values ride GitHub Actions configuration. The deploy workflow bakes the browser
-error-tracker DSN and the analytics website id into the web app's client bundle as build args, and a
-bundle without the website id ships no analytics tracker ([analytics](../analytics.md)). Source-map
-uploads authenticate with an Actions secret, passed to the image build as a build secret rather than
-a build arg, so no layer or build cache keeps it. The build skips source maps when it is unset.
+The browser-side values come from GitHub Actions configuration. The deploy workflow bakes the
+browser error-tracker DSN and the analytics website id into the web app's client bundle as build
+args, and a bundle without the website id ships no analytics tracker ([analytics](../analytics.md)).
+Source-map uploads authenticate with an Actions secret, passed to the image build as a build secret
+rather than a build arg, so no layer or build cache keeps it. The build skips source maps when it is
+unset.
 
 ### Shared secrets
 
@@ -75,7 +78,7 @@ flowchart LR
   E --> X
   P --> B["build<br>one leg per stale app"]
   X --> B
-  B --> G["full-stack gate<br>every image in one compose stack"]
+  B --> G["full-stack gate<br>every built image in one compose stack"]
   M --> D
   P --> D
   X --> D
@@ -84,8 +87,8 @@ flowchart LR
 ```
 
 A push to `main` runs the main workflow. The `checks` and `e2e` jobs run side by side, and every
-later job waits for both to pass. Each build and deploy leg self-gates on staleness, so a phase lost
-to an earlier failure ships on the next push.
+later job waits for both to pass. Each build and deploy leg skips an app that is not stale, so a
+phase lost to an earlier failure ships on the next push.
 
 ### Pipeline
 
@@ -97,27 +100,30 @@ branch. Database migrations are never rolled back: a release must tolerate every
 after it shipped (expand and contract), which is what makes redeploying a previous image safe.
 
 The build and deploy matrices derive from the manifest, so adding an app to the manifest is the
-whole change. An app's failed build leaves its ref unavailable to the full-stack gate, whose
-fleet-wide failure holds every cutover.
+whole change. When an app's build fails, the full-stack gate has no ref for that app and fails,
+which holds every app's cutover.
 
 ### Staleness
 
 Each deploy stamps the commit it ships into the app's machine env as `GIT_SHA`, and the web app's
 `/health` serves it as `commit`, so a reader without Fly access can tell which commit is live. The
-CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A deployed
-commit that is HEAD or descends from it is current, which happens when a later push's deploy lands
-while this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips it
-rather than roll it back. `deploy verify` also passes a fleet split between HEAD's image and a
-descendant's, as long as every started machine on HEAD's image passes its health checks, and a
-machine on any other image fails the run. A deploy leg reads a split fleet as stale, because no
-single commit is stamped across its machines, and redeploys HEAD.
+CLI compares the commit stamped on the app's machines with HEAD before it reads any diff. A deployed
+commit that is HEAD or descends from it is current. That happens when a later push's deploy lands
+while this run is still between its legs. `deploy verify` passes such an app, and a deploy leg skips
+an app whose machines all carry that commit rather than roll it back. `deploy verify` also passes a
+fleet split between HEAD's image and a descendant's, as long as every started machine on HEAD's
+image passes its health checks. A machine on any other image fails the run. A deploy leg has no such
+exception: it reads any split fleet as stale, because no single commit is stamped across its
+machines, and runs the [stranded-machine sweep](#stranded-machine-sweep) before it deploys HEAD.
+While machines on both images are started, the sweep fails the leg and HEAD never deploys. Once only
+the kept group has started machines, the sweep destroys the rest and the leg deploys HEAD.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
-packages turbo reports affected from that base. The app's manifest trigger reads that set: a
-turbo-affected trigger is stale when its package is affected, and a paths trigger is stale when a
-changed path matches one of its globs. A path the root `.dockerignore` excludes never counts as a
-change, because a file the build context never holds cannot change an image. The filter never
-reaches turbo's affected set, so a README edit under an app's directory still ships that app.
+packages turbo reports affected from that base. The CLI checks the app's manifest trigger against
+that set: a turbo-affected trigger is stale when its package is affected, and a paths trigger is
+stale when a changed path matches one of its globs. A path the root `.dockerignore` excludes never
+counts as a change, because a file the build context never holds cannot change an image. The filter
+never reaches turbo's affected set, so a README edit under an app's directory still ships that app.
 
 ### Env preflight
 
@@ -134,10 +140,11 @@ secret names and digests only, so no secret value enters the run.
 
 ### Full-stack gate
 
-Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack:
-every service image, the web app's production image, postgres, and a capture-only email stub. It
-migrates the stack's own database and drives the e2e suite's stack journeys against it. The gate is
-fleet-wide by design: a combined state that fails its journeys ships for no app.
+Between build and cutover, the `stack-e2e` job boots every deployable image except the two
+[pinned upstream images](#pinned-upstream-images) in a compose stack: every service image, the web
+app's production image, postgres, a capture-only email stub, and an analytics stub behind the web
+app's proxy. It migrates the stack's own database and drives the e2e suite's stack journeys against
+it. When the combined stack fails a journey, no app ships, the pinned upstream apps included.
 
 ### Build and cutover
 
@@ -145,29 +152,32 @@ A stale build leg builds on Fly's remote builder from the app's Dockerfile
 ([container builds](./container-builds.md)) and pushes the image under a tag derived from the
 commit, so no image blob crosses from the GitHub runner and no ref travels between jobs. Re-running
 a leg overwrites its own tag. flyctl sets no deadline on a remote build, whose push can stall with
-no output. The deploy CLI rebuilds after a silence no healthy build shows, and the Build step's
-timeout fails the leg before the job's. A stale cutover leg deploys that pushed ref, waits for the
-fleet to report the new commit, then runs the app's post-deploy probes from the manifest: an HTTP
-status check, a JSON round-trip against an expected body, or a Lighthouse audit of the live page
-against the manifest's performance budget. An app with no Dockerfile cuts over to the image named in
-its `fly.toml`. For a manual rollout, the CLI's `deploy` command runs both phases in one invocation.
+no output. The deploy CLI rebuilds when a build stays silent longer than a healthy build ever does,
+and the Build step's timeout fails the leg before the job's. A stale cutover leg deploys that pushed
+ref, waits for the fleet to report the new commit, then runs the app's post-deploy probes from the
+manifest: an HTTP status check, a JSON round-trip against an expected body, or a Lighthouse audit of
+the live page against the manifest's performance budget. An app with no Dockerfile cuts over to the
+image named in its `fly.toml`. For a manual rollout, the CLI's `deploy` command runs both phases in
+one invocation.
 
-An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
-that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old
-machines. A broken boot fails the gate before cutover, and the old machines serve every request
+An app whose `fly.toml` sets the blue-green strategy, which is the web app and every service, rolls
+out that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the
+old machines. A broken boot fails the gate before cutover, and the old machines serve every request
 until it passes. The deploy CLI bounds flyctl's wait for each machine, so a green machine that never
 turns healthy fails the rollout and flyctl destroys the green machines itself. A flyctl call still
 running at a later deadline gets SIGINT, its ctrl-c, which aborts a rollout that is still waiting
-and destroys its green machines. A grace after that, it gets SIGKILL. Both bounds end before the
+and destroys its green machines. After a grace period, it gets SIGKILL. Both bounds end before the
 deploy job's timeout, which would otherwise kill flyctl mid-rollout and leave the green machines
 started. The two pinned upstream apps set no strategy and roll over in place.
 
 Deploy jobs queue rather than cancel. The checks, e2e, builds, full-stack gate and verifies group by
 commit and never cancel, so every push to `main` is tested in full. A run whose checks pass after a
-newer push has landed skips its deploy stages, so an older commit never migrates or deploys after a
-newer one, and the newest run ships every change. Migrate and each app's deploy have one fixed group
-that never cancels, so they run one job at a time, and every waiting job keeps its turn. A rollout
-can fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
+newer push has landed skips its deploy stages, so an older run never migrates or deploys after a
+newer one, and the newest run ships every change. Only a [rollback](#release-record-and-rollback)
+puts an older commit back on an app. Migrate and each app's deploy each have one fixed group that
+never cancels, so each group runs one job at a time, and every waiting job keeps its turn. When a
+rollout fails on a transient host-capacity refusal, Fly rolls back cleanly, so re-run the failed
+job.
 
 ### Release record and rollback
 
@@ -182,17 +192,17 @@ with no recorded release yet is left serving the broken release, reported in the
 
 ### Fleet verification
 
-`verify-fleet` runs on every green push that no newer run replaced, even when every deploy leg
-skipped, and asserts every manifest app is online and current, catching an app at zero machines or a
-fleet behind HEAD. A rolled-back app reads stale there by design. It also checks each private
-entry's addresses ([networking](#networking)), each declared scheduled machine against the app's
-image, and each shared secret's digests across its declaring apps.
+The `verify-fleet` job runs `deploy verify` on every green push that no newer run replaced, even
+when every deploy leg skipped. It asserts every manifest app is online and current, so it catches an
+app at zero machines or a fleet behind HEAD. A rolled-back app reads stale there by design. It also
+checks each private entry's addresses ([networking](#networking)), each declared scheduled machine
+against the app's image, and each shared secret's digests across its declaring apps.
 
 ### Scheduled machines
 
 A scheduled machine is unmanaged: `fly deploy` never rolls its image forward. An app entry declares
 each one in the manifest, and the CLI reconciles the declarations right after the app's rollout
-lands, and on its skipped-deploy path alike: it creates a declared machine that does not exist yet
+lands, and also when the app's deploy skips: it creates a declared machine that does not exist yet
 on the app's just-deployed image and moves one on a stale image onto it. When the machine's host has
 no room for the new image, the CLI replaces the machine: it creates a new one on the new image, then
 destroys the old one. Fly names are unique per app, so the replacement takes the declared name with
@@ -201,7 +211,7 @@ a short commit suffix, and every scheduled machine the CLI creates carries the d
 When a declared name matches more than one machine, such as after a replace that stopped before its
 destroy, the reconcile keeps one, preferring a machine on the new image, and destroys the others
 once the kept machine is on the new image. `deploy verify` reports a declared name with more than
-one machine. Provisioning a new scheduled machine is a manifest edit. A declaration carries its own
+one machine. To provision a new scheduled machine, edit the manifest. A declaration carries its own
 env map, because a scheduled machine reads no `fly.toml` env table.
 
 ### Stranded-machine sweep
@@ -214,8 +224,9 @@ outside it, then proceeds. A started machine outside the kept group is never a d
 leg fails instead and prints the fleet's machine table for an operator. A machine that flyctl
 reports no image for joins no group. When the fleet also has an image group, the leg destroys each
 such machine that is not started, and fails on one that is started. `deploy verify` never sweeps; it
-reports a mixed-image fleet, and a started machine with no image beside machines with one, as
-findings of their own.
+reports a mixed-image fleet as a finding of its own, unless a descendant's rollout explains the
+split ([staleness](#staleness)), and it reports a started machine with no image beside machines with
+one.
 
 ### Pinned upstream images
 

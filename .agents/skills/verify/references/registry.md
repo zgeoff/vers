@@ -15,7 +15,7 @@ The file holds three lists:
   as docs, tests and CI wiring. `report` marks no feature for a file that matches one, even when it
   matches the other lists too.
 
-The gate fails on a changed file that matches none of the three lists.
+`bun verify gate` fails a PR in CI on a changed file that matches none of the three lists.
 
 1. Edit the glob in the list it belongs to.
 2. For each glob you add to `featurePaths` or `sharedPaths`, add an entry to

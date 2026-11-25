@@ -1,8 +1,8 @@
 # Infra
 
-How the vers-infra Pulumi program in `infra/` is set up and deployed, and what each of its resource
-sets keeps out of code. [Provisioning](./provisioning.md) owns the order in which the platform comes
-up; this page owns the program's own credentials and commands.
+How the vers-infra Pulumi program in `infra/` is set up and deployed, its own credentials and
+commands, and what each of its resource sets keeps out of code. For the order in which the platform
+comes up, see [Provisioning](./provisioning.md).
 
 ## Resource sets
 
@@ -10,13 +10,13 @@ up; this page owns the program's own credentials and commands.
   serves TLS, plus the Resend records: the sending set for `transactional.versidle.com` and the
   receiving MX for `qa.versidle.com`, the domain QA test inboxes live on.
 - `axiom.ts` — the Axiom resource set: the `vers-*` datasets, the ingest and query API tokens, the
-  threshold monitors, the Discord alarms notifier, and the dashboards; the registries in
-  [observability](../architecture/platform/observability.md) describe what the monitors and
-  instruments watch. Token secret values live in 1Password, out of code; stack state holds sensitive
-  outputs encrypted. Any change to a token's arguments regenerates its secret, so a scope edit means
-  updating the vault item and dependent Fly secrets within the 48-hour rotation grace window. The
-  provider's own credential is console-managed: a token cannot rotate itself without invalidating
-  the session doing the rotating.
+  threshold monitors, the Discord alarms notifier, and the dashboards. For what the monitors and
+  instruments watch, see the registries in
+  [observability](../architecture/platform/observability.md). Token secret values live in 1Password,
+  out of code; stack state holds sensitive outputs encrypted. Any change to a token's arguments
+  regenerates its secret, so after a scope edit, update the vault item and the dependent Fly secrets
+  within the 48-hour rotation grace window. The provider's own credential is console-managed: a
+  token cannot rotate itself without invalidating the session doing the rotating.
 - `neon.ts` — the Neon layer: the `vers` project, its `main` and `dev` branches with their compute
   endpoints, and the `mcp_ro` and `mcp_dev` roles. Databases, schemas, and migrations stay with the
   migration pipeline. Each role's in-database grants are SQL applied per the
@@ -28,13 +28,14 @@ up; this page owns the program's own credentials and commands.
   environment, the Actions variables, and the Actions secrets. Variables are repo- and
   environment-scoped. The service-auth public key value comes from encrypted stack config, and the
   rest sit in code. Secret values resolve from the `vers-ci` vault as environment variables at run
-  time. The production `NEON_API_KEY`, which the migrate job's backup uses, is a key scoped to the
-  `vers` Neon project, read from the `neon-vers-prod-backup` item as `NEON_BACKUP_API_KEY`. GitHub
-  cannot return a secret's value, so the program pushes and the vault stays the source of truth.
-  Three things stay console-managed and are therefore not drift: milestones and project boards,
-  which are planning state rather than schema; the `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential
-  the resolution itself authenticates with; and the provider's own PAT, for the same reason as the
-  Axiom token.
+  time. The `NEON_API_KEY` Actions secret in the `production` environment, which the migrate job's
+  backup uses, is a key scoped to the `vers` Neon project, read from the `neon-vers-prod-backup`
+  item as `NEON_BACKUP_API_KEY`. It is not the org key the program itself runs with
+  ([prerequisites](#prerequisites)). GitHub cannot return a secret's value, so the program pushes
+  and the vault stays the source of truth. These stay console-managed, so they don't count as drift:
+  milestones and project boards, which are planning state rather than schema; the
+  `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential the resolution itself authenticates with; and
+  the provider's own PAT, for the same reason as the Axiom token.
 - `sdks/axiom/`, `sdks/neon/` — committed TypeScript SDKs generated from the bridged Terraform
   providers. `pulumi package add terraform-provider axiomhq/axiom 1.6.2` and
   `pulumi package add terraform-provider kislerdm/neon 0.13.0` regenerate them, and `Pulumi.yaml`
@@ -45,7 +46,6 @@ up; this page owns the program's own credentials and commands.
 - `op` authenticated (service account: `OP_SERVICE_ACCOUNT_TOKEN` in the environment).
 - `versidle.com` added to Cloudflare, with the registrar's nameservers pointed at the pair
   Cloudflare assigns. DNS records attach to a zone, so this comes first.
-- An R2 bucket named `vers-pulumi-state` for Pulumi state.
 - An Axiom API token (the `iac-token` field on the `vers-ci` vault's `axiom` item) with org-level
   create/read/update/delete on monitors, notifiers, dashboards, datasets, and API tokens, plus query
   permission on all datasets — Axiom rejects monitor writes unless the token can query every dataset
@@ -58,7 +58,8 @@ up; this page owns the program's own credentials and commands.
 
 ## One-time setup
 
-Run these from `infra/`. Create the state bucket:
+Run these from `infra/`. Create the state bucket, `vers-pulumi-state`, the value of
+`R2_STATE_BUCKET`:
 
 ```sh
 op run --env-file=.env -- sh -c 'curl -fsS -X POST \
@@ -82,10 +83,9 @@ The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and
 ## Deploy
 
 The `infra-deploy` workflow applies each merge to `main` that changes the program. Each run first
-runs a drift check, a preview of the commit before its push, and its guard holds a plan that deletes
-or replaces a resource or that follows a failed drift check.
-[Infra deploys](../architecture/platform/infra-deploys.md) describes the workflow, the guard and
-drift.
+runs a drift check: a preview of the commit before its push. The run's guard holds a plan that
+deletes or replaces a resource, or that follows a failed drift check. For the workflow, the guard
+and drift, see [Infra deploys](../architecture/platform/infra-deploys.md).
 
 Apply a held plan through the workflow, never with `bun run up`. The workflow's run waits in the
 `infra-prod` queue, so it never overlaps another apply or preview, and its summary records the plan
@@ -112,10 +112,11 @@ the run's summary lists each reason under `Apply plan (prod)`.
    gh workflow run infra-deploy.yml --ref main
    ```
 
-   The dispatched run applies the plan of main's tip whatever the guard finds. That plan reverts
-   each console change that the program lacks. When `main` moves while the run waits, the run holds
-   with `this run's commit <commit> is not main's tip <tip>`; dispatch the workflow again. Expect:
-   the run's `Apply plan (prod)` holds `the job applies it because a person dispatched the run`, and
+   The dispatched run applies the plan of main's tip whatever the guard finds about deletes,
+   replaces and drift. That plan reverts each console change that the program lacks. When `main`
+   moves while the run waits, the run holds with
+   `this run's commit <commit> is not main's tip <tip>`; dispatch the workflow again. Expect: the
+   run's `Apply plan (prod)` holds `the job applies it because a person dispatched the run`, and
    `Drift after the apply (prod)` ends with every resource unchanged.
 
 To drop a held change instead, merge a pull request that reverts it, then do step 3. The revert's
@@ -132,7 +133,7 @@ the run's summary, then act on its cause:
 | an error in the program                      | merge a fix in a pull request, then dispatch the workflow when its run holds |
 | `the stack is currently locked`              | [clear the stale lock](#clear-a-stale-lock)                                  |
 
-A failed apply leaves the stack apart from the commit it tried to apply. The fix's drift check
+A failed apply leaves the stack out of step with the commit it tried to apply. The fix's drift check
 previews that commit and finds the difference, so the guard holds the fix until you dispatch the
 workflow.
 

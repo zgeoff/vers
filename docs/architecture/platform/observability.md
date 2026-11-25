@@ -1,7 +1,7 @@
 # Observability
 
-The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and Axiom consumes them, one
-dataset per signal. Error reporting is a separate path through the Sentry SDK to Bugsink
+The fleet emits OpenTelemetry traces, logs, and metrics, and Axiom consumes them, one dataset per
+signal. Error reporting is a separate path through the Sentry SDK to Bugsink
 ([error handling](../services/error-handling.md)). Every Axiom resource is managed as code in the
 `infra/` Pulumi program ([infra deploys](./infra-deploys.md)).
 
@@ -15,7 +15,7 @@ flowchart LR
     M1["process-global meter provider<br>behind a periodic exporter"] -->|metrics| O
   end
   subgraph web["the web app"]
-    W[its own exporters] -->|traces, logs, metrics| O
+    W["its own exporters, and the shared LogTape setup"] -->|traces, logs, metrics| O
   end
   O[("the OTLP endpoint")]
 ```
@@ -26,8 +26,8 @@ LogTape's OpenTelemetry sink, and metrics through a process-global meter provide
 exporter. The web app carries no Elysia plugin and boots its own exporters for traces and metrics.
 Both configure logging through the service runtime's one LogTape setup, which writes each entry to
 stdout and, with the endpoint set, hands it to a batching log exporter that shares the trace and
-metric resource. A process with the endpoint unset emits nothing, and every instrument stays the
-OpenTelemetry API's no-op.
+metric resource. A process with the endpoint unset exports nothing and writes its logs to stdout
+alone, and every instrument stays the OpenTelemetry API's no-op.
 
 The Sentry SDK registers no tracer provider, context manager or propagator, and opens no spans of
 its own. Only the OpenTelemetry setup above registers those three. Its server integration, the Bun
@@ -44,8 +44,8 @@ pool and the other service resources, since a final gauge collection may still q
 ## Traces
 
 One span opens per unit of work and stays active across every await inside it, so a query, an RPC
-call, or a manual span nests under the work that caused it. Where the work originates decides which
-site opens the span:
+call, or a manual span nests under the work that caused it. The site that opens the span depends on
+where the work starts:
 
 - An inbound request to a service: the Elysia plugin opens one SERVER span from the inbound
   `traceparent`.
@@ -66,21 +66,22 @@ id by parsing the inbound header directly and mints a fresh one when none arrive
 
 Wherever a span is active, it is the source of truth for the request's identity: a request's
 exported span trace id, its `x-trace-id` response header, and every log line's trace id field agree.
-One exception: a response built with immutable headers, such as a redirect, ships unstamped and
-correlates through its log lines only. A span carries semantic-convention attributes for its kind
-and never a raw per-entity id or secret material, the same cardinality and leakage discipline metric
-attributes follow.
+The one exception is a response built with immutable headers, such as a redirect, which ships
+unstamped and correlates through its log lines only. A span carries semantic-convention attributes
+for its kind and never a raw per-entity id or secret material, the same cardinality and leakage
+discipline metric attributes follow.
 
 ## Log lines
 
 The LogTape setup stamps the active request's trace id onto each entry, and HTTP responses report
-the same id in `x-trace-id`, so one trace id names a request's log lines across the web app and the
-services it called. The line-level conventions:
+the same id in `x-trace-id`, so a request's log lines across the web app and the services it called
+share one trace id. Log lines follow these conventions:
 
-- Data rides in structured fields, never interpolated into the message. The message is a stable
-  label for the event, and the fields are what Axiom queries filter and aggregate on.
+- Put data in structured fields, never interpolated into the message. The message is a stable label
+  for the event, and the fields are what Axiom queries filter and aggregate on.
 - Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
-  everything else at `info`.
+  everything else at `info`. The exceptions are the slow-request line and the static-asset line
+  below.
 - A failure always emits a line at the site that decides the outcome, carrying the reason in a
   field.
 - Each request logs one completion line with its method, path, status, and duration. The query
@@ -89,24 +90,24 @@ services it called. The line-level conventions:
   probe like any request and logs a served static asset at `debug`.
 - A service logs a request past its slow-request threshold at `warn`, with a per-path override,
   unless its status is already a server error. A service or the web app writes an overdue line for a
-  request still open past the overdue threshold, the one record a request that never finishes
-  leaves.
+  request still open past the overdue threshold. A request that never finishes leaves no other
+  record.
 - Presentation is the transport's job: dev consoles pretty-print, and call sites never embed
   decoration in the message.
 
 ## Metrics
 
 Instrumentation is part of a feature: work that adds a pipeline, queue, worker, or failure path
-lands with the metrics that make it observable. The conventions:
+lands with the metrics that make it observable. Metrics follow these conventions:
 
-- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`).
+- Define instruments in the owning package through the global metrics API (`metrics.getMeter`).
   Domain code never constructs, receives, or stops a meter provider; the service runtime owns that
   lifecycle.
 - Names are dot-namespaced `vers.<domain>.<measure>`, units use UCUM annotations, and attributes are
   snake_case with closed value sets, never unbounded values like per-entity ids.
 - A rare, meaningful event is a counter recorded at the site that decides it, a `record-*.ts`
   module, and the recording's log line carries the raw numbers behind it.
-- Database-resident state observes through observable gauges: one batch callback per package, one
+- Observe database-resident state through observable gauges: one batch callback per package, one
   snapshot query per collection, failures caught and logged so a bad query never takes down the
   process it observes.
 - An instrument's `description` and `unit` in its definition are its registry. A grep for the
@@ -119,7 +120,7 @@ reads quiet.
 ## Alarms
 
 Each Axiom threshold monitor alerts on its threshold alone, never on no data, because a failure
-counter that emits only on failure reads quiet when healthy. The monitors:
+counter that emits only on failure reads quiet when healthy. Axiom runs these monitors:
 
 - 5xx responses: a server span that completed with a 5xx status. The central error interceptor has
   already reported the failure to Bugsink with its trace id, so the alarm is the prompt to open that
@@ -131,15 +132,15 @@ counter that emits only on failure reads quiet when healthy. The monitors:
 - Replay poke failed: the activity service's poke-failed line, which it writes when a wake poke to
   the replay service exhausts its retries, so the queue may go undrained while unverified work sits
   in it.
-- Replay parked: the replay service's park line, grouped by the line, which names the park reason,
-  so each reason alerts on its own. A parked activity halts its avatar's settlement order until an
-  operator releases it.
+- Replay parked: the replay service's park line, grouped by the park reason the line names, so each
+  reason alerts on its own. A parked activity halts its avatar's settlement order until an operator
+  releases it.
 - Replay quarantined: the replay service's quarantine line. A quarantined activity halts its
   avatar's settlement order and blocks new starts in its chain scope until an operator releases it.
 - Activity refusals: the activity service's refusal line, which it writes for each start or append
-  it refuses, grouped by the line, which names the code and the reason, so each reason alerts on its
-  own. The threshold sits above one transient stale-head conflict and below a device stuck retrying
-  a refused chain.
+  it refuses, grouped by the code and the reason the line names, so each reason alerts on its own.
+  The threshold sits above one transient stale-head conflict and below a device stuck retrying a
+  refused chain.
 
 Axiom monitors, the CI pipeline, and Bugsink all post to one Discord channel. CI posts a structured
 embed; Axiom and Bugsink post their tools' stock formats.

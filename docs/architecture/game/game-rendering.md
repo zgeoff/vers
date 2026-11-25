@@ -1,9 +1,11 @@
 # Game rendering
 
-The game world renders through one persistent three.js canvas. Every other UI element (panels,
-tooltips, the stash, the market, the avatar panels) is HTML from the design system. 3D is reserved
-for genuinely spatial content. List-and-filter UI, forms, and text stay in the DOM lane, where the
-design system, accessibility, and testing already work.
+The game world renders through one persistent three.js canvas. A small 3D widget, such as an avatar
+viewer, renders in a satellite canvas of its own ([the persistent canvas](#the-persistent-canvas)).
+Every other UI element (panels, tooltips, the stash, the market, the avatar panels) is HTML from the
+design system. Reserve 3D for spatial content. List-and-filter UI, forms, and text stay in the DOM,
+where the design system, accessibility, and testing already work. For the world map's ground and how
+the client draws biome on it, read [the world map](./worldmap.md).
 
 ## The persistent canvas
 
@@ -14,11 +16,11 @@ uploaded geometry, and compiled shaders. The canvas loads behind a lazy client-o
 three.js never lands in the initial bundle. The streamed HTML shell paints before the world fades
 in.
 
-The canvas is the sole owner of world assets. GPU contexts share nothing, so a second canvas pointed
-at the world would re-upload and recompile all of it. Anything that shows the world renders through
-this one context. A self-contained 3D widget with its own small asset set — an avatar viewer, an
-item inspector — gets a satellite canvas through a layout-level registry. The registry owns each
-satellite's lifecycle policy: it dies with its route or survives it (`keepAlive`).
+Only this canvas holds world assets. GPU contexts share nothing, so a second canvas pointed at the
+world would re-upload and recompile all of it. Anything that shows the world renders through this
+one context. A self-contained 3D widget with its own small asset set — an avatar viewer, an item
+inspector — gets a satellite canvas through a layout-level registry. The registry sets whether each
+satellite dies with its route or survives it (`keepAlive`).
 
 ## Scene and presentation
 
@@ -29,7 +31,7 @@ branch never declares keeps its previous value.
 
 - **Scene** — which world is on the canvas: the `worldmap` explore graph or the `respite` home city.
   Only scene routes set it, so it persists untouched while non-scene routes are active.
-- **Presentation** — how the current scene shows. Three modes:
+- **Presentation** — how the current scene shows:
   - `focus` — the canvas is the page, and DOM renders a HUD over it.
   - `ambient` — the world recedes behind an HTML panel, dimmed and pulled back.
   - `hidden` — the frameloop suspends, so the canvas pays zero GPU cost off-screen.
@@ -54,8 +56,8 @@ is not readable inside the router's `types` callback, so that path runs `matchRo
 folds the matched branch through the same `resolveSceneState` that syncs the store. The canvas
 container carries a stable `view-transition-name`, so the live world keeps rendering through a
 transition instead of freezing into the page snapshot. Browsers without the API fall back to instant
-navigation. Camera choreography within a scene is the scene's own concern and needs no router
-involvement.
+navigation. The router hands a scene only its focus target, and the scene runs the camera flight to
+that target.
 
 ## Renderer
 
@@ -75,7 +77,7 @@ fallback covers browsers without WebGPU. That fallback constrains authoring:
 
 ## R3F usage constraints
 
-R3F is pinned to the v9 line, and three of its edges are walled off:
+R3F is pinned to the v9 line. Follow these rules when you use it:
 
 - **The game loop lives behind an internal scheduler wrapper**, not raw `useFrame` timing. R3F v9's
   clock cannot pause or provide deterministic time, and the wrapper owns the loop's timing.
@@ -85,14 +87,14 @@ R3F is pinned to the v9 line, and three of its edges are walled off:
   container strands the children under React 19.
 
 drei and tunnel-rat are reference material, not dependencies. drei trails R3F majors and carries
-GLSL-era helpers the fallback can't run, and tunnel-rat is unmaintained. The project vendors or
-reimplements a helper worth keeping. Camera controls come from `yomotsu/camera-controls` directly.
+GLSL-era helpers the fallback can't run, and tunnel-rat is unmaintained. Vendor or reimplement a
+helper worth keeping. Camera controls come from `yomotsu/camera-controls` directly.
 
 ## Scene and DOM bridge
 
-Scene and DOM communicate through zustand stores in both directions, under two read disciplines. DOM
-overlays subscribe reactively. The render loop reads imperatively via `getState()` inside the frame
-callback, never through reactive selectors.
+Scene and DOM communicate through zustand stores in both directions. DOM overlays subscribe
+reactively. The render loop reads imperatively via `getState()` inside the frame callback, never
+through reactive selectors.
 
 HTML that must render from inside the scene tree crosses back to the DOM through a small in-house
 tunnel or a plain portal. The tunnel pairs in/out components over a store (`sceneTunnel`).

@@ -30,14 +30,14 @@ stateDiagram-v2
   closed --> offline: reopen with no network reconstructs nothing until a reconnect
 ```
 
-| State       | App    | Simulation  | Network      |
-| ----------- | ------ | ----------- | ------------ |
-| **online**  | open   | running     | reachable    |
-| **offline** | open   | running     | unreachable  |
-| **closed**  | closed | not running | not relevant |
+| State       | App                     | Simulation  | Network      |
+| ----------- | ----------------------- | ----------- | ------------ |
+| **online**  | open                    | running     | reachable    |
+| **offline** | open                    | running     | unreachable  |
+| **closed**  | closed, or backgrounded | not running | not relevant |
 
-A backgrounded tab counts as closed even though the app is open. The browser can pause the writer
-worker while the app is open and the network is reachable, so the simulation stops and a gap opens.
+A backgrounded tab counts as closed. The browser can pause the writer worker while the app is open
+and the network is reachable, so the simulation stops and a gap opens.
 
 The network returning is a reconnect, and the app opening is a reopen. A reconnect starts the
 reconcile. A reopen with the network reachable reconciles too, as the diagram shows. A device that
@@ -74,8 +74,7 @@ writer worker in the same browser profile, so the worker delivers the activities
 by one and fast-forwards any idle gap on top of them. A different device or browser profile reads a
 different store. It knows only the last position the server confirmed, so it fast-forwards idle
 attempts at that node instead, and the server never receives the nodes the player walked offline on
-the original device. While the original device is offline or closed, nothing can reach its outbox,
-so this loss follows from where the outbox lives.
+the original device. Nothing can reach the original device's outbox while it is offline or closed.
 
 An account holds one verified session, so verifying a session on a new device evicts every other
 session the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device's next
@@ -106,11 +105,12 @@ that session ended.
 | The player signed out here   | deleted at once        | discarded, once the player confirms                     |
 | It ran past its expiry       | left in place          | kept, and delivered once the same account signs back in |
 
-A takeover discards the outbox without asking, because delivering it later would write progress the
-player made elsewhere, and the device taking the account over warns the player first. The displaced
-device halts its live activity before the discard, so the activity queues no checkpoint behind it.
-Its tabs then show the activity as halted and playing on another device. On a sign-out, the player
-decides through the sign-out control ([signing out](#signing-out)).
+A takeover discards the whole outbox, every account's avatars included, without asking, because
+delivering it later would write progress the player made elsewhere, and the device taking the
+account over warns the player first. The displaced device halts its live activity before the
+discard, so the activity queues no checkpoint behind it. Its tabs then show the activity as halted
+and playing on another device. On a sign-out, the player decides through the sign-out control
+([signing out](#signing-out)).
 
 A discard drops the cached node seeds of the avatars it covers: each node's cached genesis seed and
 appended anchor. Local play moved their appended anchors past what the server holds, and a node
@@ -133,8 +133,8 @@ activity start for another account's avatar, and delivers it once that account s
 ## Cached anchors
 
 At node reveal the device caches each node's genesis seed and appended anchor, so it can mint an
-activity start offline. Three server events move a chain's anchors while the device runs no discard
-to reset that cache: an account reset, a replay rejection and a database restore.
+activity start offline. An account reset, a replay rejection and a database restore each move a
+chain's anchors on the server, with no discard on the device to reset that cache.
 
 An account reset deletes the avatar's chains on the server, and the next node reveal re-creates each
 chain from a new genesis seed. A node reveal whose genesis seed differs from the cached one replaces
@@ -153,7 +153,8 @@ An activity's rewards are provisional until the verifier confirms it
 total rises, its items mint, and the node's first clear opens its neighbours. An activity built on
 an earlier one's reward is provisional in the same way, so the server settles an avatar's activities
 one at a time, in the order the player played them, and checks each only after every earlier one is
-settled or rejected.
+settled or rejected. The one exception is an earlier activity with no proven checkpoint, which the
+verifier skips ([where the order comes from](#where-the-order-comes-from)).
 
 A player clears one node, then walks to its neighbour. The neighbour is built on the first twice:
 its build snapshot folds in the XP the first earned, and the neighbour is reachable only because the

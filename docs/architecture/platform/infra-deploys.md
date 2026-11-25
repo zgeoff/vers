@@ -4,8 +4,8 @@ Two GitHub Actions workflows run Pulumi on the production stack of the `infra/` 
 secrets in the `vers-ci` 1Password vault. Drift is a difference between the live resources and the
 program on `main`, such as a setting that a person changed in a provider's console. Both workflows
 watch the same files: `infra/`, their own scripts, and the root `package.json` and `bun.lock`, which
-pin the program's Pulumi packages. A person answers drift and every plan that the guard holds, as
-the [infra runbook](../../runbooks/infra.md#answer-a-held-apply) describes.
+pin the program's Pulumi packages. A person answers drift and every plan that the guard holds, with
+the steps in the [infra runbook](../../runbooks/infra.md#answer-a-held-apply).
 
 ## The apply on merge
 
@@ -20,24 +20,28 @@ flowchart LR
 ```
 
 The `deploy` job of `infra-deploy` runs on each push to `main` that changes a watched file. Its
-drift check previews the commit before the push with `--expect-no-changes`. A change there is drift,
-or an earlier push whose plan the guard held. The job then previews the pushed commit as JSON, and
-the guard holds that plan when:
+drift check previews the commit before the push with `--expect-no-changes`. A change there is drift:
+a console edit, or an earlier push whose plan the guard held. The job then previews the pushed
+commit as JSON, and on a push the guard holds that plan when:
 
-- a step does anything but create, update, read or refresh a resource;
+- a step does anything but create, update, read or refresh a resource, because a delete or a replace
+  can destroy what the resource holds;
 - the drift check found a change.
+
+On a dispatch, the guard holds the plan only if the run's commit is no longer main's tip when the
+guard reads the plan.
 
 When the guard passes the plan, the job runs `pulumi up --refresh`. A last preview with
 `--expect-no-changes` fails the job when the stack still differs from the commit.
 
 A held plan stays unapplied, and its run ends green with a Discord alert. A person applies it by
-dispatching the workflow on `main`. The dispatched run skips the drift check and applies the plan of
-main's tip whatever the guard finds, so it also applies each push that landed after the held one. A
-dispatched run whose commit is no longer main's tip when the guard reads the plan holds, such as a
-rerun of an old dispatch, because its plan would revert each change applied since. A later push
-holds too while the commit before it differs from the live stack, such as while the held change
-stays unapplied. A push that reverts the held change holds as well, and the push after the revert
-can pass, because the revert's commit matches the live stack.
+dispatching the workflow on `main`. A dispatched run of main's tip skips the drift check and applies
+the plan whatever its steps do, so it also applies each push that landed after the held one. A
+dispatch that is no longer main's tip, such as a rerun of an old dispatch, holds, because its plan
+would revert each change applied since. A later push holds too while the commit before it differs
+from the live stack, such as while the held change stays unapplied. A push that reverts the held
+change holds as well, and the push after the revert can pass, because the revert's commit matches
+the live stack.
 
 ## The preview on a pull request
 

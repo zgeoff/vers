@@ -1,11 +1,17 @@
 # Manual QA
 
-Use this runbook to test a player flow on production at `https://versidle.com` by hand, or to look
-into a bug that only shows there. You drive the flow with a QA account, a real Chrome and the repo
-scripts behind `bun run qa:*`. The scripts seed and reset accounts, read verification email, drive
-the browser and log its worker traffic, and suspend the fleet. From the console of a game page, you
-read the state of the [writer worker](../architecture/game/glossary.md) and run a QA avatar faster
-than real time through the [debug hook](#debug-hook).
+Test a player flow on production at `https://versidle.com` by hand, or look into a bug that only
+shows there. You drive the flow with a QA account, a real Chrome and the repo scripts behind
+`bun run qa:*`. The scripts seed and reset accounts, read verification email, drive the browser and
+log its worker traffic, and suspend the fleet. From the console of a game page, you read the state
+of the [writer worker](../architecture/game/glossary.md) and run a QA avatar faster than real time
+through the [debug hook](#debug-hook).
+
+Run a pass in this order. Count and seed a QA account ([accounts](#accounts)), then start the
+browser ([browser](#browser)). When you need worker traffic, start `qa:capture` before you drive the
+flow, because it logs only what happens while it runs. Drive the flow, and read any verification
+mail ([inbox](#inbox)) and the debug hook where the flow needs them. Then reset or delete the
+account. Seed or reset an account on production only when the repo owner asks for the pass.
 
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
@@ -186,7 +192,7 @@ address and a port from 1 to 65535; the scripts reject any other value before a 
 port bridge a NAT-mode WSL distribution needs to reach the Windows loopback is in
 [Chrome DevTools MCP](../../.agents/skills/chrome-devtools-mcp/SKILL.md#add-the-proxy). Behind the
 bridge, the endpoint is the WSL default gateway on port 9223, the port that the bridge forwards to
-Chrome's 9222. A session under NAT sets `QA_CDP_ENDPOINT` once:
+Chrome's 9222. Under NAT, set `QA_CDP_ENDPOINT` once per session:
 
 ```bash
 export QA_CDP_ENDPOINT="$(ip route show default | awk '{print $3; exit}'):9223"

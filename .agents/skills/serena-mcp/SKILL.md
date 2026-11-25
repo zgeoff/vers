@@ -10,10 +10,10 @@ description:
 
 Keep one serena daemon running for every Claude Code session on the machine, and get the `serena`
 tools working again when they fail. The daemon answers symbol lookups (a file's outline, a
-definition, its references) on `http://127.0.0.1:9121/mcp`, and [`.mcp.json`](../../../.mcp.json)
-registers that URL, so no session starts its own copy, which would take about 740 MB of memory. The
-daemon runs as a systemd user unit. The work is done when `get_symbols_overview` answers for a
-TypeScript file.
+definition, its references) on `http://127.0.0.1:9121/mcp`. Each session connects to that URL
+through [`.mcp.json`](../../../.mcp.json) and starts no copy of its own, which would take about 740
+MB of memory. The daemon runs as a systemd user unit. You're done when `get_symbols_overview`
+returns the symbols of a TypeScript file.
 
 Ask the user before you enable lingering, which starts their systemd user manager at boot, or the
 unit: both keep a process running on their machine across logout and reboot.

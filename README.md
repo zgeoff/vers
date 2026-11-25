@@ -34,8 +34,8 @@ bun run e2e                       # playwright; first run: bun playwright instal
 
 ## Layout and conventions
 
-- [docs/architecture/overview.md](./docs/architecture/overview.md) maps the architecture and every
-  workspace project.
-- [AGENTS.md](./AGENTS.md) holds the engineering conventions.
-- Deploys run through `bun run deploy` — see
+- For a map of the architecture and every workspace project, read
+  [docs/architecture/overview.md](./docs/architecture/overview.md).
+- Follow the engineering conventions in [AGENTS.md](./AGENTS.md).
+- Deploys run through `bun run deploy`. For the details, read
   [docs/architecture/platform/deployment.md](./docs/architecture/platform/deployment.md).

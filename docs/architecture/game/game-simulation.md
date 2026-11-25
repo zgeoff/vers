@@ -1,16 +1,16 @@
 # Game simulation
 
-The client computes and records all gameplay, and the server decides by replay whether to trust it.
-The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
-random stream, and writes each step to an append-only checkpoint stream. The server never simulates
-on a player's request path. One exception: the activity service's QA seeding procedure simulates up
-to 20 runs for a new QA account ([manual QA](../../runbooks/qa.md#accounts)). The same inputs re-run
-to byte-identical results, which lets a verifier check a stream it did not compute and lets a
-returning client rebuild simulation state it no longer holds.
-[Replay verification](./replay-verification.md) owns the verifier and settlement, the
-[seed chain](./seed-chain.md) owns where an activity's randomness comes from, and
-[offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on reconnect. The
-[glossary](./glossary.md) defines the terms these docs share.
+The client computes and records the gameplay of every activity a player plays, and the server
+decides by replay whether to trust it. The client runs every real-time simulation as a pure function
+of a fixed set of inputs and a seeded random stream, and writes each step to an append-only
+checkpoint stream. The server never simulates on a player's request path, except in the activity
+service's QA seeding procedure, which simulates up to 20 runs for a new QA account
+([manual QA](../../runbooks/qa.md#accounts)). The same inputs re-run to byte-identical results,
+which lets a verifier check a stream it did not compute and lets a returning client rebuild
+simulation state it no longer holds. [Replay verification](./replay-verification.md) owns the
+verifier and settlement, the [seed chain](./seed-chain.md) owns where an activity's randomness comes
+from, and [offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on
+reconnect. The [glossary](./glossary.md) defines the terms these docs share.
 
 A checkpoint's path from the writer to settled progress:
 
@@ -21,7 +21,7 @@ flowchart LR
   Q --> V["verifier<br>replays the segment under its pinned sim version"]
   V -->|match| S["settlement<br>moves the verified head, pays XP and items"]
   V -->|reproducible divergence| R["rejection<br>rewinds the appended anchor"]
-  V -->|cannot replay yet| P["parked or quarantined<br>waits for an operator"]
+  V -->|cannot replay yet| P["parked or quarantined<br>waits for an operator or a later deploy"]
 ```
 
 ## Activities and encounters
@@ -32,7 +32,7 @@ pure function of the node, the seed, and the content, and the idle engine runs a
 
 ## The deterministic core
 
-Purity rests on four invariants:
+Purity rests on these invariants:
 
 - Every random draw comes from the seeded stream. No draw reads a system random source or a wall
   clock.
@@ -56,13 +56,13 @@ renders the writer's sim snapshot.
 
 ## Authoring an activity start
 
-The client authors every activity input, and the server verifies it. To start an activity, the
-client builds the activity start from the materials it cached at node reveal and drops into the
-simulation with no server round trip. The same local build covers a tap on a node, a continuation
-(the next activity at the same scope after a terminal checkpoint), and an offline gap caught up on
-reconnect. The client persists the start to the device's outbox before it installs it, so a crash
-between building and installing loses nothing. The outbox also queues the activity's checkpoints,
-and a durable submitter lands them whenever the server is next reachable.
+Apart from QA seeding, the client authors every activity input, and the server verifies it. To start
+an activity, the client builds the activity start from the materials it cached at node reveal and
+drops into the simulation with no server round trip. The same local build covers a tap on a node, a
+continuation (the next activity at the same scope after a terminal checkpoint), and an offline gap
+caught up on reconnect. The client persists the start to the device's outbox before it installs it,
+so a crash between building and installing loses nothing. The outbox also queues the activity's
+checkpoints, and a durable submitter lands them whenever the server is next reachable.
 
 The server admits a client-authored start by re-deriving every authoritative input from its own
 truth. It trusts none of the payload:
@@ -87,19 +87,21 @@ one round trip.
 ## Building against unsettled XP
 
 A new activity's build snapshot counts the unsettled XP of every activity this avatar has ended that
-still waits for its verifier, so a player who finishes one activity and starts another builds
-against what they just earned. Identity is avatar-wide while chains are per scope, so a snapshot
-draws from activities on other chains too. A held activity does not count: a parked or quarantined
-activity reaches verification only when an operator intervenes, so counting it would stamp XP that
-never settles into this snapshot and every later one. XP is the only quantity a snapshot draws ahead
-of proof, because an item mints only for a proved segment.
+still waits for its verifier, except a held one, so a player who finishes one activity and starts
+another builds against what they just earned. Identity is avatar-wide while chains are per scope, so
+a snapshot draws from activities on other chains too. A held activity does not count: a parked or
+quarantined activity reaches verification only after an operator or a later deploy releases it, so
+counting it could stamp XP that never settles into this snapshot and every later one. XP is the only
+quantity a snapshot draws ahead of proof, because an item mints only for a proved segment.
 
 The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
-XP, and the server folds the same rule from its own rows. A worker with no record of the previous
-activity, on a fresh device or after the server closed it, mints from the snapshot the server
-returns beside the avatar's latest activity. When the server holds no activity for the avatar, as
-after an account reset, a refused start clears any record of a previous activity that the outbox
-does not hold, so the next start folds from no previous activity.
+XP, and the server folds the same rule from its own rows, leaving out a held activity. When the two
+differ, such as after a hold, the server refuses the start as a build-snapshot mismatch
+([handing an activity start to the server](./seed-chain.md#handing-an-activity-start-to-the-server)).
+A worker with no record of the previous activity, on a fresh device or after the server closed it,
+mints from the snapshot the server returns beside the avatar's latest activity. When the server
+holds no activity for the avatar, as after an account reset, a refused start clears any record of a
+previous activity that the outbox does not hold, so the next start folds from no previous activity.
 
 ## What replay pins
 
@@ -108,8 +110,8 @@ and content versions, the key version ([game entropy](./game-entropy.md#version-
 snapshot, the encounter node, and the chain index the activity started from
 ([seed chain](./seed-chain.md#positions-on-the-chain)). The `Started` checkpoint, the activity's
 first checkpoint, carries the start seed and no version. The activity's id is a client-assigned
-label with no cryptographic role, which is what lets the client compute a whole fast-forward run
-with no per-row round trip.
+label with no cryptographic role, which lets the client compute a whole fast-forward run with no
+per-row round trip.
 
 A node's encounter parameters freeze onto the head row at the content version the start pins, and
 every continuation in the same request inherits them. They fold into the start hash, so a later
@@ -130,8 +132,8 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
   loses, or repurposes a member, and the set includes the previous checkpoint's hash. The chain
   position sits inside the hash, so replay reproduces every reward coordinate keyed on it, and the
   entropy-source tag makes a checkpoint's provenance derivable from the stream alone.
-- The hash links; it does not prove. The stream carries rewards outside the hashed set, so the hash
-  proves nothing about them. Only a replay validates a reward.
+- The hash links checkpoints and proves nothing about rewards. The stream carries rewards outside
+  the hashed set, so only a replay validates a reward.
 - An append is a guarded update of the head row. The append advances the appended head only if the
   head still holds its expected value. A stale head fails the append with a retryable conflict
   carrying the current head, and the client resends the tail. A resend deduplicates on the
@@ -155,10 +157,11 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
 A per-avatar simulated-time meter bounds offline progress, and the append path enforces it. The
 meter refills at wall-clock rate since it was last banked, never past its cap. Every accepted
 checkpoint batch debits its simulated-time delta: the last checkpoint's cumulative time minus the
-head row's accounted time, never a sum of per-checkpoint times. Elapsed wall clock is the only
-credit source, so no path earns simulated time faster than real time. Live play self-funds, because
-each flush banks the wall clock it consumed. An initial grant absorbs tick-boundary and network
-jitter. One exception: a QA avatar's meter refills at a multiple of wall clock
+head row's accounted time, never a sum of per-checkpoint times. Apart from an initial grant that
+absorbs tick-boundary and network jitter, elapsed wall clock is the only credit source for a player
+avatar, so no player avatar earns simulated time faster than real time. Live play self-funds,
+because each flush banks the wall clock it consumed. A QA avatar's meter is the exception: it
+refills at a multiple of wall clock
 ([QA debug hook](../../runbooks/qa-debug-hook.md#set-the-speed)).
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the

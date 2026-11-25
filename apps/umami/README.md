@@ -3,22 +3,22 @@
 Self-hosted [Umami](https://umami.is) web analytics, deployed on Fly as `vers-umami`. The public
 address serves the reporting dashboard. Tracker traffic arrives through `app-web`'s same-origin
 analytics proxy at `/site.js` and `/site/api/send`, which forwards to the `UMAMI_URL` in `app-web`'s
-`fly.toml` and stamps each visitor's address into `x-vers-client-ip`. `CLIENT_IP_HEADER` tells Umami
-to trust that header for geolocation. `app-web` injects the tracker from its root route when
-`VITE_UMAMI_WEBSITE_ID` is set at build time. [Analytics](../../docs/architecture/analytics.md) owns
-why the proxy exists and what belongs in Umami versus the product-analytics stream.
+`fly.toml` and stamps each visitor's address into `x-vers-client-ip`. Umami takes the address for
+geolocation from the header set in `CLIENT_IP_HEADER`. `app-web` injects the tracker from its root
+route when `VITE_UMAMI_WEBSITE_ID` is set at build time. For why the proxy exists and what belongs
+in Umami versus the product-analytics stream, see [Analytics](../../docs/architecture/analytics.md).
 
 This directory holds Fly config only. `fly.toml` deploys the pinned stock
 `ghcr.io/umami-software/umami` image with no build. A merge to `main` touching this directory
-redeploys it, and upgrading Umami is a tag bump on the `[build]` `image` line. A manual roll is
+redeploys it. To upgrade Umami, bump the tag on the `[build]` `image` line. To redeploy by hand, run
 `fly deploy --config apps/umami/fly.toml`. `DISABLE_TELEMETRY` is set, so Umami sends no usage pings
 of its own.
 
 ## Storage
 
 Analytics data lives in a dedicated `umami` database in the shared Neon project (`DATABASE_URL`
-secret). No app runs its own database, and the machine keeps no volume. Umami migrates its schema
-itself on boot.
+secret). No app runs a Postgres server of its own, and the machine keeps no volume. Umami migrates
+its schema itself on boot.
 
 ## Secrets
 
@@ -30,6 +30,6 @@ itself on boot.
 ## Admin
 
 The admin credentials live on the `umami` item in the `vers` 1Password vault. The stock image boots
-with `admin`/`umami`; the password is changed in the UI on first login. Websites and their tracking
-IDs are managed in the UI — the `vers` website's ID is the `VITE_UMAMI_WEBSITE_ID` GitHub Actions
+with `admin`/`umami`; change the password in the UI on first login. Manage websites and their
+tracking IDs in the UI. The `vers` website's ID is the `VITE_UMAMI_WEBSITE_ID` GitHub Actions
 variable baked into `app-web`'s client bundle.

@@ -5,8 +5,9 @@ edge runs the credential and code flows, holds the session cookie, and signs the
 token for its own outbound calls. Durable state lives in the services: sessions, step-up
 transactions and step-up grants in the session service, password credentials and reset tokens in the
 user service, TOTP verifications in the verification service. Services never see cookies. The edge
-validates the session and passes each service a short-lived token naming the acting user, so a
-service trusts the token's claims and nothing else ([service contracts](./service-contracts.md)).
+validates the session and passes each service a short-lived token naming the acting user when the
+call has one. A service trusts the token's claims and nothing else
+([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
@@ -113,10 +114,10 @@ matches zero rows. The service also returns the authenticator-app URI for a pend
 
 ## Credentials and password reset
 
-The user service owns the credential path: it verifies a password at login, a password change
-rewrites the hash and leaves the sessions in place, and a password reset rewrites the hash and
-deletes every session of that user. It stores a reset token as its hash, the token reaches the user
-only through the URL in the reset email, and the reset matches it in constant time.
+The user service verifies a password at login. A password change rewrites the hash and leaves the
+sessions in place, and a password reset rewrites the hash and deletes every session of that user.
+The service stores a reset token as its hash, the token reaches the user only through the URL in the
+reset email, and the reset matches it in constant time.
 
 ## Service-to-service tokens
 
@@ -125,9 +126,9 @@ keypair. The issuer claim and the key id both name the minting service, the subj
 user and is omitted for a verified-anonymous call, a session claim names the acting session, and the
 audience is the target service's registered audience. A scope claim marks a token the edge mints for
 one route only, and a procedure that requires a scope refuses a token without it. Every issuer holds
-its own private key, held by no other app: the web edge for its outbound calls, the replay service
-for its calls toward the keys service and the version-pinned replay providers, and the activity
-service for the wake call a committed append sends toward the replay service.
+a private key that no other app holds: the web edge for its outbound calls, the replay service for
+its calls toward the keys service and the version-pinned replay providers, and the activity service
+for the wake call a committed append sends toward the replay service.
 
 The service runtime verifies every inbound token before any handler runs, against a key set
 registering every issuer's public key under its key id. A token's claimed issuer must be a known
@@ -152,7 +153,7 @@ The edge checks each request to `/api/qa` in this order:
 3. When the URL path after `/api/qa/` is anything but `createQAAccount`, the edge answers 404.
 
 The edge forwards an admitted request to the activity service's `createQAAccount` under a service
-token with no subject and the scope claim `qa:seed`, so the QA token never leaves the edge. Two
+token with no subject and the scope claim `qa:seed`, so the QA token never leaves the edge. These
 checks keep a browser out of `createQAAccount`:
 
 - The browser proxy answers a browser call to `createQAAccount` with 404

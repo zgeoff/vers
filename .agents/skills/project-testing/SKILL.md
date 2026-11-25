@@ -13,17 +13,18 @@ metadata:
 
 ## Facts
 
-| Fact          | Where                                                                                                                         |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Test commands | `bun run e2e` runs [`apps/web/e2e/`](../../../apps/web/e2e/), with each timeout in the `timeout` of a `playwright*.config.ts` |
-| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                        |
+| Fact          | Where                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test commands | `bun run e2e` runs the main Playwright config in [`apps/web/e2e/`](../../../apps/web/e2e/), with each suite's timeout in the `timeout` of a `playwright*.config.ts` |
+| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                                                              |
 
 ## Departures
 
-- Run each package's tests with plain `bun test --randomize`, in one process. The run-mode rule in
-  [testing](../testing/SKILL.md) passes `--parallel=<N> --no-isolate` instead. Turbo runs four
-  packages at once in CI, and plain mode uses the least memory. The comment above the Unit Tests
-  step in [`pr.yml`](../../../.github/workflows/pr.yml) gives the times.
+- Run each package's `bun test` suites with plain `bun test --randomize`, in one process. Use it in
+  place of the `--parallel=<N> --no-isolate` from the run-mode rule in
+  [testing](../testing/SKILL.md). Turbo runs four packages at once in CI, and plain mode uses the
+  least memory. Find the times in the comment above the Unit Tests step in
+  [`pr.yml`](../../../.github/workflows/pr.yml).
 
 ## The run mode
 
@@ -81,7 +82,7 @@ a test.
 - Add an anonymous test, built with
   [`createAnonymousViewer`](../../../libs/testing/service-test-utils/src/bun/composites/create-anonymous-viewer.ts),
   to a procedure that reads the acting user. It sits beside the allowed and refused tests that
-  testing asks for. A procedure that only another service calls needs no anonymous test.
+  testing asks for. Skip the anonymous test for a procedure that only another service calls.
 - In the replay service, test the order in which the verifier settles one avatar's activities
   through
   [`runSettlementSequence`](../../../services/replay/src/test-utils/settlement-model/run-settlement-sequence.ts).
@@ -141,9 +142,11 @@ calls in one helper. A helper hides the values the test acts on.
 
 ## Playwright timeouts
 
-- Run the suites in [`apps/web/e2e/`](../../../apps/web/e2e/) through that package's `e2e` scripts,
-  never `bun test`. The lint rule `zgeoff/max-test-timeout` checks only tests that import from
-  `bun:test`, so no lint checks a Playwright timeout.
+- Run the suites in [`apps/web/e2e/`](../../../apps/web/e2e/) with Playwright, never `bun test`:
+  `bun run e2e` from the repo root runs the main config. Each other `playwright*.config.ts` has its
+  own `e2e:*` script in `apps/web/package.json`.
+- Expect no lint to check a Playwright timeout. The lint rule `zgeoff/max-test-timeout` checks only
+  tests that import from `bun:test`.
 - Set the `timeout` in each `playwright*.config.ts` to twice the slowest test in the last 5 green CI
   runs, rounded up to a whole second. The `list` reporter prints each test's time in the CI log.
 - When one test runs far slower than the rest, remove each fixed wait in it, or wait on a condition.

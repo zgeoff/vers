@@ -10,11 +10,11 @@ description:
 # Verifying a domain service at its socket
 
 Boot one domain service as a process, sign throwaway service tokens, and call its endpoints over
-HTTP. Do this only for code the in-process test client never runs. The service suites already boot
-the real service against Postgres and call it through
+HTTP. Do this only for code the in-process test client never runs. The service suites already build
+the real service inside the test process, against Postgres, and call it through
 [`buildRPCTestClient`](../../../libs/testing/test-utils/src/build-rpc-test-client.ts), with real
-token checks. For a change to a procedure's logic, its auth or its declared errors, the test suite
-is the check, so skip this.
+token checks. They never run `src/serve.ts` or listen on a port. For a change to a procedure's
+logic, its auth or its declared errors, the test suite is the check, so skip this.
 
 Check these at the socket:
 
@@ -36,11 +36,11 @@ for a token that expires between calls.
 
 ## Commands
 
-`bun run pg:test-container:start` starts Postgres on `localhost:32999`, with user `test` and
-password `test`. It also creates the migrated template database for the current branch and prints
-its name, `test_template_<branch>`. The script uses `TEST_DB_URI` in place of the default only while
-something listens on `localhost:32999`. Otherwise it starts a new container on host port 32999 and
-uses that.
+`bun run pg:test-container:start` gives you Postgres on `localhost:32999`, with user `test` and
+password `test`. While something already listens on `localhost:32999`, the script uses it, through
+`TEST_DB_URI` when that is set. Otherwise it starts a new container on host port 32999. Either way
+it creates the migrated template database for the current branch and prints its name,
+`test_template_<branch>`.
 
 | Step               | Command                                                                                                                                              | Needs                                                                                                                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -60,7 +60,7 @@ Run `sign.ts` from `libs/testing/service-test-utils/`, so its imports resolve. I
 
 `<procedure>` is the procedure's key in the service's contract, such as `getAvatar` in
 [`avatar-contract.ts`](../../../contracts/avatar/src/avatar-contract.ts). `GET /health` needs no
-token. Each service lists the env it reads in its `src/env-shape.ts`. Add any key beyond
+token. Find the env a service reads in its `src/env-shape.ts`, and add each key beyond
 `DATABASE_URL` to the boot command.
 
 To check trace continuity, send a `traceparent` header and compare its trace ID, the second field,
@@ -82,9 +82,9 @@ gets a plain body, such as `{"error":"issuer-not-permitted"}`.
   `SERVICE_TOKEN_ISSUERS`, in
   [`token-claims.ts`](../../../libs/service/service-auth/src/token-claims.ts), so any issuer
   verifies.
-- **The service answers 403 for an issuer it doesn't allow.** Each service lists the issuers it
-  takes in the `allowedIssuers` of its `create-<name>-service.ts`, and `createServiceToken` defaults
-  to `app-web`. Pass `issuer` to match, such as `service-activity` for `services/replay`.
+- **The service answers 403 for an issuer it doesn't allow.** Find the issuers a service takes in
+  the `allowedIssuers` of its `create-<name>-service.ts`. `createServiceToken` defaults to
+  `app-web`, so pass `issuer` to match, such as `service-activity` for `services/replay`.
 
 **Reply:** each call with its status, the headers you checked and the body, and whether each check
 passed.

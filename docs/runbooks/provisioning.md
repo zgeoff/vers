@@ -1,14 +1,14 @@
 # Provisioning
 
-The steps that stand the platform up from nothing and tear it down: the Neon project, the Fly fleet
-and its secrets, and the roles agent sessions query through.
-[Deployment](../architecture/platform/deployment.md) owns what a rollout does once the fleet exists;
-[database](../architecture/platform/database.md) owns the Neon topology and connection rules.
+To stand the platform up from nothing, or tear it down, follow these steps in order: the Neon
+project, the Fly fleet and its secrets, and the roles agent sessions query through. For what a
+rollout does once the fleet exists, see [Deployment](../architecture/platform/deployment.md); for
+the Neon topology and connection rules, see [database](../architecture/platform/database.md).
 
 ## Neon project
 
-The Pulumi program creates the Neon layer: project, branches, endpoints, roles. The database and its
-connection string follow with neonctl, authenticated through `neonctl auth`:
+Run the Pulumi program to create the Neon layer: project, branches, endpoints and roles. Then
+authenticate with `neonctl auth`, and create the database and its connection string with neonctl:
 
 ```sh
 cd infra && bun run up
@@ -17,17 +17,20 @@ neonctl connection-string main --project-id <new-id> --database-name vers
 # then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores
 ```
 
-After provisioning, write the string into `libs/data/db/.env.local`. Then `db:migrate` and `db:seed`
-(run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update the
-`database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program pushes
-it to the `DATABASE_URL` Actions secret) and each Fly app's secret to the new string.
+After provisioning, write the string into `libs/data/db/.env.local`. Then run `db:migrate` and
+`db:seed` with `--env-file=.env.local` to bring the schema and dev seed data up from zero. Update
+the `database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program
+pushes it to the `DATABASE_URL` Actions secret) to the new string. On a build from nothing, you set
+it as `DATABASE_URL` on each app that reads the `vers` database in the Fly fleet steps below. When
+you replace the string on a running fleet, also update the secret on each of those apps.
 
 ## Fly fleet
 
-Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the direct host —
-[database](../architecture/platform/database.md)), and the domain in `$DOMAIN`. Export `EMAIL_FROM`,
-`RESEND_API_KEY`, `TINYBIRD_URL`, and `TINYBIRD_INGEST_TOKEN` from the `vers` vault before step 4:
-an unset variable sets an empty secret, which `flyctl` accepts.
+Before you start, authenticate `flyctl` to the `vers` org, and set the Neon `DATABASE_URL` (the
+direct host — [database](../architecture/platform/database.md)) and the domain in `$DOMAIN`. Export
+`EMAIL_FROM`, `RESEND_API_KEY`, `TINYBIRD_URL`, and `TINYBIRD_INGEST_TOKEN` from the `vers` vault
+before step 4. Step 4's script stops at the first unset variable, because `flyctl` would accept an
+empty secret.
 
 1. Create the apps:
 
@@ -56,11 +59,11 @@ an unset variable sets an empty secret, which `flyctl` accepts.
 4. Generate the keys and set each app's secrets. Each minting issuer (`app-web`, `service-activity`,
    `service-replay`) gets its own Ed25519 keypair: the private half lands only in that app's
    secrets, and the public halves combine into the `SERVICE_AUTH_JWKS` every domain service verifies
-   with. The JWKS also goes into the `vers` 1Password vault (`s2s-auth` item, `jwks` field):
-   provisioning a single service later reads it with `op read 'op://vers/s2s-auth/jwks'`. The
-   generated key files are deleted once the secrets are set, so the deployed private keys live only
-   in Fly's secret store. The Tinybird pair — the Events API origin and the `product_events` append
-   token ([analytics](../architecture/analytics.md)) — comes from the `tinybird` item in the `vers`
+   with. The JWKS also goes into the `vers` 1Password vault (`s2s-auth` item, `jwks` field): to
+   provision a single service later, read it with `op read 'op://vers/s2s-auth/jwks'`. The generated
+   key files are deleted once the secrets are set, so the deployed private keys live only in Fly's
+   secret store. Take the Tinybird pair — the Events API origin and the `product_events` append
+   token ([analytics](../architecture/analytics.md)) — from the `tinybird` item in the `vers`
    1Password vault.
 
    ```sh
@@ -184,8 +187,8 @@ an unset variable sets an empty secret, which `flyctl` accepts.
      program) and one for the MCP server, added to the `bugsink` vault item as `mcp-token`.
 
 7. Stand up web analytics. The first deploy is by hand; CI redeploys it on later config changes.
-   Umami boots with an `admin`/`umami` account, so the rotation to the vault value runs in the same
-   block. The stock credential is live from first boot until the rotation lands:
+   Umami boots with an `admin`/`umami` account, so rotate its password to the vault value in the
+   same block. The stock credential is live from first boot until the rotation lands:
 
    ```sh
    fly apps create vers-umami --org vers
@@ -216,17 +219,17 @@ an unset variable sets an empty secret, which `flyctl` accepts.
    Actions variable, then assemble the acquisition funnel report over the tracked events
    ([analytics](../architecture/analytics.md)).
 
-9. Stand up the telemetry backend. The Axiom account is created in its UI, along with one
-   console-minted credential that bootstraps the rest: the `iac-token` field on the `vers-ci`
-   vault's `axiom` item, the Pulumi provider's API token, with the scopes listed in the
-   [infra runbook](./infra.md#prerequisites). Every other Axiom resource is provisioned by the
-   `infra/` Pulumi program (`bun run up` in `infra/`); the resource registry and drift stance live
-   in [observability](../architecture/platform/observability.md). Token secret values sit on the
-   `axiom` item in the `vers` 1Password vault (`ingest-token`, `mcp-token`). A scope change in the
-   program regenerates a token's value, and the vault field plus the fleet's staged OTel secrets
-   must be updated within the 48-hour rotation grace window. Destructive administration outside the
-   program uses a short-lived token minted in the UI with the needed scopes and revoked when the
-   work is done.
+9. Stand up the telemetry backend. Create the Axiom account in its UI, and mint one credential in
+   the console to bootstrap the rest: the `iac-token` field on the `vers-ci` vault's `axiom` item,
+   the Pulumi provider's API token, with the scopes listed in the
+   [infra runbook](./infra.md#prerequisites). Provision every other Axiom resource with the `infra/`
+   Pulumi program (`bun run up` in `infra/`); the resource registry and drift stance live in
+   [observability](../architecture/platform/observability.md). Token secret values sit on the
+   `axiom` item in the `vers` 1Password vault (`ingest-token`, `mcp-token`). When a scope change in
+   the program regenerates a token's value, update the vault field and the fleet's staged OTel
+   secrets within the 48-hour rotation grace window. For destructive administration outside the
+   program, mint a short-lived token in the UI with the needed scopes, and revoke it when the work
+   is done.
 
    Point the fleet at the datasets:
 
@@ -246,8 +249,8 @@ Agent access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAu
 
 ## Agent database access
 
-The `dev` branch and both roles come from the Pulumi program. Grants, passwords, and vault items
-follow by hand.
+The Pulumi program creates the `dev` branch and both roles. Set up the grants, passwords and vault
+items by hand.
 
 1. Apply the program. It declares the `dev` branch and the `mcp_ro` and `mcp_dev` roles.
 

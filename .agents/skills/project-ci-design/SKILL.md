@@ -30,8 +30,8 @@ metadata:
 
 - Add each new check to the `checks` job in `pr.yml`, as a step.
 - Add a step that checks the code a deploy ships, such as a lint or a test, to the `checks` job of
-  [`main.yml`](../../../.github/workflows/main.yml) as well. Each deploy job in `main.yml` lists
-  `checks` under `needs:`, so a deploy waits for every step there.
+  [`main.yml`](../../../.github/workflows/main.yml) as well as `pr.yml`. Each deploy job in
+  `main.yml` lists `checks` under `needs:`, so a deploy waits for every step there.
 - Keep a check that a deploy doesn't need, such as the doc-link check or `bun run audit`, in
   `pr.yml` only.
 - Add a job of its own only for work that needs another runner or other permissions. `size` runs

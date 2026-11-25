@@ -2,8 +2,8 @@
 
 vers runs two analytics pipelines, each with one job. Umami answers questions about the site: who
 visits, from where, which pages, and whether acquisition converts. Tinybird carries the behavioural
-product-event stream — what players do once they're in the game. The dividing test: data that would
-ever be joined to a user or avatar is a product event, and data about the site is web analytics.
+product-event stream — what players do once they're in the game. Treat data that would ever be
+joined to a user or avatar as a product event, and data about the site as web analytics.
 
 ## Web analytics (Umami)
 
@@ -32,7 +32,7 @@ and a bun patch under `patches/` keeps the tag in place instead.
 
 Route changes auto-track as pageviews through the tracker's History API hooks. A play session parked
 on one route for hours reads as a single pageview. Gameplay engagement is a product-analytics
-question, and pageview counts are not bent toward answering it.
+question, so don't bend pageview counts to answer it.
 
 ### Events
 
@@ -42,17 +42,17 @@ Analytics events are a small curated set: anonymous, carrying no payload, and fi
 completion steps. The funnel report — landing pageview through those events — is assembled in the
 Umami UI.
 
-A new player-facing flow worth measuring adds its event name to the union and fires it where the
-flow confirms success. An element-level click can instead carry a `data-umami-event` attribute.
+To measure a new player-facing flow, add its event name to the union and fire it where the flow
+confirms success. To measure an element-level click, add a `data-umami-event` attribute instead.
 
 ### Privacy stance
 
 - Events and pageviews carry no PII: no emails, user IDs, avatar names, or free-text input. The
   visitor's address reaches Umami only to derive coarse geolocation and the daily visitor hash.
   Umami stores the derived values, never the address itself.
-- Umami's `identify()` API stays unused: linking a visitor to an account would convert anonymous
+- Leave Umami's `identify()` API unused: linking a visitor to an account would convert anonymous
   traffic measurement into user tracking.
-- Session replay and heatmaps stay off: recording interactions and DOM snapshots cuts against the
+- Keep session replay and heatmaps off: recording interactions and DOM snapshots cuts against the
   reason a cookieless tracker was chosen, and the snapshots would land in the shared Neon project.
 - `DISABLE_TELEMETRY` keeps Umami's own anonymous usage pings off the wire.
 
@@ -85,8 +85,8 @@ and e2e traffic never reaches analytics.
 ### Event registry
 
 Event names are snake_case `noun_pastparticiple`. Properties are ids of the entities the event is
-about. Every event addition lands in the same PR with its row in the registry table, its entry in
-the `@vers/product-analytics` types, its arm in app-web's ingest schema, and any new column in the
+about. Add each new event in one PR, with its row in the registry table, its entry in the
+`@vers/product-analytics` types, its arm in app-web's ingest schema, and any new column in the
 `product_events` data source.
 
 | Event                | Properties               | Fired when                                                                             |
@@ -112,6 +112,6 @@ Worker-broadcast events reach every connected tab, so a multi-tab player can lan
 
 ### Privacy
 
-Product events are joined to accounts by design: that is the stream's purpose. They carry nothing
-beyond the identity keys and entity ids — no emails, no avatar or display names, no free-text input.
-Traffic measurement stays in the anonymous web-analytics stream. The two are never joined.
+Product events are joined to accounts by design. They carry nothing beyond the identity keys and
+entity ids — no emails, no avatar or display names, no free-text input. Traffic measurement stays in
+the anonymous web-analytics stream. The two are never joined.

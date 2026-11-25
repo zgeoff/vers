@@ -1,14 +1,16 @@
 # The world map
 
 The world map is the graph of places an avatar travels to reach content. Every avatar walks a
-different map, unbounded in every direction and harder the farther from its origin it runs. The
-server stores no part of the map. The client computes the shape on the device, the server computes
-what each place holds, and the wire carries only the nodes a player has revealed.
+different map, which runs in every direction as far as a cell can be addressed
+([a node's identity](#a-nodes-identity)) and grows harder, up to a maximum, the farther from its
+origin it runs. The server stores no part of the map. The client computes the shape on the device,
+the server computes what each place holds, and the wire carries only the nodes a player has
+revealed.
 
-One split governs everything else. The map's shape is public and any client can compute it, while a
-node's contents are sealed and only the server can compute them. The two derive from different
-inputs, so knowing the whole shape tells a player nothing about where the reward sits. A public
-shape over sealed contents is what makes an infinite client-computed world safe to ship.
+The map's shape is public and any client can compute it, while a node's contents are sealed and only
+the server can compute them. The two derive from different inputs, so knowing the whole shape tells
+a player nothing about where the reward sits. A public shape over sealed contents is what makes a
+client-computed world of that size safe to ship.
 
 The [economy modes note](../../game-design/economy-modes.md#perfect-foresight) owns the threat model
 those rules answer, and [game entropy](./game-entropy.md) owns the entropy model. The
@@ -25,8 +27,8 @@ Every derived value sits on one of two planes, split by who can compute it.
 
 `userSeed` is the avatar's own seed. It differs per avatar, so every map differs, and it is not a
 secret: shipping it leaks nothing, because the shape it produces is worth nothing on its own. The
-client derives the whole infinite map from it in a worker shared across the tabs, so panning never
-waits on a round trip.
+client derives the whole map from it in a worker shared across the tabs, so panning never waits on a
+round trip.
 
 The scope secret seals the content plane. It is per-avatar, held server-side, and never shipped.
 Content folds in the same `userSeed` geometry uses, but without the secret that shared input derives
@@ -80,10 +82,11 @@ discs. The radius is a security limit, because look-ahead value climbs with it.
 No reveal state is stored, so the projection is idempotent by construction, and storage grows with
 the nodes an avatar has completed, never with the area it can see.
 
-The server discloses a node only after the clear that opened it verifies, never on an optimistic
-one. It discloses the node's difficulty and its sealed content fields, never the secret those fields
-derive from, and it caps how many nodes one clear can fan out to. A request for one specific node is
-served ahead of the bulk fan-out, so the online path stays responsive.
+Apart from the origin's disc, the server discloses a node only after the clear that opened it
+verifies, never on an optimistic one. It discloses the node's difficulty and its sealed content
+fields, never the secret those fields derive from, and it caps how many nodes one clear can fan out
+to. A request for one specific node is served ahead of the bulk fan-out, so the online path stays
+responsive.
 
 A reveal request names specific nodes, and the server authorizes each against its own projection
 rather than trusting the list. A node the projection does not cover discloses nothing and mints no
@@ -93,24 +96,24 @@ it counts every refusal.
 ## Where a player may travel
 
 Travel selection is narrow, and it uses a different rule from reveal. A node is selectable when it
-is the origin, when the avatar has already cleared it, or when an edge joins it to a node the avatar
-has cleared. Reveal measures hex distance; selection follows edges. A revealed node two hops away
-with no edge to a cleared node is visible and unreachable, and that is the intended shape of the
-boundary.
+is the origin, or when an edge joins it to a node the avatar has cleared. A cleared node is
+selectable by the same rule, when an edge joins it to another cleared node. Reveal measures hex
+distance; selection follows edges. A revealed node two hops away with no edge to a cleared node is
+visible and unreachable, and that is the intended shape of the boundary.
 
 The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
-has verified, bounds travel: replay rejects an activity at a node that borders no node on the
-frontier ([replay verification](./replay-verification.md#replay)). Client and server derive edges
-from identical inputs, so they never disagree about which nodes connect.
+has verified, bounds travel: replay rejects an activity at a node with no edge to a node on the
+frontier, except at the origin, which always counts as reachable
+([replay verification](./replay-verification.md#replay)). Client and server derive edges from
+identical inputs, so they never disagree about which nodes connect.
 
 ### Playing past the frontier offline
 
-The server discloses every node in the revealed region, which reaches past what the avatar can
-travel to, and the client caches them. Offline, a player farms the nodes they can already see and
-pushes outward into ground the fog has already lifted from. Reward-magnitude variance lives in
-sealed entropy drawn online
-([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)), so reading a
-node's base early buys nothing.
+The revealed region reaches past what the avatar can travel to, and the client caches every node the
+server discloses from it. Offline, a player farms the nodes they can see and pushes outward into
+ground the fog has already lifted from. Reward-magnitude variance lives in sealed entropy drawn
+online ([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)), so
+reading a node's base early buys nothing.
 
 Clearing a node offline opens its neighbours for selection before the server verifies the clear: the
 client widens its selectable set from the device's outbox
