@@ -27,7 +27,8 @@ When you write or edit a skill:
    step, fill in the `## Checks` section of the PR template.
 
 Start at `docs/architecture/overview.md`, the entry point to the system's docs. Learn a subsystem's
-invariants from its doc: grep finds the code but not the rules. These areas have their own docs:
+invariants from its doc: grep finds the code but not the rules. Read the doc for the area in full
+before substantial work there:
 
 - Activities, the seed chain, verification, replay or reconcile:
   `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
