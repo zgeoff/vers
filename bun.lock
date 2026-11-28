@@ -1580,7 +1580,7 @@
     "kysely": "0.29.8",
     "kysely-codegen": "0.20.0",
     "kysely-ctl": "0.22.0",
-    "kysely-postgres-js": "3.0.0",
+    "kysely-postgres-js": "5.1.0",
     "lefthook": "2.2.2",
     "lighthouse": "13.6.0",
     "lru-cache": "11.5.3",
@@ -3896,7 +3896,7 @@
 
     "kysely-ctl": ["kysely-ctl@0.22.0", "", { "dependencies": { "c12": "^3.3.4", "citty": "^0.2.2", "confbox": "^0.3.1", "consola": "^3.4.2", "jiti": "^2.7.0", "nypm": "^0.6.10", "ofetch": "^1.5.1", "pathe": "^2.0.3", "pkg-types": "^2.3.3", "std-env": "^4.3.0" }, "peerDependencies": { "kysely": ">=0.18.1 <0.30.0", "kysely-neon": "^2 || ^3", "kysely-postgres-js": "^2 || ^3 || ^4 || ^5", "kysely-prisma-postgres": "^0.1" }, "optionalPeers": ["kysely-neon", "kysely-postgres-js", "kysely-prisma-postgres"], "bin": { "kysely": "./dist/bin.mjs" } }, "sha512-KqmjbJvFv58PLPaYizPmTnJqgpnclR4k39Vw3mCXZz2kcbxygZgtM4hBtmlbzt03yqvVJlhJ3shLKCPUsmxNuw=="],
 
-    "kysely-postgres-js": ["kysely-postgres-js@3.0.0", "", { "peerDependencies": { "kysely": ">= 0.24.0 < 1", "postgres": "^3.4.0" }, "optionalPeers": ["postgres"] }, "sha512-o2t/xNSYJQDW6rVGGFPXKmZ0BEz2dGn66c2B+cO/k9ZNcU2qPWPycQPQ+B+P2MBXbKYq0xV9BZmFIvkUrmFWAQ=="],
+    "kysely-postgres-js": ["kysely-postgres-js@5.1.0", "", { "peerDependencies": { "kysely": ">= 0.29.0 < 1", "postgres": ">= 3.4.0 < 5" }, "optionalPeers": ["postgres"] }, "sha512-n5OLGrxyb89l+gpmC97tGN7vCt+KRcck1JG0hEunnWuk2oKCeBrmK+0ADu6lJwLfCCZAdSC1kEhqbUUyXWqbgw=="],
 
     "lazystream": ["lazystream@1.0.1", "", { "dependencies": { "readable-stream": "^2.0.5" } }, "sha512-b94GiNHQNy6JNTrt5w6zNyffMrNkXZb3KTkCZJb2V1xaEGCk093vkZ2jk3tpaeP33/OiXC+WvK9AxUebnf5nbw=="],
 
