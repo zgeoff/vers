@@ -112,7 +112,7 @@
       "@zgeoff/diet": "0.3.2",
       "@zgeoff/format-codemod": "0.3.6",
       "@zgeoff/mcp-remote": "0.1.38",
-      "@zgeoff/oxlint-config": "0.11.3",
+      "@zgeoff/oxlint-config": "0.11.4",
       "@zgeoff/rig": "0.3.2",
       "@zgeoff/std": "0.4.5",
       "@zgeoff/testing": "0.4.2",
