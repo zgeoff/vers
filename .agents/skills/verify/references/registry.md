@@ -8,8 +8,8 @@ feature's `paths` from `featurePaths` in `feature-paths.ts`, and `bun verify rep
 set `changed: true` on a feature. `featurePaths` builds each feature's `paths` from these:
 
 - `corePaths` in `core-paths.ts`, which holds the packages and globs that every journey runs, such
-  as the web app's shell, the RPC proxy and the avatar service. Each entry has a comment on why
-  every journey runs it.
+  as the web app's shell, the RPC proxy and the avatar service, and the pages no journey opens. Each
+  entry has a comment on why it flags every feature.
 - the folder of each package in the feature's `packages` list in `feature-paths.ts`, and the folder
   of each workspace package it depends on, read from each `package.json` when the file loads.
 - the globs in the feature's `paths` list in `feature-paths.ts`, such as the web routes its journey
@@ -24,23 +24,26 @@ set `changed: true` on a feature. `featurePaths` builds each feature's `paths` f
   journey sees, such as docs, tests and CI wiring. `report` marks no feature for a file that matches
   one, even when it matches the other lists too.
 
-`bun verify gate`, which CI runs on each PR but a release or Renovate PR, fails on a changed file
-that matches no list.
+CI runs `bun verify gate` on each PR except a release or Renovate PR. The gate fails on a changed
+file that matches no list.
 
 1. Put each path in the list for the journeys it reaches:
    - Add a path that one journey, or a few, reach to the `packages` or `paths` of those features.
    - Add a path that every journey reaches to `corePaths`, with a comment on why.
-   - Add a path that you can't trace to a journey to `corePaths`. An extra journey run costs less
-     than a missed feature.
+   - Add a file that the running app reads, but that you can't trace to a journey, to `corePaths`.
+     An extra journey run costs less than a missed feature.
+   - Add a file that the running app never reads, such as a test, to `ignoredPaths`, and a verify
+     helper that `bun verify up` runs to `sharedPaths`.
 2. Name a service or a lib in `packages` by its folder, such as `services/email`, so its workspace
    dependencies join the feature. For the web app, use a glob in `paths`, because its `package.json`
    depends on nearly every contract and lib. When you delete a package that a feature reaches only
-   through another package's dependencies, add its folder to that feature's `packages`: the walk
-   reads the `package.json` files in your tree, and finds no deleted one.
-3. For each glob you add to `featurePaths` or `sharedPaths`, check that an entry in
-   [skill-gate.json](../../../../.claude/skill-gate.json) matches it, such as
-   `{ "match": "apps/web/**", "skills": ["verify"] }`. With the entry, an agent must load this skill
-   before it edits a matching file. For a glob you remove, delete an entry that only it used.
+   through another package's dependencies, add its folder to that feature's `packages`, because
+   `feature-paths.ts` reads only the `package.json` files in your tree, and the deleted one is gone.
+3. For each glob you add to `corePaths`, a feature or `sharedPaths`, and each folder you add to
+   `packages`, check that an entry in [skill-gate.json](../../../../.claude/skill-gate.json) matches
+   it, such as `{ "match": "apps/web/**", "skills": ["verify"] }`. With the entry, an agent must
+   load this skill before it edits a matching file. For a glob you remove, delete an entry that only
+   it used.
 4. Run `bun test apps/web/src/test-utils/verify/feature-paths.test.ts`. Expect: the test passes. It
    fails when:
    - a glob in `featurePaths` or `sharedPaths` has no `verify` entry in `skill-gate.json`;
@@ -48,6 +51,6 @@ that matches no list.
    - a tracked file matches no feature and no ignore glob;
    - a service, contract or lib folder flags no feature.
 
-   Fix the glob or the entry that the failure names, and run the test again. When a sample file
-   flags other features because you moved a path on purpose, change the sample's expected features
-   in the test.
+   Fix the glob or the entry named in the failure, and run the test again. When a sample file flags
+   other features because you moved a path on purpose, change the sample's expected features in the
+   test.

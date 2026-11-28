@@ -53,7 +53,10 @@ test.each([
   { path: 'apps/web/src/routes/-onboarding/run-onboarding.ts', flagged: ['signup'] },
   { path: 'apps/web/src/routes/-avatars/run-avatar-select.ts', flagged: ['avatar-roster'] },
   { path: 'apps/web/src/routes/-login/run-login.ts', flagged: ['device-takeover'] },
-  { path: 'apps/web/src/routes/-respite/respite-panel.tsx', flagged: ['device-takeover'] },
+  {
+    path: 'apps/web/src/routes/-respite/respite-panel.tsx',
+    flagged: ['signup', 'device-takeover'],
+  },
   {
     path: 'apps/web/src/routes/-avatar-create/run-avatar-create.ts',
     flagged: ['signup', 'avatar-roster'],

@@ -34,6 +34,12 @@ const avatarCreate: FeatureReach = {
   paths: ['apps/web/src/routes/_game/avatars_.create.tsx', 'apps/web/src/routes/-avatar-create/**'],
 };
 
+// Onboarding and a confirmed takeover both land on `/respite`.
+const respite: FeatureReach = {
+  packages: [],
+  paths: ['apps/web/src/routes/_game/respite.tsx', 'apps/web/src/routes/-respite/**'],
+};
+
 // The run journeys start a run from a map node. `Click to start` opens the current run, which
 // moves to `/activity`, and each checkpoint wakes the replay service, which can reject the run.
 const runStart: FeatureReach = {
@@ -53,7 +59,7 @@ export const featurePaths = {
   }),
   signup: buildFeatureGlobs(
     workspace,
-    joinReaches(gamePages, avatarCreate, {
+    joinReaches(gamePages, avatarCreate, respite, {
       // the welcome email and its code
       packages: ['services/email', 'services/verification'],
       paths: [
@@ -72,16 +78,12 @@ export const featurePaths = {
   'offline-run': buildFeatureGlobs(workspace, joinReaches(gamePages, runStart)),
   'device-takeover': buildFeatureGlobs(
     workspace,
-    joinReaches(gamePages, runStart, {
+    joinReaches(gamePages, runStart, respite, {
       // each sign-in reads the user's two-factor state
       packages: ['services/verification'],
       paths: [
         'apps/web/src/routes/{login,login_.force-logout}.tsx',
         'apps/web/src/routes/{-login,-login-force-logout}/**',
-
-        // the confirmed takeover lands the second device on `/respite`
-        'apps/web/src/routes/_game/respite.tsx',
-        'apps/web/src/routes/-respite/**',
       ],
     }),
   ),
