@@ -4,27 +4,26 @@ Read this before you add, remove or rename a glob in
 [core-paths.ts](../../../../apps/web/src/test-utils/verify/core-paths.ts) or
 [feature-paths.ts](../../../../apps/web/src/test-utils/verify/feature-paths.ts). The
 [registry](../../../../apps/web/src/test-utils/verify/create-verify-registry.ts) reads each
-feature's `paths` from `feature-paths.ts`, and `bun verify report` uses them to set `changed: true`
-on a feature.
-
-Each feature's `paths` holds three parts:
+feature's `paths` from `featurePaths` in `feature-paths.ts`, and `bun verify report` uses them to
+set `changed: true` on a feature. `featurePaths` builds each feature's `paths` from three parts:
 
 - the core list in `core-paths.ts`: the packages and globs that every journey runs, such as the web
   app's shell, the RPC proxy and the avatar service. Each entry has a comment that says why every
   journey runs it.
-- the folder of each package the feature names in `feature-paths.ts`, and the folder of each
-  workspace package it depends on, read from each `package.json` when the file loads.
-- the feature's own globs in `feature-paths.ts`, such as the web routes its journey opens.
+- the folder of each package in the feature's `packages` list in `feature-paths.ts`, and the folder
+  of each workspace package it depends on, read from each `package.json` when the file loads.
+- the globs in the feature's `paths` list in `feature-paths.ts`, such as the web routes its journey
+  opens.
 
 `feature-paths.ts` also holds two lists for the whole registry:
 
-- `sharedPaths`: the verify CLI and the stubs and helpers that `bun verify up` runs. `report` marks
-  every feature changed when a changed file matches one.
-- `ignoredPaths`: the registry's `.ignore` list, for files that change nothing a journey sees, such
-  as docs, tests and CI wiring. `report` marks no feature for a file that matches one, even when it
-  matches the other lists too.
+- `sharedPaths`, the registry's `.shared()` list: the verify CLI and the stubs and helpers that
+  `bun verify up` runs. `report` marks every feature changed when a changed file matches one.
+- `ignoredPaths`, the registry's `.ignore()` list: the files that change nothing a journey sees,
+  such as docs, tests and CI wiring. `report` marks no feature for a file that matches one, even
+  when it matches the other lists too.
 
-The gate fails on a changed file that matches no list.
+`bun verify gate`, which CI runs on each PR, fails on a changed file that matches no list.
 
 1. Put a path where it reaches:
    - a path that one journey, or a few, reach: the `packages` or `paths` of those features;
@@ -44,3 +43,7 @@ The gate fails on a changed file that matches no list.
    - a sample file flags other features than the test expects;
    - a tracked file matches no feature and no ignore glob;
    - a service, contract or lib folder flags no feature.
+
+   Fix the glob or the entry that the failure names, and run the test again. When a sample file
+   flags other features because you moved a path on purpose, change the sample's expected features
+   in the test.

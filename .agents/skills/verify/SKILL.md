@@ -144,8 +144,9 @@ that command alone. A command with neither runs on the registry's first target, 
 | `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com, for public-smoke only.                                      |
 
 `up` needs Docker. Both targets need the Chromium from `bun run verify:install-browser`. Each `up`
-starts an empty database and a signed-out browser. Later journeys use signup's account: run signup
-first after each `up` or `up --restart`. Run device-takeover last: it signs out.
+starts an empty database and a signed-out browser. The journeys after signup play as its account, so
+after each `up` or `up --restart`, run signup before any of them. Run device-takeover last: it signs
+out.
 
 <!-- /repo -->
 
