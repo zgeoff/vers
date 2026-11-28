@@ -1552,7 +1552,7 @@
     "@zgeoff/bun-test-extended": "0.2.4",
     "@zgeoff/chex": "0.3.14",
     "@zgeoff/dbhub": "0.23.5",
-    "@zgeoff/diet": "0.3.2",
+    "@zgeoff/diet": "0.3.3",
     "@zgeoff/format-codemod": "0.3.6",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.11.4",
@@ -3118,7 +3118,7 @@
 
     "@zgeoff/dbhub": ["@zgeoff/dbhub@0.23.5", "", { "dependencies": { "@iarna/toml": "2.2.5", "@modelcontextprotocol/sdk": "1.29.0", "dotenv": "16.5.0", "express": "5.2.1", "ssh-config": "5.0.3", "ssh2": "1.16.0", "zod": "4.6.7" }, "optionalDependencies": { "@aws-sdk/rds-signer": "3.1079.0", "@azure/identity": "4.13.1", "mariadb": "3.4.2", "mssql": "11.0.1", "mysql2": "3.14.1", "pg": "8.16.0" }, "bin": { "dbhub": "dist/index.js" } }, "sha512-jZIfyJHRONRI9fxc3JgxUXAiH0ZKtAISqGw3cpzsXcFRRJtgU8nsZpJak6rn7P/yPQQoC2y9TDj86j8lXdJeVw=="],
 
-    "@zgeoff/diet": ["@zgeoff/diet@0.3.2", "", { "bin": { "diet": "diet.sh" } }, "sha512-WTr8W2oOHfGFSASJgy/8LFHmiW5vRu2jduhsM5ixsMi7gAiTcERG7JhdLcIwksuyGTmOVxlCf7cRP6crAPDOig=="],
+    "@zgeoff/diet": ["@zgeoff/diet@0.3.3", "", { "bin": { "diet": "diet.sh" } }, "sha512-jJY5zvsgWXU/OMh1r4kXVcrB0GIHyviS0qVJb54soUXpLEbvMIFtL2+C9q+ACghbzykh6IJRTRN5vMaZKtRLGQ=="],
 
     "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.3.6", "", { "dependencies": { "gunshi": "1.0.0-rc.1", "oxc-parser": "0.158.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-hoa6JerU9JHgikqumdtu23VE8wemOgkTr1zrwBFGnLyBns59bTt7Z3kkV6IBxc07CveYKtPT94IDTWFmFj5qHA=="],
 
@@ -5071,6 +5071,8 @@
     "@zgeoff/dbhub/pg": ["pg@8.16.0", "", { "dependencies": { "pg-connection-string": "^2.9.0", "pg-pool": "^3.10.0", "pg-protocol": "^1.10.0", "pg-types": "2.2.0", "pgpass": "1.0.5" }, "optionalDependencies": { "pg-cloudflare": "^1.2.5" }, "peerDependencies": { "pg-native": ">=3.0.1" }, "optionalPeers": ["pg-native"] }, "sha512-7SKfdvP8CTNXjMUzfcVTaI+TDzBEeaUnVwiVGZQD1Hh33Kpev7liQba9uLd4CfN8r9mCVsD0JIpq03+Unpz+kg=="],
 
     "@zgeoff/format-codemod/gunshi": ["gunshi@1.0.0-rc.1", "", {}, "sha512-/nSFKVrJHKg9O4ppBl+lOSLDQWmvJ5fG3ldVsdJX8KMtUV2uYwlx/a8OaOWuvniuV28bZDjsB8p6YFtDxSlMcw=="],
+
+    "@zgeoff/rig/@zgeoff/diet": ["@zgeoff/diet@0.3.2", "", { "bin": { "diet": "diet.sh" } }, "sha512-WTr8W2oOHfGFSASJgy/8LFHmiW5vRu2jduhsM5ixsMi7gAiTcERG7JhdLcIwksuyGTmOVxlCf7cRP6crAPDOig=="],
 
     "@zgeoff/rig/gunshi": ["gunshi@1.0.0-rc.1", "", {}, "sha512-/nSFKVrJHKg9O4ppBl+lOSLDQWmvJ5fG3ldVsdJX8KMtUV2uYwlx/a8OaOWuvniuV28bZDjsB8p6YFtDxSlMcw=="],
 
