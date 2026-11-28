@@ -1,25 +1,133 @@
-// Globs are root-relative, as `git ls-files` prints them, and match with Bun.Glob. Every journey
-// signs up through the web app, which calls the services, and plays through the game libraries in
-// the browser, so each feature holds all of the code the local stack runs.
-const everyJourney = [
-  'apps/web/**',
-  'services/**',
-  'contracts/**',
-  'libs/core/**',
-  'libs/data/**',
-  'libs/design/**',
-  'libs/game/**',
-  'libs/service/**',
-  'patches/**',
-] as const;
+import { join } from 'node:path';
+import { collectReachedFolders } from './collect-reached-folders';
+import { corePaths } from './core-paths';
+import { readWorkspacePackages } from './read-workspace-packages';
+import type { FeatureReach, WorkspacePackage } from './types';
 
+// Globs are root-relative, as `git ls-files` prints them, and match with Bun.Glob. A service boots,
+// and a route file loads, in every journey, so a change that breaks either fails every journey,
+// though it flags only the features whose journeys use it.
+const workspace = await readWorkspace(join(import.meta.dir, '..', '..', '..', '..', '..'));
+
+// Every journey but public-smoke signs in and plays on a game page, which mounts the game world,
+// the world map and the idle worker, and reads the session, the user and the current activity.
+const gamePages: FeatureReach = {
+  packages: [
+    'services/session',
+    'services/user',
+    'services/activity',
+
+    // the activity service reads each run's seeds from it
+    'services/keys',
+    'libs/game/idle-client',
+    'libs/game/worldmap-client',
+  ],
+  paths: [
+    'apps/web/src/routes/{_game.tsx,_game/explore.tsx}',
+    'apps/web/src/routes/{-game,-explore}/**',
+    'apps/web/src/lib/{activity,avatar,idle,qa,worldmap}/**',
+  ],
+};
+
+const avatarCreate: FeatureReach = {
+  packages: [],
+  paths: ['apps/web/src/routes/_game/avatars_.create.tsx', 'apps/web/src/routes/-avatar-create/**'],
+};
+
+// The run journeys start a run from a map node, and `Click to start` opens the current run.
+const runStart: FeatureReach = {
+  packages: [],
+  paths: [
+    'apps/web/src/routes/_game/{explore.node.$nodeID,explore_.current}.tsx',
+    'apps/web/src/routes/{-explore-node,-explore-current}/**',
+  ],
+};
+
+// Each feature holds the core list, the folders of its packages and of the workspace packages they
+// depend on, from each `package.json` as this file loads, and its own web files.
 export const featurePaths = {
-  'public-smoke': [...everyJourney],
-  signup: [...everyJourney],
-  'device-takeover': [...everyJourney],
-  'offline-run': [...everyJourney],
-  'avatar-roster': [...everyJourney],
+  'public-smoke': buildFeatureGlobs(workspace, {
+    packages: [],
+    paths: ['apps/web/src/routes/index.tsx', 'apps/web/src/routes/-home/**'],
+  }),
+  signup: buildFeatureGlobs(
+    workspace,
+    joinReaches(gamePages, avatarCreate, {
+      // the welcome email and its code
+      packages: ['services/email', 'services/verification'],
+      paths: [
+        'apps/web/src/routes/{signup,verify-otp,onboarding}.tsx',
+        'apps/web/src/routes/{-signup,-verify-otp,-onboarding}/**',
+      ],
+    }),
+  ),
+  'avatar-roster': buildFeatureGlobs(
+    workspace,
+    joinReaches(gamePages, avatarCreate, {
+      packages: [],
+      paths: ['apps/web/src/routes/_game/avatars.tsx', 'apps/web/src/routes/-avatars/**'],
+    }),
+  ),
+  'offline-run': buildFeatureGlobs(
+    workspace,
+    joinReaches(gamePages, runStart, {
+      // the service that verifies each run once the worker sends its outbox
+      packages: ['services/replay'],
+      paths: [],
+    }),
+  ),
+  'device-takeover': buildFeatureGlobs(
+    workspace,
+    joinReaches(gamePages, runStart, {
+      // each sign-in reads the user's two-factor state
+      packages: ['services/verification'],
+      paths: [
+        'apps/web/src/routes/{login,login_.force-logout}.tsx',
+        'apps/web/src/routes/{-login,-login-force-logout}/**',
+        'apps/web/src/routes/_game/activity.tsx',
+        'apps/web/src/routes/-activity/**',
+      ],
+    }),
+  ),
 } as const satisfies Record<string, ReadonlyArray<string>>;
+
+interface Workspace {
+  readonly packages: ReadonlyArray<WorkspacePackage>;
+  readonly coreFolders: ReadonlyArray<string>;
+  readonly coreGlobs: ReadonlyArray<string>;
+}
+
+function buildFeatureGlobs(workspaceFacts: Workspace, reach: FeatureReach): Array<string> {
+  // the test libraries that a service imports sit in the shared list or the ignore list
+  const ownFolders = collectReachedFolders(reach.packages, workspaceFacts.packages).filter(
+    (folder) => !workspaceFacts.coreFolders.includes(folder) && !folder.startsWith('libs/testing/'),
+  );
+
+  return [
+    ...workspaceFacts.coreGlobs,
+    ...ownFolders.map((folder) => `${folder}/**`),
+    ...reach.paths,
+  ];
+}
+
+async function readWorkspace(rootDir: string): Promise<Workspace> {
+  const packages = await readWorkspacePackages(rootDir);
+
+  const coreFolders = collectReachedFolders(corePaths.packages, packages);
+
+  return {
+    packages,
+    coreFolders,
+    coreGlobs: [...coreFolders.map((folder) => `${folder}/**`), ...corePaths.globs],
+  };
+}
+
+function joinReaches(...reaches: ReadonlyArray<FeatureReach>): FeatureReach {
+  return {
+    packages: reaches.flatMap((reach) => reach.packages),
+    paths: reaches.flatMap((reach) => reach.paths),
+  };
+}
 
 // A change to one of these changes every feature: the verify CLI and its local stack, the e2e
 // helpers and stubs the stack and the game driver run, and the QA reset that removes each account.
@@ -118,7 +226,9 @@ export const ignoredPaths = [
   '**/package.json',
   'bun.lock',
 
-  // 4. Apps that no journey runs.
+  // 4. Code that no journey runs: the apps beside the game, and the release registry that only
+  //    the deploy scripts read.
   'apps/bugsink/**',
   'apps/umami/**',
+  'libs/data/release-registry/**',
 ] as const;
