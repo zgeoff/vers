@@ -175,7 +175,7 @@ for its commands.
 <!-- repo: registry -->
 
 The [registry](../../../apps/web/src/test-utils/verify/create-verify-registry.ts) declares the
-targets, actions, checks and features. A feature's `paths` holds the core list and what its own
+targets, actions, checks and features. A feature's `paths` holds `corePaths` and what its own
 journey reaches. To change them, read [references/registry.md](references/registry.md).
 
 <!-- /repo -->

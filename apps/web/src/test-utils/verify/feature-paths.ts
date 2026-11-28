@@ -34,16 +34,17 @@ const avatarCreate: FeatureReach = {
   paths: ['apps/web/src/routes/_game/avatars_.create.tsx', 'apps/web/src/routes/-avatar-create/**'],
 };
 
-// The run journeys start a run from a map node, and `Click to start` opens the current run.
+// The run journeys start a run from a map node. `Click to start` opens the current run, which
+// moves to `/activity`, and each checkpoint wakes the replay service, which can reject the run.
 const runStart: FeatureReach = {
-  packages: [],
+  packages: ['services/replay'],
   paths: [
-    'apps/web/src/routes/_game/{explore.node.$nodeID,explore_.current}.tsx',
-    'apps/web/src/routes/{-explore-node,-explore-current}/**',
+    'apps/web/src/routes/_game/{explore.node.$nodeID,explore_.current,activity}.tsx',
+    'apps/web/src/routes/{-explore-node,-explore-current,-activity}/**',
   ],
 };
 
-// Each feature holds the core list, the folders of its packages and of the workspace packages they
+// Each feature holds `corePaths`, the folders of its packages and of the workspace packages they
 // depend on, from each `package.json` as this file loads, and its own web files.
 export const featurePaths = {
   'public-smoke': buildFeatureGlobs(workspace, {
@@ -68,14 +69,7 @@ export const featurePaths = {
       paths: ['apps/web/src/routes/_game/avatars.tsx', 'apps/web/src/routes/-avatars/**'],
     }),
   ),
-  'offline-run': buildFeatureGlobs(
-    workspace,
-    joinReaches(gamePages, runStart, {
-      // the service that verifies each run once the worker sends its outbox
-      packages: ['services/replay'],
-      paths: [],
-    }),
-  ),
+  'offline-run': buildFeatureGlobs(workspace, joinReaches(gamePages, runStart)),
   'device-takeover': buildFeatureGlobs(
     workspace,
     joinReaches(gamePages, runStart, {
@@ -84,8 +78,10 @@ export const featurePaths = {
       paths: [
         'apps/web/src/routes/{login,login_.force-logout}.tsx',
         'apps/web/src/routes/{-login,-login-force-logout}/**',
-        'apps/web/src/routes/_game/activity.tsx',
-        'apps/web/src/routes/-activity/**',
+
+        // the confirmed takeover lands the second device on `/respite`
+        'apps/web/src/routes/_game/respite.tsx',
+        'apps/web/src/routes/-respite/**',
       ],
     }),
   ),

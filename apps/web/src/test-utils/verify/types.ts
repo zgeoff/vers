@@ -6,7 +6,7 @@ export interface WorkspacePackage {
   readonly workspaceDependencies: ReadonlyArray<string>;
 }
 
-// What a journey reaches beyond the core list: package folders, whose workspace dependencies it
+// What a journey reaches beyond `corePaths`: package folders, whose workspace dependencies it
 // also reaches, and globs for the rest.
 export interface FeatureReach {
   readonly packages: ReadonlyArray<string>;

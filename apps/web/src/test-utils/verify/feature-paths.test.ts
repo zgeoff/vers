@@ -52,9 +52,8 @@ test.each([
   { path: 'services/email/src/index.ts', flagged: ['signup'] },
   { path: 'apps/web/src/routes/-onboarding/run-onboarding.ts', flagged: ['signup'] },
   { path: 'apps/web/src/routes/-avatars/run-avatar-select.ts', flagged: ['avatar-roster'] },
-  { path: 'services/replay/src/index.ts', flagged: ['offline-run'] },
   { path: 'apps/web/src/routes/-login/run-login.ts', flagged: ['device-takeover'] },
-  { path: 'apps/web/src/routes/-activity/activity-panel.tsx', flagged: ['device-takeover'] },
+  { path: 'apps/web/src/routes/-respite/respite-panel.tsx', flagged: ['device-takeover'] },
   {
     path: 'apps/web/src/routes/-avatar-create/run-avatar-create.ts',
     flagged: ['signup', 'avatar-roster'],
@@ -64,6 +63,11 @@ test.each([
     path: 'apps/web/src/routes/-explore-node/explore-node-focus.tsx',
     flagged: ['offline-run', 'device-takeover'],
   },
+  {
+    path: 'apps/web/src/routes/-activity/activity-panel.tsx',
+    flagged: ['offline-run', 'device-takeover'],
+  },
+  { path: 'services/replay/src/index.ts', flagged: ['offline-run', 'device-takeover'] },
   {
     path: 'services/activity/src/index.ts',
     flagged: ['signup', 'avatar-roster', 'offline-run', 'device-takeover'],
@@ -89,6 +93,8 @@ test.each([
   'libs/data/db/src/index.ts',
   'libs/game/game-rendering/src/index.ts',
   'contracts/activity/src/index.ts',
+  'contracts/user/src/index.ts',
+  'contracts/session/src/index.ts',
   'apps/web/src/test-utils/verify/verify.ts',
 ])('it flags every feature for a change to the core file %s', async (path) => {
   const ctx = await setupTest();

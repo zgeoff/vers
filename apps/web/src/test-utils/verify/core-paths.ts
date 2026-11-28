@@ -9,6 +9,10 @@ export const corePaths = {
     // the proxy reads this contract on every RPC call, public-smoke's included
     'contracts/activity',
 
+    // the landing page's loader and the proxy's session check load these clients, signed out too
+    'contracts/user',
+    'contracts/session',
+
     // the router reads the scene state on every page
     'libs/game/game-rendering',
 
@@ -45,7 +49,7 @@ export const corePaths = {
     // the pages that no journey opens
     'apps/web/src/routes/{account_.2fa.verify,account_.change-email,account_.change-password,forgot-password,reset-password,reset-password-started}.tsx',
     'apps/web/src/routes/{-account,-account-2fa-verify,-account-change-email,-account-change-password,-forgot-password,-reset-password}/**',
-    'apps/web/src/routes/_game/{avatar,codex,market,market.listing.$listingID,respite,settings,stash}.tsx',
-    'apps/web/src/routes/{-avatar,-codex,-market,-market-listing,-respite,-settings,-stash}/**',
+    'apps/web/src/routes/_game/{avatar,codex,market,market.listing.$listingID,settings,stash}.tsx',
+    'apps/web/src/routes/{-avatar,-codex,-market,-market-listing,-settings,-stash}/**',
   ],
 } as const;
