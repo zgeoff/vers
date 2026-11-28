@@ -48,7 +48,7 @@ file that matches no list.
    fails when:
    - a glob in `featurePaths` or `sharedPaths` has no `verify` entry in `skill-gate.json`;
    - a sample file flags other features than the test expects;
-   - a tracked file matches no feature and no ignore glob;
+   - a tracked file matches no feature, shared or ignore glob;
    - a service, contract or lib folder flags no feature.
 
    Fix the glob or the entry named in the failure, and run the test again. When a sample file flags
