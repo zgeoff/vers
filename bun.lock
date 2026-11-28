@@ -1448,7 +1448,7 @@
     "@opentelemetry/sdk-trace-base@2.2.0": {
       "@opentelemetry/core": "2.12.0",
     },
-    "@pulumi/pulumi": "3.276.0",
+    "@pulumi/pulumi": "3.277.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "decode-uri-component": "0.5.1",
@@ -1505,7 +1505,7 @@
     "@playwright/test": "1.65.0",
     "@pulumi/cloudflare": "6.24.0",
     "@pulumi/github": "6.15.0",
-    "@pulumi/pulumi": "3.276.0",
+    "@pulumi/pulumi": "3.277.0",
     "@react-email/components": "1.0.12",
     "@react-hookz/web": "26.1.0",
     "@react-spring/rafz": "10.1.2",
@@ -2356,7 +2356,7 @@
 
     "@pulumi/github": ["@pulumi/github@6.15.0", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-U8ZxPQQcOrcTn8y8EZsWmXzMtbw0JnwWCVGmqxBZ/i2SpUlEGMYT9B+EFC/qTALZXkDf7cMiq6fZ3Gy1G23nyQ=="],
 
-    "@pulumi/pulumi": ["@pulumi/pulumi@3.276.0", "", { "dependencies": { "@grpc/grpc-js": "^1.10.1", "@logdna/tail-file": "^2.0.6", "@opentelemetry/api": "~1.9", "@opentelemetry/core": "^2.9", "@opentelemetry/exporter-trace-otlp-grpc": "^0.220", "@opentelemetry/exporter-zipkin": "^2.9", "@opentelemetry/instrumentation": "^0.220", "@opentelemetry/instrumentation-grpc": "^0.220", "@opentelemetry/resources": "^2.9", "@opentelemetry/sdk-trace-base": "^2.9", "@opentelemetry/sdk-trace-node": "^2.9", "@opentelemetry/semantic-conventions": "^1.42", "@types/google-protobuf": "^3.15.5", "@types/semver": "^7.5.6", "execa": "^5.1.0", "google-protobuf": "^3.21.4", "ini": "^2.0.0", "js-yaml": "^4.3.2", "minimist": "^1.2.6", "normalize-package-data": "^6.0.0", "require-from-string": "^2.0.1", "semver": "^7.5.2", "source-map-support": "^0.5.6", "upath": "^1.1.0" }, "peerDependencies": { "ts-node": ">= 7.0.1 < 12", "typescript": ">= 3.8.3 < 7" }, "optionalPeers": ["ts-node", "typescript"] }, "sha512-8ThwjehdLmmSpcoCtQG/9uxXx5duAsFm1OeMZOEzj9b/V3VdST6baKu51K4HnSTwqRHgH84NDhM2AwAKapTtXQ=="],
+    "@pulumi/pulumi": ["@pulumi/pulumi@3.277.0", "", { "dependencies": { "@grpc/grpc-js": "^1.10.1", "@logdna/tail-file": "^2.0.6", "@opentelemetry/api": "~1.9", "@opentelemetry/core": "^2.9", "@opentelemetry/exporter-trace-otlp-grpc": "^0.220", "@opentelemetry/exporter-zipkin": "^2.9", "@opentelemetry/instrumentation": "^0.220", "@opentelemetry/instrumentation-grpc": "^0.220", "@opentelemetry/resources": "^2.9", "@opentelemetry/sdk-trace-base": "^2.9", "@opentelemetry/sdk-trace-node": "^2.9", "@opentelemetry/semantic-conventions": "^1.42", "@types/google-protobuf": "^3.15.5", "@types/semver": "^7.5.6", "execa": "^5.1.0", "google-protobuf": "^3.21.4", "ini": "^2.0.0", "js-yaml": "^4.3.2", "minimist": "^1.2.6", "normalize-package-data": "^6.0.0", "require-from-string": "^2.0.1", "semver": "^7.5.2", "source-map-support": "^0.5.6", "upath": "^1.1.0" }, "peerDependencies": { "ts-node": ">= 7.0.1 < 12", "typescript": ">= 3.8.3 < 7" }, "optionalPeers": ["ts-node", "typescript"] }, "sha512-EvvBo55xmGByLRWjIqp24k4vzmPoKmZ6nTmK8EHzRb9veLCNISN3/Fq4RlJxrEt5+HmNkZveEasI+z0UCgkMxw=="],
 
     "@puppeteer/browsers": ["@puppeteer/browsers@3.2.6", "", { "dependencies": { "modern-tar": "^0.8.6", "yargs": "^18.0.0" }, "peerDependencies": { "proxy-agent": ">=8.0.1", "yauzl": "^2.10.0 || ^3.4.0" }, "optionalPeers": ["proxy-agent", "yauzl"], "bin": { "browsers": "lib/main-cli.js" } }, "sha512-MJP29gVoHznmqmwhH1tlZqzfeQ3aylTpSSa6WKZXtkwYUH02i9imBmWGTyZrbnAou5paX78SE4jMAUqnEPf8ug=="],
 
@@ -5052,9 +5052,9 @@
 
     "@typespec/ts-http-runtime/https-proxy-agent": ["https-proxy-agent@7.0.6", "", { "dependencies": { "agent-base": "^7.1.2", "debug": "4" } }, "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw=="],
 
-    "@vers/infra/@pulumi/axiom": ["@pulumi/axiom@file:infra/sdks/axiom", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" } }],
+    "@vers/infra/@pulumi/axiom": ["@pulumi/axiom@file:infra/sdks/axiom", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
-    "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" } }],
+    "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
     "@vitejs/plugin-rsc/srvx": ["srvx@1.0.5", "", { "bin": { "srvx": "./bin/srvx.mjs" } }, "sha512-KvSKRpgPG/oaq3cyT614OQ2bAa7DynuGamivCZeoZzIUULOdbQz6wUtnnVuC4+DCx2Zglzo8v5gBYmWIWYhDxA=="],
 
